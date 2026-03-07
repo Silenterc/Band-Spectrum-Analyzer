@@ -79,7 +79,7 @@ void SpectrumAnalyzerAudioProcessor::changeProgramName(int index, const juce::St
 void SpectrumAnalyzerAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    engine.prepare(sampleRate, samplesPerBlock);
 }
 
 void SpectrumAnalyzerAudioProcessor::releaseResources() {
@@ -138,6 +138,7 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
+    engine.processBlock(buffer);
     for (int channel = 0; channel < totalNumInputChannels; ++channel) {
         auto *channelData = buffer.getWritePointer(channel);
         juce::ignoreUnused(channelData);
@@ -182,7 +183,7 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
     gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
 }
 
-SpectrumAnalyzerAudioProcessor::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
+Analyzer::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
     return {
         .analysisMode = static_cast<ParamSpec::AnalysisMode>(static_cast<int>(analysisModeParam->load())),
         .bandMode = static_cast<ParamSpec::BandMode>(static_cast<int>(bandModeParam->load())),

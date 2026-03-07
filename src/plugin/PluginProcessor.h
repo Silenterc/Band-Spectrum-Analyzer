@@ -4,8 +4,10 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "../dsp/ParameterState.h"
 #include "ParamIDs.h"
 #include "ParamSpec.h"
+#include "../dsp/AnalyzerEngine.h"
 
 //==============================================================================
 class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor {
@@ -67,18 +69,7 @@ public:
     }
 
 private:
-    struct ParameterState {
-        ParamSpec::AnalysisMode analysisMode;
-        ParamSpec::BandMode bandMode;
-        bool showRms;
-        bool showPeak;
-        bool showHold;
-        float holdMs;
-        float gridMinDb;
-        float gridMaxDb;
-        float gridStepDb;
-    };
-
+    Analyzer::Engine engine;
     juce::AudioProcessorValueTreeState parameters;
 
     std::atomic<float> *analysisModeParam = nullptr;
@@ -93,11 +84,11 @@ private:
     std::atomic<float> *gridMaxDbParam = nullptr;
     std::atomic<float> *gridStepDbParam = nullptr;
 
-    std::optional<ParameterState> previousParameterState;
+    std::optional<Analyzer::ParameterState> previousParameterState;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void cacheParameterPointers();
-    ParameterState readCurrentParameterState() const;
+    Analyzer::ParameterState readCurrentParameterState() const;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerAudioProcessor)

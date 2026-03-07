@@ -1,9 +1,4 @@
-//
-// Created by Lukáš Zima on 07.03.2026.
-//
-
-#ifndef BAND_SPECTRUM_ANALYZER_PARAMIDS_H
-#define BAND_SPECTRUM_ANALYZER_PARAMIDS_H
+#pragma once
 
 namespace ParamIDs {
     inline constexpr const char* analysisMode = "analysisMode"; // Summed / MidSide
@@ -18,5 +13,3 @@ namespace ParamIDs {
     inline constexpr const char* gridMaxDb  = "gridMaxDb";
     inline constexpr const char* gridStepDb = "gridStepDb";
 }
-
-#endif //BAND_SPECTRUM_ANALYZER_PARAMIDS_H
