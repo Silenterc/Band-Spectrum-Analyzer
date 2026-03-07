@@ -1,5 +1,8 @@
 modules/
 jumake_build/
 build/
+build-release/
+cmake-build-debug/
+cmake-build-release/
 compile_commands.json
-.jumake
+.*
