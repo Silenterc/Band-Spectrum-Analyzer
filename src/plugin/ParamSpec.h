@@ -11,7 +11,8 @@ namespace ParamSpec {
 
     enum class AnalysisMode {
         summed = 0,
-        midSide
+        midSide,
+        stereo
     };
 
     enum class BandMode {
@@ -32,9 +33,10 @@ namespace ParamSpec {
     inline constexpr auto gridMaxDbName = "Grid Max dB";
     inline constexpr auto gridStepDbName = "Grid Step dB";
 
-    inline constexpr std::array<const char *, 2> analysisModeChoices{
+    inline constexpr std::array<const char *, 3> analysisModeChoices{
         "Summed",
-        "Mid/Side"
+        "Mid/Side",
+        "Stereo"
     };
 
     inline constexpr std::array<const char *, 3> bandModeChoices{

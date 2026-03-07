@@ -104,9 +104,33 @@ namespace Analyzer {
         void rebuildFilters();
 
         /**
-         * Builds the mono summed input stream used by the current analyzer path
+         * Updates the mono summed input stream for the current block
          */
         void updateSummedAnalysisInput(const juce::AudioBuffer<float> &buffer);
+
+        /**
+         * Runs the summed mono analysis path for one block
+         */
+        void processSummedBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                float blockDurationSeconds, float blockDurationMs);
+
+        /**
+         * Runs the "stereo" analysis path by processing L and R separately
+         */
+        void processStereoBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                float blockDurationSeconds, float blockDurationMs);
+
+        /**
+         * Placeholder for the future mid/side analysis path
+         */
+        void processMidSideBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                 float blockDurationSeconds, float blockDurationMs);
+
+        /**
+         * Applies common dB conversion, hold logic, and frame updates for one band
+         */
+        void updateBandFrame(size_t bandIndex, float rmsLinear, float peakLinear, float floorDb,
+                             float blockDurationSeconds, float blockDurationMs);
 
         /**
          * Returns how many bands the current mode should use
@@ -123,7 +147,7 @@ namespace Analyzer {
         // Latest parameter snapshot pushed into the engine
         ParameterState currentParameters{};
 
-        // Temporary mono input used by the summed analysis path
+        // Temporary mono input vector (re)used by the summed analysis path
         std::vector<float> summedAnalysisInput;
         // Static band metadata for the current layout
         std::vector<BandInfo> bandInfo;

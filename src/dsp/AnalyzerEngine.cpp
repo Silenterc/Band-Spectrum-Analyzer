@@ -65,53 +65,19 @@ namespace Analyzer {
         if (numInputChannels <= 0 || numSamples == 0)
             return;
 
-        if (currentParameters.analysisMode != ParamSpec::AnalysisMode::summed)
-            return;
-
-        // Only works with Summed for now, TODO for mid/side
-        updateSummedAnalysisInput(buffer);
-
         const auto blockDurationSeconds = static_cast<float>(numSamples) / static_cast<float>(currentSampleRate);
         const auto blockDurationMs = blockDurationSeconds * 1000.0f;
 
-        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
-            auto &band = bands[bandIndex];
-            float rmsLinear = 0.0f;
-            float peakLinear = 0.0f;
-
-            // Compute the filter, RMS (root mean sq vol) and peak for each band
-            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
-                // Will potentially need to be revised if this filter is good for our purposes
-                const auto filteredSample = band.filter.processSample(0, summedAnalysisInput[sampleIndex]);
-                rmsLinear = band.rmsEnvelope.processSample(0, filteredSample);
-                peakLinear = band.peakEnvelope.processSample(0, filteredSample);
-            }
-
-            // Convert to Db
-            const auto rmsDb = juce::Decibels::gainToDecibels(rmsLinear, floorDb);
-            const auto peakDb = juce::Decibels::gainToDecibels(peakLinear, floorDb);
-
-            band.smoothedRmsDb = rmsDb;
-            band.smoothedPeakDb = peakDb;
-
-            // Update hold if needed
-            if (currentParameters.showHold) {
-                if (band.smoothedPeakDb >= band.heldPeakDb) {
-                    // New peak, so pin the hold marker here and restart the timer
-                    band.heldPeakDb = band.smoothedPeakDb;
-                    band.holdTimeRemainingMs = currentParameters.holdMs;
-                } else if (band.holdTimeRemainingMs > 0.0f) {
-                    band.holdTimeRemainingMs = std::max(0.0f, band.holdTimeRemainingMs - blockDurationMs);
-                } else {
-                    // Once hold time is over, let it fall at a fixed dB/s rate
-                    band.heldPeakDb = std::max(band.smoothedPeakDb,
-                                               band.heldPeakDb - holdDecayDbPerSecond * blockDurationSeconds);
-                }
-            }
-
-            latestFrame.rmsDb[bandIndex] = currentParameters.showRms ? band.smoothedRmsDb : floorDb;
-            latestFrame.peakDb[bandIndex] = currentParameters.showPeak ? band.smoothedPeakDb : floorDb;
-            latestFrame.holdDb[bandIndex] = currentParameters.showHold ? band.heldPeakDb : floorDb;
+        switch (currentParameters.analysisMode) {
+            case ParamSpec::AnalysisMode::summed:
+                processSummedBlock(buffer, floorDb, blockDurationSeconds, blockDurationMs);
+                break;
+            case ParamSpec::AnalysisMode::midSide:
+                processMidSideBlock(buffer, floorDb, blockDurationSeconds, blockDurationMs);
+                break;
+            case ParamSpec::AnalysisMode::stereo:
+                processStereoBlock(buffer, floorDb, blockDurationSeconds, blockDurationMs);
+                break;
         }
     }
 
@@ -163,7 +129,7 @@ namespace Analyzer {
         juce::dsp::ProcessSpec processSpec{};
         processSpec.sampleRate = currentSampleRate;
         processSpec.maximumBlockSize = static_cast<juce::uint32>(currentMaximumBlockSize);
-        processSpec.numChannels = 1;
+        processSpec.numChannels = 2;
 
         for (auto &band: bands) {
             const auto bandwidth = std::max(band.info.highHz - band.info.lowHz, 1.0f);
@@ -196,12 +162,111 @@ namespace Analyzer {
         const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
         const auto *leftChannel = buffer.getReadPointer(0);
         const auto *rightChannel = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
+        summedAnalysisInput.resize(numSamples);
 
+        // Precompute the mono sum once so each band can reuse it
         for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
             const auto leftSample = leftChannel[sampleIndex];
             const auto rightSample = rightChannel != nullptr ? rightChannel[sampleIndex] : leftSample;
             summedAnalysisInput[sampleIndex] = 0.5f * (leftSample + rightSample);
         }
+    }
+
+    void Engine::processSummedBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                    float blockDurationSeconds, float blockDurationMs) {
+        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
+
+        updateSummedAnalysisInput(buffer);
+
+        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
+            auto &band = bands[bandIndex];
+            float rmsEnvelopeLinear = 0.0f;
+            float peakEnvelopeLinear = 0.0f;
+
+            // Compute the filter, RMS (root mean sq vol) and peak for each band
+            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
+                // Will potentially need to be revised if this filter is good for our purposes
+                const auto filteredSample = band.filter.processSample(0, summedAnalysisInput[sampleIndex]);
+                rmsEnvelopeLinear = band.rmsEnvelope.processSample(0, filteredSample);
+                peakEnvelopeLinear = band.peakEnvelope.processSample(0, filteredSample);
+            }
+
+            updateBandFrame(bandIndex, rmsEnvelopeLinear, peakEnvelopeLinear, floorDb, blockDurationSeconds,
+                            blockDurationMs);
+        }
+    }
+
+    void Engine::processStereoBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                    float blockDurationSeconds, float blockDurationMs) {
+        const auto numChannels = buffer.getNumChannels();
+        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
+        const auto *leftChannel = buffer.getReadPointer(0);
+        // If we only have 1 channel, this becomes the same as summed/mono
+        const auto *rightChannel = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
+
+        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
+            auto &band = bands[bandIndex];
+            float leftRmsEnvelopeLinear = 0.0f;
+            float rightRmsEnvelopeLinear = 0.0f;
+            float leftPeakEnvelopeLinear = 0.0f;
+            float rightPeakEnvelopeLinear = 0.0f;
+
+            // Process left and right independently and then merge
+            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
+                const auto leftSample = leftChannel[sampleIndex];
+                const auto rightSample = rightChannel != nullptr ? rightChannel[sampleIndex] : leftSample;
+
+                const auto leftFilteredSample = band.filter.processSample(0, leftSample);
+                const auto rightFilteredSample = band.filter.processSample(1, rightSample);
+
+                leftRmsEnvelopeLinear = band.rmsEnvelope.processSample(0, leftFilteredSample);
+                rightRmsEnvelopeLinear = band.rmsEnvelope.processSample(1, rightFilteredSample);
+                leftPeakEnvelopeLinear = band.peakEnvelope.processSample(0, leftFilteredSample);
+                rightPeakEnvelopeLinear = band.peakEnvelope.processSample(1, rightFilteredSample);
+            }
+
+            // Combine channel magnitudes after analysis so we keep stereo energy without phase cancellation
+            const auto rmsEnvelopeLinear = 0.5f * (leftRmsEnvelopeLinear + rightRmsEnvelopeLinear);
+            const auto peakEnvelopeLinear = 0.5f * (leftPeakEnvelopeLinear + rightPeakEnvelopeLinear);
+
+            updateBandFrame(bandIndex, rmsEnvelopeLinear, peakEnvelopeLinear, floorDb, blockDurationSeconds,
+                            blockDurationMs);
+        }
+    }
+
+    void Engine::processMidSideBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
+                                     float blockDurationSeconds, float blockDurationMs) {
+        juce::ignoreUnused(buffer, floorDb, blockDurationSeconds, blockDurationMs);
+
+        // TODO implement mid/side analysis path
+    }
+
+    void Engine::updateBandFrame(size_t bandIndex, float rmsLinear, float peakLinear, float floorDb,
+                                 float blockDurationSeconds, float blockDurationMs) {
+        auto &band = bands[bandIndex];
+
+        // Convert to dB before writing the frame
+        band.smoothedRmsDb = juce::Decibels::gainToDecibels(rmsLinear, floorDb);
+        band.smoothedPeakDb = juce::Decibels::gainToDecibels(peakLinear, floorDb);
+
+        // Update hold if needed
+        if (currentParameters.showHold) {
+            if (band.smoothedPeakDb >= band.heldPeakDb) {
+                // New peak, so pin the hold marker here and restart the timer
+                band.heldPeakDb = band.smoothedPeakDb;
+                band.holdTimeRemainingMs = currentParameters.holdMs;
+            } else if (band.holdTimeRemainingMs > 0.0f) {
+                band.holdTimeRemainingMs = std::max(0.0f, band.holdTimeRemainingMs - blockDurationMs);
+            } else {
+                // Once hold time is over, let it fall at a fixed dB/s rate
+                band.heldPeakDb = std::max(band.smoothedPeakDb,
+                                           band.heldPeakDb - holdDecayDbPerSecond * blockDurationSeconds);
+            }
+        }
+
+        latestFrame.rmsDb[bandIndex] = currentParameters.showRms ? band.smoothedRmsDb : floorDb;
+        latestFrame.peakDb[bandIndex] = currentParameters.showPeak ? band.smoothedPeakDb : floorDb;
+        latestFrame.holdDb[bandIndex] = currentParameters.showHold ? band.heldPeakDb : floorDb;
     }
 
     int Engine::getBandCount() const {
