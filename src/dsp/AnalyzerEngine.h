@@ -1,0 +1,13 @@
+//
+// Created by Lukáš Zima on 07.03.2026.
+//
+
+#ifndef BAND_SPECTRUM_ANALYZER_ANALYZERENGINE_H
+#define BAND_SPECTRUM_ANALYZER_ANALYZERENGINE_H
+
+
+class AnalyzerEngine {
+};
+
+
+#endif //BAND_SPECTRUM_ANALYZER_ANALYZERENGINE_H

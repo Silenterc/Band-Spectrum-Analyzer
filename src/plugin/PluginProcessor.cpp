@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
-#include "ParamSpec.h"
 #include "../ui/PluginEditor.h"
+
+#include <cmath>
 
 //==============================================================================
 SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
@@ -13,6 +14,7 @@ SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
 #endif
           // TODO: IMPLEMENT UNDO
       ), parameters(*this, nullptr, "SpecParams", createParameterLayout()) {
+    cacheParameterPointers();
 }
 
 SpectrumAnalyzerAudioProcessor::~SpectrumAnalyzerAudioProcessor() {
@@ -112,6 +114,10 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
                                                   juce::MidiBuffer &midiMessages) {
     juce::ignoreUnused(midiMessages);
 
+    const auto currentParams = readCurrentParameterState();
+
+    previousParameterState = currentParams;
+
     // Zeroes out really tiny floats (denormals)
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
@@ -160,6 +166,34 @@ void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int s
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
     juce::ignoreUnused(data, sizeInBytes);
+}
+
+void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
+    analysisModeParam = parameters.getRawParameterValue(ParamIDs::analysisMode);
+    bandModeParam = parameters.getRawParameterValue(ParamIDs::bandMode);
+
+    showRmsParam = parameters.getRawParameterValue(ParamIDs::showRms);
+    showPeakParam = parameters.getRawParameterValue(ParamIDs::showPeak);
+    showHoldParam = parameters.getRawParameterValue(ParamIDs::showHold);
+
+    holdMsParam = parameters.getRawParameterValue(ParamIDs::holdMs);
+    gridMinDbParam = parameters.getRawParameterValue(ParamIDs::gridMinDb);
+    gridMaxDbParam = parameters.getRawParameterValue(ParamIDs::gridMaxDb);
+    gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
+}
+
+SpectrumAnalyzerAudioProcessor::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
+    return {
+        .analysisMode = static_cast<ParamSpec::AnalysisMode>(static_cast<int>(analysisModeParam->load())),
+        .bandMode = static_cast<ParamSpec::BandMode>(static_cast<int>(bandModeParam->load())),
+        .showRms = showRmsParam->load() > 0.5f,
+        .showPeak = showPeakParam->load() > 0.5f,
+        .showHold = showHoldParam->load() > 0.5f,
+        .holdMs = holdMsParam->load(),
+        .gridMinDb = gridMinDbParam->load(),
+        .gridMaxDb = gridMaxDbParam->load(),
+        .gridStepDb = gridStepDbParam->load()
+    };
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcessor::createParameterLayout() {

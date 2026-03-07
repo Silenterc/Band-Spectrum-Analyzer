@@ -18,6 +18,7 @@ juce_add_plugin(${PROJECT_NAME}
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        dsp/AnalyzerEngine.cpp
         ui/PluginEditor.cpp
         plugin/PluginProcessor.cpp)
 
