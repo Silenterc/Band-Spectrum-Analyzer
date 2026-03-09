@@ -17,6 +17,12 @@ target_include_directories(band-spectrum-analyzer-tests
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src)
 
+target_compile_definitions(band-spectrum-analyzer-tests
+    PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0)
+
 target_link_libraries(band-spectrum-analyzer-tests
     PRIVATE
         Catch2::Catch2WithMain
