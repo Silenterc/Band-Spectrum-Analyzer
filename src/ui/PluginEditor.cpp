@@ -1,13 +1,11 @@
-#include "../plugin/PluginProcessor.h"
 #include "PluginEditor.h"
 
 //==============================================================================
-SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &p)
-    : AudioProcessorEditor(&p), processorRef(p) {
-    juce::ignoreUnused(processorRef);
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
-    setSize(400, 300);
+SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(juce::AudioProcessor &audioProcessor,
+                                                                           AnalyzerDataSource &analyzerDataSource)
+    : AudioProcessorEditor(&audioProcessor), analyzerComponent(analyzerDataSource) {
+    addAndMakeVisible(analyzerComponent);
+    setSize(920, 420);
 }
 
 SpectrumAnalyzerAudioProcessorEditor::~SpectrumAnalyzerAudioProcessorEditor() {
@@ -15,15 +13,9 @@ SpectrumAnalyzerAudioProcessorEditor::~SpectrumAnalyzerAudioProcessorEditor() {
 
 //==============================================================================
 void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-    g.setColour(juce::Colours::white);
-    g.setFont(15.0f);
-    g.drawFittedText("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    g.fillAll(juce::Colour::fromRGB(8, 9, 11));
 }
 
 void SpectrumAnalyzerAudioProcessorEditor::resized() {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    analyzerComponent.setBounds(getLocalBounds().reduced(18));
 }

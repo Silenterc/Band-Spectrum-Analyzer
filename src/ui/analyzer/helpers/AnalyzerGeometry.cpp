@@ -1,0 +1,98 @@
+#include "AnalyzerGeometry.h"
+
+#include <cmath>
+
+namespace {
+    constexpr float leftMargin = 56.0f;
+    constexpr float rightMargin = 16.0f;
+    constexpr float topMargin = 16.0f;
+    constexpr float bottomMargin = 34.0f;
+    constexpr float tooltipWidth = 132.0f;
+    constexpr float tooltipHeight = 62.0f;
+}
+
+juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<float> &localBounds) const {
+    auto bounds = localBounds;
+    bounds.removeFromTop(topMargin);
+    bounds.removeFromLeft(leftMargin);
+    bounds.removeFromRight(rightMargin);
+    bounds.removeFromBottom(bottomMargin);
+    return bounds;
+}
+
+float AnalyzerGeometry::xForFrequency(float frequencyHz, const std::vector<Analyzer::BandInfo> &bandInfo,
+                                      const juce::Rectangle<float> &plotBounds) const {
+    if (bandInfo.empty())
+        return plotBounds.getX();
+
+    const auto minFrequencyHz = bandInfo.front().lowHz;
+    const auto maxFrequencyHz = bandInfo.back().highHz;
+    // We draw frequency on a log axis, so we convert Hz -> log10(Hz) before mapping to pixels
+    const auto logMin = std::log10(minFrequencyHz);
+    const auto logMax = std::log10(maxFrequencyHz);
+    const auto logFrequency = std::log10(juce::jlimit(minFrequencyHz, maxFrequencyHz, frequencyHz));
+    const auto normalised = (logFrequency - logMin) / (logMax - logMin);
+    return plotBounds.getX() + normalised * plotBounds.getWidth();
+}
+
+float AnalyzerGeometry::frequencyForX(float x, const std::vector<Analyzer::BandInfo> &bandInfo,
+                                      const juce::Rectangle<float> &plotBounds) const {
+    if (bandInfo.empty())
+        return 0.0f;
+
+    const auto minFrequencyHz = bandInfo.front().lowHz;
+    const auto maxFrequencyHz = bandInfo.back().highHz;
+    const auto width = std::max(plotBounds.getWidth(), 1.0f);
+    const auto normalised = juce::jlimit(0.0f, 1.0f, (x - plotBounds.getX()) / width);
+    // This is the inverse of xForFrequency: pixel -> normalised -> log10(Hz) -> Hz
+    const auto logMin = std::log10(minFrequencyHz);
+    const auto logMax = std::log10(maxFrequencyHz);
+    const auto logFrequency = juce::jmap(normalised, logMin, logMax);
+    return std::pow(10.0f, logFrequency);
+}
+
+float AnalyzerGeometry::yForDb(float decibels, float minDb, float maxDb,
+                               const juce::Rectangle<float> &plotBounds) const {
+    const auto clampedDb = juce::jlimit(minDb, maxDb, decibels);
+    const auto normalised = juce::jmap(clampedDb, minDb, maxDb, 0.0f, 1.0f);
+    return plotBounds.getBottom() - normalised * plotBounds.getHeight();
+}
+
+int AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
+                                  const juce::Rectangle<float> &plotBounds) const {
+    if (bandCount == 0 || !plotBounds.contains(position))
+        return -1;
+
+    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
+    const auto bandIndex = static_cast<int>((position.x - plotBounds.getX()) / bandWidth);
+    return juce::jlimit(0, static_cast<int>(bandCount) - 1, bandIndex);
+}
+
+juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t bandCount, float displayedDb, float minDb,
+                                                      float maxDb, const juce::Rectangle<float> &plotBounds) const {
+    if (bandCount == 0)
+        return {};
+
+    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
+    const auto x = plotBounds.getX() + static_cast<float>(bandIndex) * bandWidth;
+    const auto y = yForDb(displayedDb, minDb, maxDb, plotBounds);
+    return {x + 1.0f, y, bandWidth - 2.0f, plotBounds.getBottom() - y};
+}
+
+juce::Rectangle<float> AnalyzerGeometry::getTooltipBounds(juce::Point<float> hoverPosition,
+                                                          const juce::Rectangle<float> &plotBounds,
+                                                          const juce::Rectangle<float> &localBounds) const {
+    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + 12.0f, hoverPosition.y - tooltipHeight * 0.5f,
+                                                tooltipWidth, tooltipHeight);
+
+    if (tooltipBounds.getRight() > localBounds.getRight() - 8.0f)
+        tooltipBounds.setX(hoverPosition.x - tooltipWidth - 12.0f);
+
+    if (tooltipBounds.getY() < plotBounds.getY())
+        tooltipBounds.setY(plotBounds.getY());
+
+    if (tooltipBounds.getBottom() > localBounds.getBottom() - 8.0f)
+        tooltipBounds.setY(localBounds.getBottom() - tooltipHeight - 8.0f);
+
+    return tooltipBounds;
+}

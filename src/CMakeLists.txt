@@ -19,6 +19,12 @@ juce_add_plugin(${PROJECT_NAME}
 target_sources(${PROJECT_NAME}
     PRIVATE
         dsp/AnalyzerEngine.cpp
+        ui/analyzer/AnalyzerComponent.cpp
+        ui/analyzer/helpers/AnalyzerGeometry.cpp
+        ui/analyzer/helpers/AnalyzerHoverModel.cpp
+        ui/analyzer/helpers/AnalyzerViewModel.cpp
+        ui/analyzer/helpers/FrequencyFormatter.cpp
+        ui/analyzer/helpers/MusicTheory.cpp
         ui/PluginEditor.cpp
         plugin/PluginProcessor.cpp)
 
