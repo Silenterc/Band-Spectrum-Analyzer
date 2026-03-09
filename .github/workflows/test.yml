@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (ubuntu-latest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lukka/get-cmake@latest
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libjack-jackd2-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure
+        run: >
+          cmake -S . -B build-test
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build tests
+        run: >
+          cmake --build build-test
+          --config Debug
+          --target band-spectrum-analyzer-tests
+
+      - name: Run tests
+        run: ./build-test/tests/band-spectrum-analyzer-tests

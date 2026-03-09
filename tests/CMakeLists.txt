@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.24)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -23,7 +25,3 @@ target_link_libraries(band-spectrum-analyzer-tests
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
-
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-include(Catch)
-catch_discover_tests(band-spectrum-analyzer-tests)
