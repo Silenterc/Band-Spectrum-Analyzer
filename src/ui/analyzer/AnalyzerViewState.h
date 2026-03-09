@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "../../dsp/AnalyzerData.h"
+#include "../../dsp/AnalyzerConstants.h"
 
 /**
  * UI-only state that controls how analyzer data is presented
@@ -11,9 +12,9 @@ struct AnalyzerViewState {
     // Whether the frequency range is zoomed away from the full analyzer range
     bool useCustomFrequencyRange = false;
     // Visible minimum frequency in Hz when zoom is enabled
-    float visibleMinFrequencyHz = 20.0f;
+    float visibleMinFrequencyHz = Analyzer::Constants::defaultVisibleMinFrequencyHz;
     // Visible maximum frequency in Hz when zoom is enabled
-    float visibleMaxFrequencyHz = 20000.0f;
+    float visibleMaxFrequencyHz = Analyzer::Constants::defaultVisibleMaxFrequencyHz;
     // Which traces are enabled for drawing
     std::vector<Analyzer::TraceKind> enabledTraces;
 };

@@ -11,7 +11,8 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
-    ../src/dsp/AnalyzerEngine.cpp)
+    ../src/dsp/AnalyzerEngine.cpp
+    ../src/ui/analyzer/helpers/AnalyzerMeter.cpp)
 
 target_include_directories(band-spectrum-analyzer-tests
     PRIVATE

@@ -6,7 +6,9 @@
 
 #include "../AnalyzerDataSource.h"
 #include "../UiTheme.h"
+#include "AnalyzerRenderData.h"
 #include "AnalyzerViewState.h"
+#include "helpers/AnalyzerMeter.h"
 #include "helpers/AnalyzerViewModel.h"
 
 /**
@@ -55,12 +57,18 @@ private:
     AnalyzerDataSource &dataSource;
     // Shared UI theme
     const Ui::Theme &theme;
-    // Latest published analyzer snapshot from the processor
-    Analyzer::CompositeSnapshot snapshot;
+    // Latest published raw analyzer snapshot from the processor
+    Analyzer::RawSnapshot snapshot;
+    // Display-rate meter processor
+    AnalyzerMeter displayMeter;
+    // Latest meter-processed data
+    Analyzer::RenderData renderData;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
     // UI-only presentation state such as visible trace set and zoom
     AnalyzerViewState viewState;
     // Raw mouse position used by the hover model
     std::optional<juce::Point<float>> hoverPosition;
+    // Last timer timestamp used to compute dt
+    double lastPollTimeMs = 0.0;
 };

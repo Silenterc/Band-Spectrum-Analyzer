@@ -16,25 +16,15 @@ namespace Analyzer {
     };
 
     /**
-     * Latest analyzer output for all bands in one engine
+     * Raw audio-rate measurement for one band over the latest engine window
      */
-    struct Frame {
-        // RMS level per band in dB
-        std::vector<float> rmsDb;
-        // Peak level per band in dB
-        std::vector<float> peakDb;
-        // Peak hold level per band in dB
-        std::vector<float> holdDb;
-    };
-
-    /**
-     * Published analyzer state for one engine
-     */
-    struct EngineSnapshot {
-        // Band layout that matches the current frame
-        std::vector<BandInfo> bandInfo;
-        // Latest analyzer values
-        Frame frame;
+    struct BandMeasurements {
+        // Maximum observed power y*y
+        float peakPower = 0.0f;
+        // Sum of power samples y*y used for mean-power calculation
+        double sumPower = 0.0;
+        // Number of samples that contributed to the sum
+        int numSamples = 0;
     };
 
     /**
@@ -49,22 +39,22 @@ namespace Analyzer {
     };
 
     /**
-     * One analyzer trace inside the composed UI snapshot
+     * One raw analyzer trace before display-rate metering
      */
-    struct TraceSnapshot {
+    struct RawTrace {
         // Identity of this trace
         TraceKind kind = TraceKind::input;
-        // Analyzer values for this trace
-        Frame frame;
+        // Raw per-band measurements
+        std::vector<BandMeasurements> measurements;
     };
 
     /**
-     * UI-facing analyzer state composed from one or more engines
+     * Raw analyzer data published by the DSP side
      */
-    struct CompositeSnapshot {
-        // Shared band layout used by all visible traces
+    struct RawSnapshot {
+        // Shared band layout used by all traces
         std::vector<BandInfo> bandInfo;
-        // All currently published traces for the UI
-        std::vector<TraceSnapshot> traces;
+        // Raw traces for this snapshot
+        std::vector<RawTrace> traces;
     };
 }

@@ -6,7 +6,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../dsp/AnalyzerData.h"
+#include "../../../dsp/AnalyzerConstants.h"
 #include "../AnalyzerViewState.h"
+#include "../AnalyzerRenderData.h"
 #include "AnalyzerGeometry.h"
 #include "AnalyzerHoverModel.h"
 #include "FrequencyFormatter.h"
@@ -59,16 +61,16 @@ struct AnalyzerTraceVisual {
 };
 
 /**
- * Builds draw-ready analyzer UI state from the latest composite snapshot
+ * Builds draw-ready analyzer UI state from the latest meter data
  */
 class AnalyzerViewModel final {
 public:
     AnalyzerViewModel();
 
     /**
-     * Rebuilds the view model from the latest analyzer snapshot and view state
+     * Rebuilds the view model from the latest meter data and view state
      */
-    void update(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+    void update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
                 float gridMinDb, float gridMaxDb, float gridStepDb,
                 const juce::Rectangle<float> &localBounds,
                 const std::optional<juce::Point<float>> &hoverPosition);
@@ -105,15 +107,15 @@ public:
 
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
-    void updateTraceVisuals(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+    void updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
                             float gridMinDb, float gridMaxDb,
                             const std::optional<juce::Point<float>> &hoverPosition);
-    std::optional<Analyzer::TraceSnapshot> getPrimaryVisibleTrace(const Analyzer::CompositeSnapshot &snapshot,
-                                                                  const AnalyzerViewState &viewState) const;
+    std::optional<Analyzer::RenderTrace> getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
+                                                                const AnalyzerViewState &viewState) const;
     bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
-    static float getRmsDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
-    static float getPeakDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
-    void updateVisibleFrequencyRange(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState);
+    static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
+    static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
+    void updateVisibleFrequencyRange(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState);
 
     AnalyzerGeometry geometry;
     FrequencyFormatter formatter;
@@ -126,6 +128,6 @@ private:
     std::vector<AnalyzerTraceVisual> traceVisuals;
     std::optional<AnalyzerHoverInfo> hoverInfo;
     float currentGridMinDb = 0.0f;
-    float visibleMinFrequencyHz = 20.0f;
-    float visibleMaxFrequencyHz = 20000.0f;
+    float visibleMinFrequencyHz = Analyzer::Constants::defaultVisibleMinFrequencyHz;
+    float visibleMaxFrequencyHz = Analyzer::Constants::defaultVisibleMaxFrequencyHz;
 };

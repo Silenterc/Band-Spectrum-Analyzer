@@ -1,27 +1,26 @@
 #include "AnalyzerViewModel.h"
 
 #include <algorithm>
-#include <array>
 
 AnalyzerViewModel::AnalyzerViewModel()
     : hoverModel(geometry, formatter, musicTheory) {
 }
 
-void AnalyzerViewModel::update(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
                                float gridMinDb, float gridMaxDb, float gridStepDb,
                                const juce::Rectangle<float> &localBounds,
                                const std::optional<juce::Point<float>> &hoverPositionToUse) {
     currentGridMinDb = gridMinDb;
     plotBounds = geometry.getPlotBounds(localBounds);
-    updateVisibleFrequencyRange(snapshot, viewState);
+    updateVisibleFrequencyRange(renderData, viewState);
     updateGrid(gridMinDb, gridMaxDb, gridStepDb);
-    updateTraceVisuals(snapshot, viewState, gridMinDb, gridMaxDb, hoverPositionToUse);
+    updateTraceVisuals(renderData, viewState, gridMinDb, gridMaxDb, hoverPositionToUse);
 
     if (hoverPositionToUse.has_value()) {
-        const auto primaryTrace = getPrimaryVisibleTrace(snapshot, viewState);
+        const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState);
 
         if (primaryTrace.has_value()) {
-            hoverInfo = hoverModel.build(localBounds, plotBounds, snapshot.bandInfo, primaryTrace->frame, gridMinDb,
+            hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame, gridMinDb,
                                          visibleMinFrequencyHz, visibleMaxFrequencyHz, *hoverPositionToUse);
         } else {
             hoverInfo.reset();
@@ -66,11 +65,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
         gridLines.push_back(gridLine);
     }
 
-    static constexpr std::array<float, 10> frequencyLabelsHz{
-        20.0f, 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f, 20000.0f
-    };
-
-    for (auto frequencyHz: frequencyLabelsHz) {
+    for (auto frequencyHz: Analyzer::Constants::frequencyScaleLabelsHz) {
         AnalyzerFrequencyMarker frequencyMarker;
         frequencyMarker.x = geometry.xForFrequency(frequencyHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
         frequencyMarker.label = formatter.formatScaleFrequency(frequencyHz);
@@ -78,28 +73,28 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     }
 }
 
-void AnalyzerViewModel::updateTraceVisuals(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
                                            float gridMinDb, float gridMaxDb,
                                            const std::optional<juce::Point<float>> &hoverPositionToUse) {
     traceVisuals.clear();
 
     const auto hoveredBandIndex = hoverPositionToUse.has_value()
-                                      ? geometry.bandIndexAt(*hoverPositionToUse, snapshot.bandInfo.size(), plotBounds)
+                                      ? geometry.bandIndexAt(*hoverPositionToUse, renderData.bandInfo.size(), plotBounds)
                                       : -1;
 
-    for (const auto &trace: snapshot.traces) {
+    for (const auto &trace: renderData.traces) {
         if (!isTraceEnabled(trace.kind, viewState))
             continue;
 
         AnalyzerTraceVisual traceVisual;
         traceVisual.kind = trace.kind;
-        traceVisual.bars.resize(snapshot.bandInfo.size());
+        traceVisual.bars.resize(renderData.bandInfo.size());
 
-        for (size_t bandIndex = 0; bandIndex < snapshot.bandInfo.size(); ++bandIndex) {
+        for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
             AnalyzerBarModel barModel;
             barModel.rmsDb = getRmsDb(bandIndex, trace.frame, gridMinDb);
             barModel.peakDb = getPeakDb(bandIndex, trace.frame, gridMinDb);
-            barModel.rmsBounds = geometry.getBarBounds(bandIndex, snapshot.bandInfo.size(), barModel.rmsDb, gridMinDb,
+            barModel.rmsBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.rmsDb, gridMinDb,
                                                        gridMaxDb, plotBounds);
             barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.isHovered = hoveredBandIndex == static_cast<int>(bandIndex);
@@ -110,9 +105,9 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::CompositeSnapshot &sn
     }
 }
 
-std::optional<Analyzer::TraceSnapshot> AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::CompositeSnapshot &snapshot,
-                                                                                 const AnalyzerViewState &viewState) const {
-    for (const auto &trace: snapshot.traces) {
+std::optional<Analyzer::RenderTrace> AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
+                                                                               const AnalyzerViewState &viewState) const {
+    for (const auto &trace: renderData.traces) {
         if (isTraceEnabled(trace.kind, viewState))
             return trace;
     }
@@ -127,30 +122,30 @@ bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerV
     return std::find(viewState.enabledTraces.begin(), viewState.enabledTraces.end(), kind) != viewState.enabledTraces.end();
 }
 
-float AnalyzerViewModel::getRmsDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
-    if (bandIndex >= latestFrame.rmsDb.size())
+float AnalyzerViewModel::getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.rmsDb.size())
         return gridMinDb;
 
-    return latestFrame.rmsDb[bandIndex];
+    return renderFrame.rmsDb[bandIndex];
 }
 
-float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
-    if (bandIndex >= latestFrame.peakDb.size())
+float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.peakDb.size())
         return gridMinDb;
 
-    return latestFrame.peakDb[bandIndex];
+    return renderFrame.peakDb[bandIndex];
 }
 
-void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::CompositeSnapshot &snapshot,
+void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &renderData,
                                                     const AnalyzerViewState &viewState) {
-    if (snapshot.bandInfo.empty()) {
-        visibleMinFrequencyHz = 20.0f;
-        visibleMaxFrequencyHz = 20000.0f;
+    if (renderData.bandInfo.empty()) {
+        visibleMinFrequencyHz = Analyzer::Constants::defaultVisibleMinFrequencyHz;
+        visibleMaxFrequencyHz = Analyzer::Constants::defaultVisibleMaxFrequencyHz;
         return;
     }
 
-    const auto fullMinFrequencyHz = snapshot.bandInfo.front().lowHz;
-    const auto fullMaxFrequencyHz = snapshot.bandInfo.back().highHz;
+    const auto fullMinFrequencyHz = renderData.bandInfo.front().lowHz;
+    const auto fullMaxFrequencyHz = renderData.bandInfo.back().highHz;
 
     if (!viewState.useCustomFrequencyRange) {
         visibleMinFrequencyHz = fullMinFrequencyHz;

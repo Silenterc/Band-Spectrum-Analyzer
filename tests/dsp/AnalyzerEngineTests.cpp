@@ -5,6 +5,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dsp/AnalyzerEngine.h"
+#include "dsp/AnalyzerConstants.h"
+#include "ui/analyzer/helpers/AnalyzerMeter.h"
 
 namespace {
     constexpr double sampleRate = 48000.0;
@@ -31,6 +33,15 @@ namespace {
         parameters.gridMaxDb = ParamSpec::defaultGridMaxDb;
         parameters.gridStepDb = ParamSpec::defaultGridStepDb;
         return parameters;
+    }
+
+    Analyzer::MeterSettings makeMeterSettings(const Analyzer::ParameterState &parameters) {
+        Analyzer::MeterSettings meterSettings;
+        meterSettings.showRms = parameters.showRms;
+        meterSettings.showPeak = parameters.showPeak;
+        meterSettings.showHold = parameters.showHold;
+        meterSettings.holdMs = parameters.holdMs;
+        return meterSettings;
     }
 
     void prepareEngine(Analyzer::Engine &engine, const Analyzer::ParameterState &parameters) {
@@ -107,37 +118,47 @@ namespace {
         return static_cast<int>(std::distance(bandInfo.begin(), nearest));
     }
 
-    void requireStrongestBandNearFrequency(const Analyzer::Engine &engine, float frequencyHz, float floorDb) {
-        const auto snapshot = engine.getSnapshot();
-        const auto &bandInfo = snapshot.bandInfo;
-        const auto &frame = snapshot.frame;
+    Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
+                                        const Analyzer::ParameterState &parameters,
+                                        float dtSeconds = Analyzer::Constants::meterPollIntervalSeconds) {
+        displayMeter.tick(engine.getSnapshot(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
+        return displayMeter.getRenderData();
+    }
+
+    void requireStrongestBandNearFrequency(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
+                                           const Analyzer::ParameterState &parameters, float frequencyHz) {
+        const auto meterData = buildMeterData(displayMeter, engine, parameters);
+        const auto &bandInfo = meterData.bandInfo;
+        const auto &frame = meterData.traces.front().frame;
         const auto strongestBandIndex = getStrongestBandIndex(frame.peakDb);
         const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
 
         REQUIRE(strongestBandIndex >= 0);
         REQUIRE(strongestBandIndex < static_cast<int>(bandInfo.size()));
         // Assert that it is at least a little loud
-        REQUIRE(frame.peakDb[static_cast<size_t>(strongestBandIndex)] > floorDb + 1.0f);
+        REQUIRE(frame.peakDb[static_cast<size_t>(strongestBandIndex)] > parameters.gridMinDb + 1.0f);
         // Assert on band location instead of exact dB because filter gain and meter ballistics are still moving
         REQUIRE(std::abs(strongestBandIndex - nearestBandIndex) <= 2);
     }
 
-    void requireHeldPeakStaysPinnedForOneSilentBlock(Analyzer::Engine &engine, int channels, float frequencyHz,
-                                                     float floorDb) {
-        const auto snapshotBeforeSilence = engine.getSnapshot();
-        const auto &bandInfo = snapshotBeforeSilence.bandInfo;
-        const auto &heldFrameBeforeSilence = snapshotBeforeSilence.frame;
+    void requireHeldPeakStaysPinnedForOneSilentBlock(AnalyzerMeter &displayMeter, Analyzer::Engine &engine,
+                                                     const Analyzer::ParameterState &parameters, int channels,
+                                                     float frequencyHz) {
+        const auto meterDataBeforeSilence = buildMeterData(displayMeter, engine, parameters);
+        const auto &bandInfo = meterDataBeforeSilence.bandInfo;
+        const auto &heldFrameBeforeSilence = meterDataBeforeSilence.traces.front().frame;
         const auto strongestHoldBandIndex = getStrongestBandIndex(heldFrameBeforeSilence.holdDb);
         const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
         const auto heldPeakBeforeSilence = heldFrameBeforeSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)];
 
         REQUIRE(std::abs(strongestHoldBandIndex - nearestBandIndex) <= 2);
-        REQUIRE(heldPeakBeforeSilence > floorDb + 1.0f);
+        REQUIRE(heldPeakBeforeSilence > parameters.gridMinDb + 1.0f);
 
         processSilenceBlocks(engine, channels, 1);
 
-        const auto heldSnapshotAfterSilence = engine.getSnapshot();
-        const auto &heldFrameAfterSilence = heldSnapshotAfterSilence.frame;
+        const auto meterDataAfterSilence = buildMeterData(displayMeter, engine, parameters,
+                                                              static_cast<float>(blockSize) / static_cast<float>(sampleRate));
+        const auto &heldFrameAfterSilence = meterDataAfterSilence.traces.front().frame;
         constexpr float tolerance = 0.0001f;
         REQUIRE(std::abs(heldFrameAfterSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)] - heldPeakBeforeSilence) < tolerance);
     }
@@ -145,16 +166,17 @@ namespace {
 
 TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.bandMode = ParamSpec::BandMode::bands60;
 
     prepareEngine(engine, parameters);
 
-    const auto snapshot = engine.getSnapshot();
-    REQUIRE(snapshot.bandInfo.size() == 60);
-    REQUIRE(snapshot.frame.rmsDb.size() == 60);
-    REQUIRE(snapshot.frame.peakDb.size() == 60);
-    REQUIRE(snapshot.frame.holdDb.size() == 60);
+    const auto meterData = buildMeterData(displayMeter, engine, parameters);
+    REQUIRE(meterData.bandInfo.size() == 60);
+    REQUIRE(meterData.traces.front().frame.rmsDb.size() == 60);
+    REQUIRE(meterData.traces.front().frame.peakDb.size() == 60);
+    REQUIRE(meterData.traces.front().frame.holdDb.size() == 60);
 }
 
 TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
@@ -190,13 +212,14 @@ TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
 
 TEST_CASE("AnalyzerEngine silence stays at the configured floor") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     const auto parameters = makeDefaultParameters();
     prepareEngine(engine, parameters);
 
     processSilenceBlocks(engine, 2, settleBlocks);
 
-    const auto snapshot = engine.getSnapshot();
-    const auto &frame = snapshot.frame;
+    const auto meterData = buildMeterData(displayMeter, engine, parameters);
+    const auto &frame = meterData.traces.front().frame;
     constexpr float tolerance = 0.001f;
 
     for (auto peakDb: frame.peakDb)
@@ -208,36 +231,39 @@ TEST_CASE("AnalyzerEngine silence stays at the configured floor") {
 
 TEST_CASE("AnalyzerEngine summed mode tracks a low sine wave") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
-    requireStrongestBandNearFrequency(engine, lowSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 }
 
 TEST_CASE("AnalyzerEngine summed mode tracks a high sine wave") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
-    requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }
 
 TEST_CASE("AnalyzerEngine summed mode cancels opposite-phase stereo content") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
 
-    const auto snapshot = engine.getSnapshot();
-    const auto &frame = snapshot.frame;
+    const auto meterData = buildMeterData(displayMeter, engine, parameters);
+    const auto &frame = meterData.traces.front().frame;
     constexpr float tolerance = 0.001f;
 
     for (auto peakDb: frame.peakDb)
@@ -249,39 +275,43 @@ TEST_CASE("AnalyzerEngine summed mode cancels opposite-phase stereo content") {
 
 TEST_CASE("AnalyzerEngine stereo mode keeps low opposite-phase stereo content") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
 
-    requireStrongestBandNearFrequency(engine, lowSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 }
 
 TEST_CASE("AnalyzerEngine stereo mode keeps high opposite-phase stereo content") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
 
-    requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }
 
 TEST_CASE("AnalyzerEngine stereo mode still works with mono input") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
-    requireStrongestBandNearFrequency(engine, lowSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 }
 
 TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
     parameters.showHold = true;
@@ -289,11 +319,12 @@ TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
-    requireHeldPeakStaysPinnedForOneSilentBlock(engine, 1, lowSineHz, parameters.gridMinDb);
+    requireHeldPeakStaysPinnedForOneSilentBlock(displayMeter, engine, parameters, 1, lowSineHz);
 }
 
 TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
     parameters.showHold = true;
@@ -301,11 +332,12 @@ TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
-    requireHeldPeakStaysPinnedForOneSilentBlock(engine, 1, highSineHz, parameters.gridMinDb);
+    requireHeldPeakStaysPinnedForOneSilentBlock(displayMeter, engine, parameters, 1, highSineHz);
 }
 
 TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfiguration") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
     parameters.bandMode = ParamSpec::BandMode::bands30;
@@ -313,20 +345,21 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
-    requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 
     parameters.bandMode = ParamSpec::BandMode::bands60;
     engine.setParameters(parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
-    const auto reconfiguredSnapshot = engine.getSnapshot();
+    const auto reconfiguredSnapshot = buildMeterData(displayMeter, engine, parameters);
     REQUIRE(reconfiguredSnapshot.bandInfo.size() == 60);
-    REQUIRE(reconfiguredSnapshot.frame.peakDb.size() == 60);
-    requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
+    REQUIRE(reconfiguredSnapshot.traces.front().frame.peakDb.size() == 60);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }
 
 TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     parameters.analysisMode = ParamSpec::AnalysisMode::summed;
     parameters.bandMode = ParamSpec::BandMode::bands30;
@@ -334,9 +367,9 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
-    const auto initialSnapshot = engine.getSnapshot();
+    const auto initialSnapshot = buildMeterData(displayMeter, engine, parameters);
     REQUIRE(initialSnapshot.bandInfo.size() == 30);
-    requireStrongestBandNearFrequency(engine, lowSineHz, parameters.gridMinDb);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 
     parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
     parameters.bandMode = ParamSpec::BandMode::bands60;
@@ -344,8 +377,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
 
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
 
-    const auto updatedSnapshot = engine.getSnapshot();
+    const auto updatedSnapshot = buildMeterData(displayMeter, engine, parameters);
     REQUIRE(updatedSnapshot.bandInfo.size() == 60);
-    REQUIRE(updatedSnapshot.frame.peakDb.size() == 60);
-    requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
+    REQUIRE(updatedSnapshot.traces.front().frame.peakDb.size() == 60);
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }

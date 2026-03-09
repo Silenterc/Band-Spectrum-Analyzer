@@ -21,6 +21,7 @@ target_sources(${PROJECT_NAME}
         dsp/AnalyzerEngine.cpp
         ui/UiTheme.cpp
         ui/analyzer/AnalyzerComponent.cpp
+        ui/analyzer/helpers/AnalyzerMeter.cpp
         ui/analyzer/helpers/AnalyzerGeometry.cpp
         ui/analyzer/helpers/AnalyzerHoverModel.cpp
         ui/analyzer/helpers/AnalyzerViewModel.cpp

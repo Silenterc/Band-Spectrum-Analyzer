@@ -39,7 +39,7 @@ namespace Analyzer {
         /**
          * Returns a stable published snapshot for one engine
          */
-        EngineSnapshot getSnapshot() const;
+        RawSnapshot getSnapshot() const;
 
     private:
         /**
@@ -50,18 +50,6 @@ namespace Analyzer {
             BandInfo info;
             // Bandpass filter
             juce::dsp::StateVariableTPTFilter<float> filter;
-            // RMS envelope follower for this band
-            juce::dsp::BallisticsFilter<float> rmsEnvelope;
-            // Peak envelope follower for this band
-            juce::dsp::BallisticsFilter<float> peakEnvelope;
-            // Latest RMS level in dB
-            float smoothedRmsDb = ParamSpec::defaultGridMinDb;
-            // Latest peak level in dB
-            float smoothedPeakDb = ParamSpec::defaultGridMinDb;
-            // Held peak marker value in dB
-            float heldPeakDb = ParamSpec::defaultGridMinDb;
-            // How much hold time is still left before the marker starts falling
-            float holdTimeRemainingMs = 0.0f;
         };
 
         /**
@@ -82,26 +70,22 @@ namespace Analyzer {
         /**
          * Runs the summed mono analysis path for one block
          */
-        void processSummedBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
-                                float blockDurationSeconds, float blockDurationMs);
+        void processSummedBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
          * Runs the "stereo" analysis path by processing L and R separately
          */
-        void processStereoBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
-                                float blockDurationSeconds, float blockDurationMs);
+        void processStereoBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
          * Placeholder for the future mid/side analysis path
          */
-        void processMidSideBlock(const juce::AudioBuffer<float> &buffer, float floorDb,
-                                 float blockDurationSeconds, float blockDurationMs);
+        void processMidSideBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
-         * Applies common dB conversion, hold logic, and frame updates for one band
+         * Clears the current raw measurements before processing a new block
          */
-        void updateBandFrame(size_t bandIndex, float rmsLinear, float peakLinear, float floorDb,
-                             float blockDurationSeconds, float blockDurationMs);
+        void clearMeasurements();
 
         /**
          * Publishes the latest frame and band layout without locking
@@ -129,9 +113,9 @@ namespace Analyzer {
         std::vector<BandInfo> bandInfo;
         // Per-band filters and meter state
         std::vector<BandState> bands;
-        // Latest frame exposed to the UI
-        Frame latestFrame;
+        // Latest raw measurements exposed to the UI
+        std::vector<BandMeasurements> latestMeasurements;
         // Published analyzer snapshots for the UI, 1 W x 1 R threads
-        mutable TripleBuffer<EngineSnapshot> snapshots;
+        mutable TripleBuffer<RawSnapshot> snapshots;
     };
 }

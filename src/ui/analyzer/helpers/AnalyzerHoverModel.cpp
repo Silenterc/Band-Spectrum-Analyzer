@@ -11,7 +11,7 @@ AnalyzerHoverModel::AnalyzerHoverModel(const AnalyzerGeometry &geometryToUse, co
 std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle<float> &localBounds,
                                                            const juce::Rectangle<float> &plotBounds,
                                                            const std::vector<Analyzer::BandInfo> &bandInfo,
-                                                           const Analyzer::Frame &latestFrame, float gridMinDb,
+                                                           const Analyzer::RenderFrame &renderFrame, float gridMinDb,
                                                            float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                            juce::Point<float> hoverPosition) const {
     const auto bandIndex = geometry.bandIndexAt(hoverPosition, bandInfo.size(), plotBounds);
@@ -25,15 +25,15 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
     AnalyzerHoverInfo hoverInfo;
     hoverInfo.bounds = geometry.getTooltipBounds(hoverPosition, plotBounds, localBounds);
     hoverInfo.bandIndex = bandIndex;
-    hoverInfo.levelText = formatter.formatDecibels(getDisplayedLevelDb(static_cast<size_t>(bandIndex), latestFrame, gridMinDb));
+    hoverInfo.levelText = formatter.formatDecibels(getDisplayedLevelDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
     hoverInfo.frequencyText = formatter.formatHoverFrequency(hoveredFrequencyHz);
     hoverInfo.noteText = musicTheory.getNearestNoteName(hoveredFrequencyHz);
     return hoverInfo;
 }
 
-float AnalyzerHoverModel::getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
-    if (bandIndex >= latestFrame.peakDb.size() || bandIndex >= latestFrame.rmsDb.size())
+float AnalyzerHoverModel::getDisplayedLevelDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.peakDb.size() || bandIndex >= renderFrame.rmsDb.size())
         return gridMinDb;
 
-    return std::max(latestFrame.peakDb[bandIndex], latestFrame.rmsDb[bandIndex]);
+    return std::max(renderFrame.peakDb[bandIndex], renderFrame.rmsDb[bandIndex]);
 }

@@ -69,7 +69,8 @@ public:
         return parameters;
     }
 
-    Analyzer::CompositeSnapshot getSnapshot() const override;
+    Analyzer::RawSnapshot getSnapshot() const override;
+    Analyzer::MeterSettings getMeterSettings() const override;
 
     float getGridMinDb() const override;
 

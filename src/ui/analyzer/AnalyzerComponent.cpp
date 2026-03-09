@@ -1,10 +1,14 @@
 #include "AnalyzerComponent.h"
+#include "../../dsp/AnalyzerConstants.h"
 
 AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
     : dataSource(source), theme(themeToUse) {
     snapshot = dataSource.getSnapshot();
+    displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), Analyzer::Constants::meterPollIntervalSeconds);
+    renderData = displayMeter.getRenderData();
+    lastPollTimeMs = juce::Time::getMillisecondCounterHiRes();
     rebuildViewModel();
-    startTimerHz(30);
+    startTimer(Analyzer::Constants::meterPollIntervalMs);
 }
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
@@ -114,12 +118,18 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::rebuildViewModel() {
-    viewModel.update(snapshot, viewState, dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
+    viewModel.update(renderData, viewState, dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
                      getLocalBounds().toFloat(), hoverPosition);
 }
 
 void AnalyzerComponent::timerCallback() {
+    const auto currentPollTimeMs = juce::Time::getMillisecondCounterHiRes();
+    const auto dtSeconds = static_cast<float>((currentPollTimeMs - lastPollTimeMs) * 0.001);
+    lastPollTimeMs = currentPollTimeMs;
+
     snapshot = dataSource.getSnapshot();
+    displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
+    renderData = displayMeter.getRenderData();
     rebuildViewModel();
     repaint();
 }

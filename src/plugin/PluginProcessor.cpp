@@ -181,18 +181,17 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
     gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
 }
 
-Analyzer::CompositeSnapshot SpectrumAnalyzerAudioProcessor::getSnapshot() const {
-    const auto engineSnapshot = engine.getSnapshot();
+Analyzer::RawSnapshot SpectrumAnalyzerAudioProcessor::getSnapshot() const {
+    return engine.getSnapshot();
+}
 
-    Analyzer::CompositeSnapshot snapshot;
-    snapshot.bandInfo = engineSnapshot.bandInfo;
-
-    Analyzer::TraceSnapshot traceSnapshot;
-    traceSnapshot.kind = Analyzer::TraceKind::input;
-    traceSnapshot.frame = engineSnapshot.frame;
-    // Right now there is only 1, but if we will want more signals it is extendable
-    snapshot.traces.push_back(std::move(traceSnapshot));
-    return snapshot;
+Analyzer::MeterSettings SpectrumAnalyzerAudioProcessor::getMeterSettings() const {
+    Analyzer::MeterSettings meterSettings;
+    meterSettings.showRms = showRmsParam->load() > 0.5f;
+    meterSettings.showPeak = showPeakParam->load() > 0.5f;
+    meterSettings.showHold = showHoldParam->load() > 0.5f;
+    meterSettings.holdMs = holdMsParam->load();
+    return meterSettings;
 }
 
 float SpectrumAnalyzerAudioProcessor::getGridMinDb() const {
