@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.24)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -15,6 +17,12 @@ target_include_directories(band-spectrum-analyzer-tests
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src)
 
+target_compile_definitions(band-spectrum-analyzer-tests
+    PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0)
+
 target_link_libraries(band-spectrum-analyzer-tests
     PRIVATE
         Catch2::Catch2WithMain
@@ -23,7 +31,3 @@ target_link_libraries(band-spectrum-analyzer-tests
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
-
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-include(Catch)
-catch_discover_tests(band-spectrum-analyzer-tests)

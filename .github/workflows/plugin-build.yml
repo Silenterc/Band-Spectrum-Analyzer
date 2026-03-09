@@ -1,0 +1,92 @@
+name: Plugin Build
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  plugin-build:
+    name: Plugin Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            generator: Ninja
+            build_type: Debug
+            multi_config: false
+            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU
+          - os: ubuntu-latest
+            generator: Ninja
+            build_type: Debug
+            multi_config: false
+            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
+          - os: windows-latest
+            generator: Visual Studio 17 2022
+            build_type: Debug
+            multi_config: true
+            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: lukka/get-cmake@latest
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libjack-jackd2-dev \
+            libgtk-3-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            pkg-config
+
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      - name: Configure
+        if: matrix.multi_config == false
+        run: >
+          cmake -S . -B build-plugin
+          -G "${{ matrix.generator }}"
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Configure
+        if: matrix.multi_config == true
+        shell: pwsh
+        run: >
+          cmake -S . -B build-plugin
+          -G "${{ matrix.generator }}"
+          -A x64
+
+      - name: Build plugin targets
+        if: runner.os != 'Windows'
+        run: |
+          for target in ${{ matrix.plugin_targets }}; do
+            cmake --build build-plugin --config ${{ matrix.build_type }} --target "$target"
+          done
+
+      - name: Build plugin targets
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($target in "${{ matrix.plugin_targets }}".Split(" ")) {
+            cmake --build build-plugin --config ${{ matrix.build_type }} --target $target
+          }
