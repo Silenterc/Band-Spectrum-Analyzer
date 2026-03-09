@@ -66,6 +66,7 @@ namespace Analyzer {
     }
 
     RawSnapshot Engine::getSnapshot() const {
+        // TripleBuffer gives us the latest published raw measurements without touching the live write side
         const auto [snapshot, hasUpdate] = snapshots.get_for_reader();
         juce::ignoreUnused(hasUpdate);
         return *snapshot;
@@ -207,6 +208,7 @@ namespace Analyzer {
     void Engine::publishSnapshot() const {
         auto *snapshot = snapshots.get_for_writer();
         snapshot->bandInfo = bandInfo;
+        // The engine is single-trace for now, so it publishes one raw input trace
         snapshot->traces.resize(1);
         snapshot->traces.front().kind = TraceKind::input;
         snapshot->traces.front().measurements = latestMeasurements;

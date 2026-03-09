@@ -17,6 +17,7 @@ void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const Ana
     updateTraceVisuals(renderData, viewState, gridMinDb, gridMaxDb, hoverPositionToUse);
 
     if (hoverPositionToUse.has_value()) {
+        // Hover uses the first visible trace as its source until we add multi-trace hover policy
         const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState);
 
         if (primaryTrace.has_value()) {

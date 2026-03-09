@@ -4,6 +4,7 @@
 AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
     : dataSource(source), theme(themeToUse) {
     snapshot = dataSource.getSnapshot();
+    // Prime the meter so the first paint already has render-ready values
     displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), Analyzer::Constants::meterPollIntervalSeconds);
     renderData = displayMeter.getRenderData();
     lastPollTimeMs = juce::Time::getMillisecondCounterHiRes();
@@ -124,10 +125,12 @@ void AnalyzerComponent::rebuildViewModel() {
 
 void AnalyzerComponent::timerCallback() {
     const auto currentPollTimeMs = juce::Time::getMillisecondCounterHiRes();
+    // The meter uses real elapsed time so decay stays correct even if the timer jitters a bit
     const auto dtSeconds = static_cast<float>((currentPollTimeMs - lastPollTimeMs) * 0.001);
     lastPollTimeMs = currentPollTimeMs;
 
     snapshot = dataSource.getSnapshot();
+    // Raw DSP measurements become render-ready RMS, peak, and hold values here
     displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
     renderData = displayMeter.getRenderData();
     rebuildViewModel();

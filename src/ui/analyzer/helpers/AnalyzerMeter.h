@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <vector>
 
 #include "../../../dsp/AnalyzerData.h"
@@ -27,15 +28,20 @@ public:
     const Analyzer::RenderData &getRenderData() const;
 
 private:
+    struct RmsHistoryEntry {
+        // Mean power measured over one meter tick
+        float meanPower = 0.0f;
+        // How long that measurement covered
+        float durationSeconds = 0.0f;
+    };
+
     struct RmsWindowState {
-        // Fixed-size rectangular averaging window over recent mean-power values
-        std::vector<double> history;
-        // Next slot to overwrite inside the ring buffer
-        size_t nextIndex = 0;
-        // Number of valid values currently stored
-        size_t filled = 0;
-        // Running sum for O(1) rectangular averaging
-        double runningSum = 0.0;
+        // Recent mean-power measurements kept inside the RMS time window
+        std::deque<RmsHistoryEntry> history;
+        // Running weighted sum of meanPower * durationSeconds
+        double weightedPowerSum = 0.0;
+        // Total time currently covered by the history
+        double totalDurationSeconds = 0.0;
     };
 
     struct TraceState {
@@ -55,9 +61,9 @@ private:
     TraceState &getOrCreateTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb);
     static float getPeakDb(const Analyzer::BandMeasurements &measurements, float floorDb);
     static float getMeanPower(const Analyzer::BandMeasurements &measurements);
-    static float pushMeanPower(RmsWindowState &windowState, float meanPower);
+    static float pushMeanPower(RmsWindowState &windowState, float meanPower, float dtSeconds);
 
-    static constexpr size_t rmsWindowPolls = 4;
+    static constexpr float rmsWindowMs = 180.0f;
     static constexpr float peakDecayDbPerSecond = 15.0f;
     static constexpr float holdDecayDbPerSecond = 12.0f;
 

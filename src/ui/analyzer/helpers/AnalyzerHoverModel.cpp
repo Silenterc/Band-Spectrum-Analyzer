@@ -19,6 +19,7 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
     if (bandIndex < 0)
         return std::nullopt;
 
+    // Hover frequency follows the cursor on the log axis, not the nearest band center
     const auto hoveredFrequencyHz = std::round(
         geometry.frequencyForX(hoverPosition.x, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds));
 

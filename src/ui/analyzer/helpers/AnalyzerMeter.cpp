@@ -12,7 +12,7 @@ void AnalyzerMeter::reset() {
 }
 
 void AnalyzerMeter::tick(const Analyzer::RawSnapshot &snapshot, const Analyzer::MeterSettings &meterSettings,
-                                float floorDb, float dtSeconds) {
+                         float floorDb, float dtSeconds) {
     renderData.bandInfo = snapshot.bandInfo;
     renderData.traces.clear();
 
@@ -29,9 +29,11 @@ void AnalyzerMeter::tick(const Analyzer::RawSnapshot &snapshot, const Analyzer::
             const auto &measurements = trace.measurements[bandIndex];
             const auto peakInputDb = getPeakDb(measurements, floorDb);
             const auto meanPower = getMeanPower(measurements);
-            const auto averagedPower = pushMeanPower(traceState.rmsWindows[bandIndex], meanPower);
+            // RMS stays in the power domain until after the rectangular average
+            const auto averagedPower = pushMeanPower(traceState.rmsWindows[bandIndex], meanPower, dtSeconds);
             const auto rmsInputDb = juce::Decibels::gainToDecibels(std::sqrt(averagedPower), floorDb);
 
+            // Peak jumps up immediately and only falls by a linear dB per second rate
             traceState.peakDb[bandIndex] = std::max(traceState.peakDb[bandIndex] - peakDecayDbPerSecond * dtSeconds,
                                                     peakInputDb);
 
@@ -39,9 +41,11 @@ void AnalyzerMeter::tick(const Analyzer::RawSnapshot &snapshot, const Analyzer::
                 traceState.holdDb[bandIndex] = traceState.peakDb[bandIndex];
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
             } else if (traceState.holdTimeRemainingMs[bandIndex] > 0.0f) {
+                // Hold stays pinned until its timer runs out
                 traceState.holdTimeRemainingMs[bandIndex] =
                     std::max(0.0f, traceState.holdTimeRemainingMs[bandIndex] - dtSeconds * 1000.0f);
             } else {
+                // After the hold time expires it falls with its own linear dB per second rate
                 traceState.holdDb[bandIndex] =
                     std::max(traceState.peakDb[bandIndex], traceState.holdDb[bandIndex] - holdDecayDbPerSecond * dtSeconds);
             }
@@ -79,9 +83,6 @@ void AnalyzerMeter::ensureTraceState(Analyzer::TraceKind kind, size_t bandCount,
     traceState.holdDb.assign(bandCount, floorDb);
     traceState.holdTimeRemainingMs.assign(bandCount, 0.0f);
     traceState.rmsWindows.assign(bandCount, {});
-
-    for (auto &windowState: traceState.rmsWindows)
-        windowState.history.assign(rmsWindowPolls, 0.0);
 }
 
 AnalyzerMeter::TraceState &AnalyzerMeter::getOrCreateTraceState(Analyzer::TraceKind kind, size_t bandCount,
@@ -104,17 +105,38 @@ float AnalyzerMeter::getMeanPower(const Analyzer::BandMeasurements &measurements
     return static_cast<float>(measurements.sumPower / static_cast<double>(measurements.numSamples));
 }
 
-float AnalyzerMeter::pushMeanPower(RmsWindowState &windowState, const float meanPower) {
-    if (windowState.history.empty())
+float AnalyzerMeter::pushMeanPower(RmsWindowState &windowState, const float meanPower, const float dtSeconds) {
+    if (dtSeconds <= 0.0f)
         return meanPower;
 
-    windowState.runningSum -= windowState.history[windowState.nextIndex];
-    windowState.history[windowState.nextIndex] = meanPower;
-    windowState.runningSum += meanPower;
-    windowState.nextIndex = (windowState.nextIndex + 1) % windowState.history.size();
+    // Each history entry remembers both its mean power and how long it covered
+    windowState.history.push_back({meanPower, dtSeconds});
+    windowState.weightedPowerSum += static_cast<double>(meanPower) * static_cast<double>(dtSeconds);
+    windowState.totalDurationSeconds += dtSeconds;
 
-    if (windowState.filled < windowState.history.size())
-        ++windowState.filled;
+    constexpr double rmsWindowSeconds = static_cast<double>(rmsWindowMs) * 0.001;
 
-    return static_cast<float>(windowState.runningSum / static_cast<double>(windowState.filled));
+    while (windowState.totalDurationSeconds > rmsWindowSeconds && !windowState.history.empty()) {
+        auto &oldestEntry = windowState.history.front();
+        const auto overflowSeconds = windowState.totalDurationSeconds - rmsWindowSeconds;
+
+        if (static_cast<double>(oldestEntry.durationSeconds) <= overflowSeconds) {
+            // Entire oldest slice is outside the window now, so drop it completely
+            windowState.weightedPowerSum -= static_cast<double>(oldestEntry.meanPower) *
+                                            static_cast<double>(oldestEntry.durationSeconds);
+            windowState.totalDurationSeconds -= oldestEntry.durationSeconds;
+            windowState.history.pop_front();
+            continue;
+        }
+
+        // Only part of the oldest slice overflowed, so trim just that tail
+        oldestEntry.durationSeconds -= static_cast<float>(overflowSeconds);
+        windowState.weightedPowerSum -= static_cast<double>(oldestEntry.meanPower) * overflowSeconds;
+        windowState.totalDurationSeconds = rmsWindowSeconds;
+    }
+
+    if (windowState.totalDurationSeconds <= 0.0)
+        return 0.0f;
+
+    return static_cast<float>(windowState.weightedPowerSum / windowState.totalDurationSeconds);
 }
