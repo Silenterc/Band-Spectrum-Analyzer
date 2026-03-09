@@ -133,8 +133,5 @@ namespace Analyzer {
         Frame latestFrame;
         // Published analyzer snapshots for the UI, 1 W x 1 R threads
         mutable TripleBuffer<EngineSnapshot> snapshots;
-
-        // How fast the hold falls once it does, dB per second
-        float holdDecayDbPerSecond = 12.0f;
     };
 }

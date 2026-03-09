@@ -97,9 +97,11 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::CompositeSnapshot &sn
 
         for (size_t bandIndex = 0; bandIndex < snapshot.bandInfo.size(); ++bandIndex) {
             AnalyzerBarModel barModel;
-            barModel.displayedDb = getDisplayedLevelDb(bandIndex, trace.frame, gridMinDb);
-            barModel.bounds = geometry.getBarBounds(bandIndex, snapshot.bandInfo.size(), barModel.displayedDb, gridMinDb,
-                                                    gridMaxDb, plotBounds);
+            barModel.rmsDb = getRmsDb(bandIndex, trace.frame, gridMinDb);
+            barModel.peakDb = getPeakDb(bandIndex, trace.frame, gridMinDb);
+            barModel.rmsBounds = geometry.getBarBounds(bandIndex, snapshot.bandInfo.size(), barModel.rmsDb, gridMinDb,
+                                                       gridMaxDb, plotBounds);
+            barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.isHovered = hoveredBandIndex == static_cast<int>(bandIndex);
             traceVisual.bars[bandIndex] = barModel;
         }
@@ -125,11 +127,18 @@ bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerV
     return std::find(viewState.enabledTraces.begin(), viewState.enabledTraces.end(), kind) != viewState.enabledTraces.end();
 }
 
-float AnalyzerViewModel::getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
-    if (bandIndex >= latestFrame.peakDb.size() || bandIndex >= latestFrame.rmsDb.size())
+float AnalyzerViewModel::getRmsDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
+    if (bandIndex >= latestFrame.rmsDb.size())
         return gridMinDb;
 
-    return std::max(latestFrame.peakDb[bandIndex], latestFrame.rmsDb[bandIndex]);
+    return latestFrame.rmsDb[bandIndex];
+}
+
+float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) {
+    if (bandIndex >= latestFrame.peakDb.size())
+        return gridMinDb;
+
+    return latestFrame.peakDb[bandIndex];
 }
 
 void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::CompositeSnapshot &snapshot,

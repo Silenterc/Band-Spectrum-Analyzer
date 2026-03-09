@@ -1,18 +1,18 @@
 #include "AnalyzerComponent.h"
 
-AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source)
-    : dataSource(source) {
+AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
+    : dataSource(source), theme(themeToUse) {
     snapshot = dataSource.getSnapshot();
     rebuildViewModel();
     startTimerHz(30);
 }
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
-    g.fillAll(juce::Colour::fromRGB(17, 18, 20));
+    g.fillAll(theme.analyzerBackground);
 
     const auto plotBounds = viewModel.getPlotBounds();
 
-    g.setColour(juce::Colour::fromRGB(28, 31, 35));
+    g.setColour(theme.plotBackground);
     g.fillRoundedRectangle(plotBounds.expanded(6.0f, 6.0f), 10.0f);
 
     drawGrid(g);
@@ -46,23 +46,23 @@ void AnalyzerComponent::mouseExit(const juce::MouseEvent &event) {
 void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
     const auto plotBounds = viewModel.getPlotBounds();
 
-    g.setColour(juce::Colour::fromRGBA(255, 255, 255, 28));
+    g.setColour(theme.gridBorder);
     g.drawRoundedRectangle(plotBounds.expanded(1.0f), 8.0f, 1.0f);
 
     for (const auto &gridLine: viewModel.getGridLines()) {
-        g.setColour(juce::Colour::fromRGBA(255, 255, 255, 20));
+        g.setColour(theme.gridLine);
         g.drawHorizontalLine(static_cast<int>(std::round(gridLine.y)), plotBounds.getX(), plotBounds.getRight());
 
-        g.setColour(juce::Colour::fromRGBA(255, 255, 255, 110));
+        g.setColour(theme.axisText);
         g.setFont(11.0f);
         g.drawText(gridLine.label, 0, static_cast<int>(gridLine.y - 7.0f), 48, 14, juce::Justification::centredRight);
     }
 
     for (const auto &frequencyMarker: viewModel.getFrequencyMarkers()) {
-        g.setColour(juce::Colour::fromRGBA(255, 255, 255, 18));
+        g.setColour(theme.gridLine);
         g.drawVerticalLine(static_cast<int>(std::round(frequencyMarker.x)), plotBounds.getY(), plotBounds.getBottom());
 
-        g.setColour(juce::Colour::fromRGBA(255, 255, 255, 110));
+        g.setColour(theme.axisText);
         g.drawText(frequencyMarker.label, static_cast<int>(frequencyMarker.x - 18.0f),
                    static_cast<int>(plotBounds.getBottom() + 6.0f),
                    36, 16, juce::Justification::centred);
@@ -72,15 +72,22 @@ void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
 void AnalyzerComponent::drawBars(juce::Graphics &g) const {
     for (const auto &traceVisual: viewModel.getTraceVisuals()) {
         for (const auto &bar: traceVisual.bars) {
-            if (bar.displayedDb <= viewModel.getGridMinDb())
+            if (bar.rmsDb <= viewModel.getGridMinDb() && bar.peakDb <= viewModel.getGridMinDb())
                 continue;
 
-            const auto topColour = bar.isHovered ? juce::Colour::fromRGB(255, 214, 102) : juce::Colour::fromRGB(255, 157, 64);
-            const auto bottomColour = bar.isHovered ? juce::Colour::fromRGB(255, 126, 69) : juce::Colour::fromRGB(255, 90, 95);
+            const auto topColour = bar.isHovered ? theme.hoveredBarTop : theme.barTop;
+            const auto bottomColour = bar.isHovered ? theme.hoveredBarBottom : theme.barBottom;
 
-            g.setGradientFill(juce::ColourGradient(topColour, bar.bounds.getCentreX(), bar.bounds.getY(),
-                                                   bottomColour, bar.bounds.getCentreX(), bar.bounds.getBottom(), false));
-            g.fillRoundedRectangle(bar.bounds, 2.0f);
+            if (bar.rmsDb > viewModel.getGridMinDb()) {
+                g.setGradientFill(juce::ColourGradient(topColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getY(),
+                                                       bottomColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getBottom(), false));
+                g.fillRoundedRectangle(bar.rmsBounds, 2.0f);
+            }
+
+            if (bar.peakDb > viewModel.getGridMinDb()) {
+                g.setColour(bar.isHovered ? theme.hoveredBarTop : theme.tooltipText);
+                g.fillRect(bar.rmsBounds.getX(), bar.peakY - 1.0f, bar.rmsBounds.getWidth(), 2.0f);
+            }
         }
     }
 }
@@ -91,17 +98,17 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
 
     const auto &hoverInfo = *viewModel.getHoverInfo();
 
-    g.setColour(juce::Colour::fromRGBA(10, 10, 12, 220));
+    g.setColour(theme.tooltipBackground);
     g.fillRoundedRectangle(hoverInfo.bounds, 8.0f);
 
-    g.setColour(juce::Colour::fromRGBA(255, 255, 255, 36));
+    g.setColour(theme.tooltipBorder);
     g.drawRoundedRectangle(hoverInfo.bounds, 8.0f, 1.0f);
 
     const auto tooltipText = hoverInfo.levelText + "\n"
                              + hoverInfo.frequencyText + "\n"
                              + hoverInfo.noteText;
 
-    g.setColour(juce::Colours::white);
+    g.setColour(theme.tooltipText);
     g.setFont(12.0f);
     g.drawFittedText(tooltipText, hoverInfo.bounds.toNearestInt().reduced(10, 8), juce::Justification::centredLeft, 3);
 }

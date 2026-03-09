@@ -36,10 +36,14 @@ struct AnalyzerFrequencyMarker {
  * Draw-ready bar state for one analyzer band
  */
 struct AnalyzerBarModel {
-    // Screen bounds for the bar
-    juce::Rectangle<float> bounds;
-    // Current displayed level for that bar
-    float displayedDb = 0.0f;
+    // Screen bounds for the RMS fill
+    juce::Rectangle<float> rmsBounds;
+    // Y position for the peak cap
+    float peakY = 0.0f;
+    // Current RMS level for that bar
+    float rmsDb = 0.0f;
+    // Current peak level for that bar
+    float peakDb = 0.0f;
     // Whether this bar is currently hovered
     bool isHovered = false;
 };
@@ -107,7 +111,8 @@ private:
     std::optional<Analyzer::TraceSnapshot> getPrimaryVisibleTrace(const Analyzer::CompositeSnapshot &snapshot,
                                                                   const AnalyzerViewState &viewState) const;
     bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
-    static float getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
+    static float getRmsDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
+    static float getPeakDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
     void updateVisibleFrequencyRange(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState);
 
     AnalyzerGeometry geometry;

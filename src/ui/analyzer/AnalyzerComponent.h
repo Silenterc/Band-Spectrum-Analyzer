@@ -5,6 +5,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../AnalyzerDataSource.h"
+#include "../UiTheme.h"
 #include "AnalyzerViewState.h"
 #include "helpers/AnalyzerViewModel.h"
 
@@ -16,7 +17,7 @@ public:
     /**
      * Binds the component to a read-only analyzer data source
      */
-    explicit AnalyzerComponent(AnalyzerDataSource &dataSource);
+    AnalyzerComponent(AnalyzerDataSource &dataSource, const Ui::Theme &theme);
 
     void paint(juce::Graphics &g) override;
     void resized() override;
@@ -52,6 +53,8 @@ private:
 
     // Read-only analyzer data source
     AnalyzerDataSource &dataSource;
+    // Shared UI theme
+    const Ui::Theme &theme;
     // Latest published analyzer snapshot from the processor
     Analyzer::CompositeSnapshot snapshot;
     // Current analyzer draw model

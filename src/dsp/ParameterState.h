@@ -7,9 +7,10 @@
 namespace Analyzer {
     struct ParameterState {
         // Which channel view the analyzer should use: summed, mid/side or stereo
+        // TODO: PROBABLY REMOVE MDISIDE OPTION DUE TO EXTANDABLE ENGINES
         ParamSpec::AnalysisMode analysisMode = ParamSpec::AnalysisMode::summed;
         // How many bars/bands the analyzer should build
-        ParamSpec::BandMode bandMode = ParamSpec::BandMode::bands40;
+        ParamSpec::BandMode bandMode = ParamSpec::BandMode::bands60;
         // Whether to expose RMS values in the output frame
         bool showRms = ParamSpec::defaultShowRms;
         // Whether to expose peak values in the output frame

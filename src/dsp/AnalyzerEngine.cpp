@@ -7,10 +7,12 @@ namespace Analyzer {
         constexpr float minAnalysisFrequencyHz = 20.0f;
         // Stay a bit below nyquist so the top band does not get weird near the edge
         constexpr float maxAnalysisFractionOfNyquist = 0.9f;
-        constexpr float defaultRmsAttackMs = 15.0f;
-        constexpr float defaultRmsReleaseMs = 150.0f;
+        constexpr float defaultRmsAttackMs = 30.0f;
+        constexpr float defaultRmsReleaseMs = 350.0f;
         constexpr float defaultPeakAttackMs = 3.0f;
-        constexpr float defaultPeakReleaseMs = 120.0f;
+        constexpr float defaultPeakReleaseMs = 350.0f;
+        // How fast the hold falls once it does, dB per second
+        constexpr float holdDecayDbPerSecond = 12.0f;
     }
 
     void Engine::prepare(double sampleRate, int maximumBlockSize) {
