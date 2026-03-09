@@ -5,8 +5,9 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
+#include <new>
 #include <utility>
-#include <__new/interference_size.h>
 
 // Taken from https://medium.com/@sgn00/triple-buffer-lock-free-concurrency-primitive-611848627a1e
 template<typename T>
@@ -35,7 +36,11 @@ struct TripleBuffer {
     }
 
 private:
-    static constexpr size_t keep_apart_sz = std::hardware_destructive_interference_size;
+#if defined(__cpp_lib_hardware_interference_size)
+    static constexpr std::size_t keep_apart_sz = std::hardware_destructive_interference_size;
+#else
+    static constexpr std::size_t keep_apart_sz = 64;
+#endif
 
     struct State {
         int idx;
