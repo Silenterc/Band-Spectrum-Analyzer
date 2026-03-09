@@ -22,6 +22,7 @@ namespace Analyzer {
         rebuildBands();
         rebuildFilters();
         reset();
+        publishSnapshot();
     }
 
     void Engine::reset() {
@@ -40,6 +41,8 @@ namespace Analyzer {
             band.heldPeakDb = floorDb;
             band.holdTimeRemainingMs = 0.0f;
         }
+
+        publishSnapshot();
     }
 
     void Engine::setParameters(const ParameterState &parameters) {
@@ -51,6 +54,7 @@ namespace Analyzer {
             rebuildBands();
 
         rebuildFilters();
+        publishSnapshot();
     }
 
     void Engine::processBlock(const juce::AudioBuffer<float> &buffer) {
@@ -79,14 +83,14 @@ namespace Analyzer {
                 processStereoBlock(buffer, floorDb, blockDurationSeconds, blockDurationMs);
                 break;
         }
+
+        publishSnapshot();
     }
 
-    const std::vector<BandInfo> &Engine::getBandInfo() const {
-        return bandInfo;
-    }
-
-    const Frame &Engine::getLatestFrame() const {
-        return latestFrame;
+    Snapshot Engine::getSnapshot() const {
+        const auto [snapshot, hasUpdate] = snapshots.get_for_reader();
+        juce::ignoreUnused(hasUpdate);
+        return *snapshot;
     }
 
     void Engine::rebuildBands() {
@@ -267,6 +271,13 @@ namespace Analyzer {
         latestFrame.rmsDb[bandIndex] = currentParameters.showRms ? band.smoothedRmsDb : floorDb;
         latestFrame.peakDb[bandIndex] = currentParameters.showPeak ? band.smoothedPeakDb : floorDb;
         latestFrame.holdDb[bandIndex] = currentParameters.showHold ? band.heldPeakDb : floorDb;
+    }
+
+    void Engine::publishSnapshot() const {
+        auto *snapshot = snapshots.get_for_writer();
+        snapshot->bandInfo = bandInfo;
+        snapshot->frame = latestFrame;
+        snapshots.publish();
     }
 
     int Engine::getBandCount() const {

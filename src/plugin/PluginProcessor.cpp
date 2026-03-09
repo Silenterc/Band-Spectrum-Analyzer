@@ -142,11 +142,6 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     engine.processBlock(buffer);
-    for (int channel = 0; channel < totalNumInputChannels; ++channel) {
-        auto *channelData = buffer.getWritePointer(channel);
-        juce::ignoreUnused(channelData);
-        // ..do something to the data...
-    }
 }
 
 //==============================================================================
@@ -155,7 +150,7 @@ bool SpectrumAnalyzerAudioProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
-    return new SpectrumAnalyzerAudioProcessorEditor(*this);
+    return new SpectrumAnalyzerAudioProcessorEditor(*this, *this);
 }
 
 //==============================================================================
@@ -184,6 +179,22 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
     gridMinDbParam = parameters.getRawParameterValue(ParamIDs::gridMinDb);
     gridMaxDbParam = parameters.getRawParameterValue(ParamIDs::gridMaxDb);
     gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
+}
+
+Analyzer::Snapshot SpectrumAnalyzerAudioProcessor::getSnapshot() const {
+    return engine.getSnapshot();
+}
+
+float SpectrumAnalyzerAudioProcessor::getGridMinDb() const {
+    return gridMinDbParam->load();
+}
+
+float SpectrumAnalyzerAudioProcessor::getGridMaxDb() const {
+    return gridMaxDbParam->load();
+}
+
+float SpectrumAnalyzerAudioProcessor::getGridStepDb() const {
+    return gridStepDbParam->load();
 }
 
 Analyzer::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {

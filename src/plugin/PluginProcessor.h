@@ -5,12 +5,13 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "../dsp/ParameterState.h"
+#include "../ui/AnalyzerDataSource.h"
 #include "ParamIDs.h"
 #include "ParamSpec.h"
 #include "../dsp/AnalyzerEngine.h"
 
 //==============================================================================
-class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor {
+class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor, public AnalyzerDataSource {
 public:
     //==============================================================================
     SpectrumAnalyzerAudioProcessor();
@@ -68,13 +69,13 @@ public:
         return parameters;
     }
 
-    const std::vector<Analyzer::BandInfo> &getAnalyzerBandInfo() const {
-        return engine.getBandInfo();
-    }
+    Analyzer::Snapshot getSnapshot() const override;
 
-    const Analyzer::Frame &getAnalyzerFrame() const {
-        return engine.getLatestFrame();
-    }
+    float getGridMinDb() const override;
+
+    float getGridMaxDb() const override;
+
+    float getGridStepDb() const override;
 
 private:
     Analyzer::Engine engine;

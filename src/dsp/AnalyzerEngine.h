@@ -1,12 +1,12 @@
 #pragma once
 
-#include <array>
 #include <vector>
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 
 #include "ParameterState.h"
+#include "TripleBuffer.h"
 
 namespace Analyzer {
     /**
@@ -23,7 +23,7 @@ namespace Analyzer {
 
     /**
      * Latest analyzer output for all bands
-     * You can get related band info (freq etc.) by calling getBandInfo()
+     * You can get related band info from the published snapshot
      */
     struct Frame {
         // RMS level per band in dB
@@ -32,6 +32,16 @@ namespace Analyzer {
         std::vector<float> peakDb;
         // Peak hold level per band in dB
         std::vector<float> holdDb;
+    };
+
+    /**
+     * Published analyzer state for the UI
+     */
+    struct Snapshot {
+        // Band layout that matches the current frame
+        std::vector<BandInfo> bandInfo;
+        // Latest analyzer values
+        Frame frame;
     };
 
     /**
@@ -61,14 +71,9 @@ namespace Analyzer {
         void processBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
-         * Returns the current band layout
+         * Returns a stable published snapshot for the UI
          */
-        const std::vector<BandInfo> &getBandInfo() const;
-
-        /**
-         * Returns the latest computed analyzer frame
-         */
-        const Frame &getLatestFrame() const;
+        Snapshot getSnapshot() const;
 
     private:
         /**
@@ -133,6 +138,11 @@ namespace Analyzer {
                              float blockDurationSeconds, float blockDurationMs);
 
         /**
+         * Publishes the latest frame and band layout without locking
+         */
+        void publishSnapshot() const;
+
+        /**
          * Returns how many bands the current mode should use
          */
         int getBandCount() const;
@@ -155,6 +165,8 @@ namespace Analyzer {
         std::vector<BandState> bands;
         // Latest frame exposed to the UI
         Frame latestFrame;
+        // Published analyzer snapshots for the UI, 1 W x 1 R threads
+        mutable TripleBuffer<Snapshot> snapshots;
 
         // How fast the hold falls once it does, dB per second
         float holdDecayDbPerSecond = 12.0f;

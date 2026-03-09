@@ -108,8 +108,9 @@ namespace {
     }
 
     void requireStrongestBandNearFrequency(const Analyzer::Engine &engine, float frequencyHz, float floorDb) {
-        const auto &bandInfo = engine.getBandInfo();
-        const auto &frame = engine.getLatestFrame();
+        const auto snapshot = engine.getSnapshot();
+        const auto &bandInfo = snapshot.bandInfo;
+        const auto &frame = snapshot.frame;
         const auto strongestBandIndex = getStrongestBandIndex(frame.peakDb);
         const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
 
@@ -123,8 +124,9 @@ namespace {
 
     void requireHeldPeakStaysPinnedForOneSilentBlock(Analyzer::Engine &engine, int channels, float frequencyHz,
                                                      float floorDb) {
-        const auto &bandInfo = engine.getBandInfo();
-        const auto &heldFrameBeforeSilence = engine.getLatestFrame();
+        const auto snapshotBeforeSilence = engine.getSnapshot();
+        const auto &bandInfo = snapshotBeforeSilence.bandInfo;
+        const auto &heldFrameBeforeSilence = snapshotBeforeSilence.frame;
         const auto strongestHoldBandIndex = getStrongestBandIndex(heldFrameBeforeSilence.holdDb);
         const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
         const auto heldPeakBeforeSilence = heldFrameBeforeSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)];
@@ -134,7 +136,8 @@ namespace {
 
         processSilenceBlocks(engine, channels, 1);
 
-        const auto &heldFrameAfterSilence = engine.getLatestFrame();
+        const auto heldSnapshotAfterSilence = engine.getSnapshot();
+        const auto &heldFrameAfterSilence = heldSnapshotAfterSilence.frame;
         constexpr float tolerance = 0.0001f;
         REQUIRE(std::abs(heldFrameAfterSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)] - heldPeakBeforeSilence) < tolerance);
     }
@@ -147,10 +150,11 @@ TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
 
     prepareEngine(engine, parameters);
 
-    REQUIRE(engine.getBandInfo().size() == 60);
-    REQUIRE(engine.getLatestFrame().rmsDb.size() == 60);
-    REQUIRE(engine.getLatestFrame().peakDb.size() == 60);
-    REQUIRE(engine.getLatestFrame().holdDb.size() == 60);
+    const auto snapshot = engine.getSnapshot();
+    REQUIRE(snapshot.bandInfo.size() == 60);
+    REQUIRE(snapshot.frame.rmsDb.size() == 60);
+    REQUIRE(snapshot.frame.peakDb.size() == 60);
+    REQUIRE(snapshot.frame.holdDb.size() == 60);
 }
 
 TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
@@ -159,7 +163,8 @@ TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
 
     prepareEngine(engine, parameters);
 
-    const auto &bandInfo = engine.getBandInfo();
+    const auto snapshot = engine.getSnapshot();
+    const auto &bandInfo = snapshot.bandInfo;
     constexpr float tolerance = 0.0001f;
 
     REQUIRE(bandInfo.size() > 2);
@@ -190,7 +195,8 @@ TEST_CASE("AnalyzerEngine silence stays at the configured floor") {
 
     processSilenceBlocks(engine, 2, settleBlocks);
 
-    const auto &frame = engine.getLatestFrame();
+    const auto snapshot = engine.getSnapshot();
+    const auto &frame = snapshot.frame;
     constexpr float tolerance = 0.001f;
 
     for (auto peakDb: frame.peakDb)
@@ -230,7 +236,8 @@ TEST_CASE("AnalyzerEngine summed mode cancels opposite-phase stereo content") {
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
 
-    const auto &frame = engine.getLatestFrame();
+    const auto snapshot = engine.getSnapshot();
+    const auto &frame = snapshot.frame;
     constexpr float tolerance = 0.001f;
 
     for (auto peakDb: frame.peakDb)
@@ -312,8 +319,9 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
     engine.setParameters(parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
-    REQUIRE(engine.getBandInfo().size() == 60);
-    REQUIRE(engine.getLatestFrame().peakDb.size() == 60);
+    const auto reconfiguredSnapshot = engine.getSnapshot();
+    REQUIRE(reconfiguredSnapshot.bandInfo.size() == 60);
+    REQUIRE(reconfiguredSnapshot.frame.peakDb.size() == 60);
     requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
 }
 
@@ -326,7 +334,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
-    REQUIRE(engine.getBandInfo().size() == 30);
+    const auto initialSnapshot = engine.getSnapshot();
+    REQUIRE(initialSnapshot.bandInfo.size() == 30);
     requireStrongestBandNearFrequency(engine, lowSineHz, parameters.gridMinDb);
 
     parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
@@ -335,7 +344,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
 
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
 
-    REQUIRE(engine.getBandInfo().size() == 60);
-    REQUIRE(engine.getLatestFrame().peakDb.size() == 60);
+    const auto updatedSnapshot = engine.getSnapshot();
+    REQUIRE(updatedSnapshot.bandInfo.size() == 60);
+    REQUIRE(updatedSnapshot.frame.peakDb.size() == 60);
     requireStrongestBandNearFrequency(engine, highSineHz, parameters.gridMinDb);
 }
