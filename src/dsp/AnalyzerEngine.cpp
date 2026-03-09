@@ -87,7 +87,7 @@ namespace Analyzer {
         publishSnapshot();
     }
 
-    Snapshot Engine::getSnapshot() const {
+    EngineSnapshot Engine::getSnapshot() const {
         const auto [snapshot, hasUpdate] = snapshots.get_for_reader();
         juce::ignoreUnused(hasUpdate);
         return *snapshot;

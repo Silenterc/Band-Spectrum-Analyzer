@@ -5,7 +5,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../../dsp/AnalyzerEngine.h"
+#include "../../../dsp/AnalyzerData.h"
 #include "AnalyzerGeometry.h"
 #include "FrequencyFormatter.h"
 #include "MusicTheory.h"
@@ -38,10 +38,11 @@ public:
      * Returns the hover info for the current mouse position
      */
     [[nodiscard]] std::optional<AnalyzerHoverInfo> build(const juce::Rectangle<float> &localBounds,
-                                           const juce::Rectangle<float> &plotBounds,
-                                           const std::vector<Analyzer::BandInfo> &bandInfo,
-                                           const Analyzer::Frame &latestFrame, float gridMinDb,
-                                           juce::Point<float> hoverPosition) const;
+                                                         const juce::Rectangle<float> &plotBounds,
+                                                         const std::vector<Analyzer::BandInfo> &bandInfo,
+                                                         const Analyzer::Frame &latestFrame, float gridMinDb,
+                                                         float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
+                                                         juce::Point<float> hoverPosition) const;
 
 private:
     static float getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);

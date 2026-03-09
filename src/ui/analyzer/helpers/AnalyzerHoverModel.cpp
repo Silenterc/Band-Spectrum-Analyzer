@@ -12,13 +12,15 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
                                                            const juce::Rectangle<float> &plotBounds,
                                                            const std::vector<Analyzer::BandInfo> &bandInfo,
                                                            const Analyzer::Frame &latestFrame, float gridMinDb,
+                                                           float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                            juce::Point<float> hoverPosition) const {
     const auto bandIndex = geometry.bandIndexAt(hoverPosition, bandInfo.size(), plotBounds);
 
     if (bandIndex < 0)
         return std::nullopt;
 
-    const auto hoveredFrequencyHz = std::round(geometry.frequencyForX(hoverPosition.x, bandInfo, plotBounds));
+    const auto hoveredFrequencyHz = std::round(
+        geometry.frequencyForX(hoverPosition.x, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds));
 
     AnalyzerHoverInfo hoverInfo;
     hoverInfo.bounds = geometry.getTooltipBounds(hoverPosition, plotBounds, localBounds);

@@ -20,13 +20,11 @@ juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<flo
     return bounds;
 }
 
-float AnalyzerGeometry::xForFrequency(float frequencyHz, const std::vector<Analyzer::BandInfo> &bandInfo,
+float AnalyzerGeometry::xForFrequency(float frequencyHz, float minFrequencyHz, float maxFrequencyHz,
                                       const juce::Rectangle<float> &plotBounds) const {
-    if (bandInfo.empty())
+    if (minFrequencyHz <= 0.0f || maxFrequencyHz <= minFrequencyHz)
         return plotBounds.getX();
 
-    const auto minFrequencyHz = bandInfo.front().lowHz;
-    const auto maxFrequencyHz = bandInfo.back().highHz;
     // We draw frequency on a log axis, so we convert Hz -> log10(Hz) before mapping to pixels
     const auto logMin = std::log10(minFrequencyHz);
     const auto logMax = std::log10(maxFrequencyHz);
@@ -35,13 +33,11 @@ float AnalyzerGeometry::xForFrequency(float frequencyHz, const std::vector<Analy
     return plotBounds.getX() + normalised * plotBounds.getWidth();
 }
 
-float AnalyzerGeometry::frequencyForX(float x, const std::vector<Analyzer::BandInfo> &bandInfo,
+float AnalyzerGeometry::frequencyForX(float x, float minFrequencyHz, float maxFrequencyHz,
                                       const juce::Rectangle<float> &plotBounds) const {
-    if (bandInfo.empty())
+    if (minFrequencyHz <= 0.0f || maxFrequencyHz <= minFrequencyHz)
         return 0.0f;
 
-    const auto minFrequencyHz = bandInfo.front().lowHz;
-    const auto maxFrequencyHz = bandInfo.back().highHz;
     const auto width = std::max(plotBounds.getWidth(), 1.0f);
     const auto normalised = juce::jlimit(0.0f, 1.0f, (x - plotBounds.getX()) / width);
     // This is the inverse of xForFrequency: pixel -> normalised -> log10(Hz) -> Hz

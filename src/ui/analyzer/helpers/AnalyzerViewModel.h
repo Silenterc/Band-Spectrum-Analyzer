@@ -5,7 +5,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../../dsp/AnalyzerEngine.h"
+#include "../../../dsp/AnalyzerData.h"
+#include "../AnalyzerViewState.h"
 #include "AnalyzerGeometry.h"
 #include "AnalyzerHoverModel.h"
 #include "FrequencyFormatter.h"
@@ -44,17 +45,29 @@ struct AnalyzerBarModel {
 };
 
 /**
- * Builds draw-ready analyzer UI state from the latest snapshot
+ * Draw-ready state for one visible analyzer trace
+ */
+struct AnalyzerTraceVisual {
+    // Logical trace identity
+    Analyzer::TraceKind kind = Analyzer::TraceKind::input;
+    // Draw-ready bar state for this trace
+    std::vector<AnalyzerBarModel> bars;
+};
+
+/**
+ * Builds draw-ready analyzer UI state from the latest composite snapshot
  */
 class AnalyzerViewModel final {
 public:
     AnalyzerViewModel();
 
     /**
-     * Rebuilds the view model from the latest analyzer snapshot
+     * Rebuilds the view model from the latest analyzer snapshot and view state
      */
-    void update(const Analyzer::Snapshot &snapshot, float gridMinDb, float gridMaxDb, float gridStepDb,
-                const juce::Rectangle<float> &localBounds, const std::optional<juce::Point<float>> &hoverPosition);
+    void update(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+                float gridMinDb, float gridMaxDb, float gridStepDb,
+                const juce::Rectangle<float> &localBounds,
+                const std::optional<juce::Point<float>> &hoverPosition);
 
     /**
      * Returns the current plot area
@@ -72,9 +85,9 @@ public:
     const std::vector<AnalyzerFrequencyMarker> &getFrequencyMarkers() const;
 
     /**
-     * Returns the current draw-ready bar models
+     * Returns the current draw-ready analyzer traces
      */
-    const std::vector<AnalyzerBarModel> &getBars() const;
+    const std::vector<AnalyzerTraceVisual> &getTraceVisuals() const;
 
     /**
      * Returns the current hover tooltip if any
@@ -87,10 +100,15 @@ public:
     float getGridMinDb() const;
 
 private:
-    void updateGrid(const std::vector<Analyzer::BandInfo> &bandInfo, float gridMinDb, float gridMaxDb, float gridStepDb);
-    void updateBars(const Analyzer::Snapshot &snapshot, float gridMinDb, float gridMaxDb,
-                    const std::optional<juce::Point<float>> &hoverPosition);
-    static float getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb) ;
+    void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
+    void updateTraceVisuals(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState,
+                            float gridMinDb, float gridMaxDb,
+                            const std::optional<juce::Point<float>> &hoverPosition);
+    std::optional<Analyzer::TraceSnapshot> getPrimaryVisibleTrace(const Analyzer::CompositeSnapshot &snapshot,
+                                                                  const AnalyzerViewState &viewState) const;
+    bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
+    static float getDisplayedLevelDb(size_t bandIndex, const Analyzer::Frame &latestFrame, float gridMinDb);
+    void updateVisibleFrequencyRange(const Analyzer::CompositeSnapshot &snapshot, const AnalyzerViewState &viewState);
 
     AnalyzerGeometry geometry;
     FrequencyFormatter formatter;
@@ -100,7 +118,9 @@ private:
     juce::Rectangle<float> plotBounds;
     std::vector<AnalyzerGridLine> gridLines;
     std::vector<AnalyzerFrequencyMarker> frequencyMarkers;
-    std::vector<AnalyzerBarModel> bars;
+    std::vector<AnalyzerTraceVisual> traceVisuals;
     std::optional<AnalyzerHoverInfo> hoverInfo;
     float currentGridMinDb = 0.0f;
+    float visibleMinFrequencyHz = 20.0f;
+    float visibleMaxFrequencyHz = 20000.0f;
 };

@@ -5,45 +5,11 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 
+#include "AnalyzerData.h"
 #include "ParameterState.h"
 #include "TripleBuffer.h"
 
 namespace Analyzer {
-    /**
-     * Frequency bounds for a single analyzer band
-     */
-    struct BandInfo {
-        // Lower edge of the band in Hz
-        float lowHz = 0.0f;
-        // Geometric center of the band in Hz
-        float centerHz = 0.0f;
-        // Upper edge of the band in Hz
-        float highHz = 0.0f;
-    };
-
-    /**
-     * Latest analyzer output for all bands
-     * You can get related band info from the published snapshot
-     */
-    struct Frame {
-        // RMS level per band in dB
-        std::vector<float> rmsDb;
-        // Peak level per band in dB
-        std::vector<float> peakDb;
-        // Peak hold level per band in dB
-        std::vector<float> holdDb;
-    };
-
-    /**
-     * Published analyzer state for the UI
-     */
-    struct Snapshot {
-        // Band layout that matches the current frame
-        std::vector<BandInfo> bandInfo;
-        // Latest analyzer values
-        Frame frame;
-    };
-
     /**
      * Owns the filter bank and produces bar data for the UI
      */
@@ -71,9 +37,9 @@ namespace Analyzer {
         void processBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
-         * Returns a stable published snapshot for the UI
+         * Returns a stable published snapshot for one engine
          */
-        Snapshot getSnapshot() const;
+        EngineSnapshot getSnapshot() const;
 
     private:
         /**
@@ -166,7 +132,7 @@ namespace Analyzer {
         // Latest frame exposed to the UI
         Frame latestFrame;
         // Published analyzer snapshots for the UI, 1 W x 1 R threads
-        mutable TripleBuffer<Snapshot> snapshots;
+        mutable TripleBuffer<EngineSnapshot> snapshots;
 
         // How fast the hold falls once it does, dB per second
         float holdDecayDbPerSecond = 12.0f;

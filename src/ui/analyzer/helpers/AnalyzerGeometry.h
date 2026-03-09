@@ -4,7 +4,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../../dsp/AnalyzerEngine.h"
+#include "../../../dsp/AnalyzerData.h"
 
 /**
  * Converts analyzer data between domain space and screen space
@@ -19,13 +19,13 @@ public:
     /**
      * Maps a frequency in Hz onto the plot's log-frequency x axis
      */
-    float xForFrequency(float frequencyHz, const std::vector<Analyzer::BandInfo> &bandInfo,
+    float xForFrequency(float frequencyHz, float minFrequencyHz, float maxFrequencyHz,
                         const juce::Rectangle<float> &plotBounds) const;
 
     /**
      * Maps a cursor x position back into a frequency on the same log axis
      */
-    float frequencyForX(float x, const std::vector<Analyzer::BandInfo> &bandInfo,
+    float frequencyForX(float x, float minFrequencyHz, float maxFrequencyHz,
                         const juce::Rectangle<float> &plotBounds) const;
 
     /**

@@ -70,16 +70,18 @@ void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::drawBars(juce::Graphics &g) const {
-    for (const auto &bar: viewModel.getBars()) {
-        if (bar.displayedDb <= viewModel.getGridMinDb())
-            continue;
+    for (const auto &traceVisual: viewModel.getTraceVisuals()) {
+        for (const auto &bar: traceVisual.bars) {
+            if (bar.displayedDb <= viewModel.getGridMinDb())
+                continue;
 
-        const auto topColour = bar.isHovered ? juce::Colour::fromRGB(255, 214, 102) : juce::Colour::fromRGB(255, 157, 64);
-        const auto bottomColour = bar.isHovered ? juce::Colour::fromRGB(255, 126, 69) : juce::Colour::fromRGB(255, 90, 95);
+            const auto topColour = bar.isHovered ? juce::Colour::fromRGB(255, 214, 102) : juce::Colour::fromRGB(255, 157, 64);
+            const auto bottomColour = bar.isHovered ? juce::Colour::fromRGB(255, 126, 69) : juce::Colour::fromRGB(255, 90, 95);
 
-        g.setGradientFill(juce::ColourGradient(topColour, bar.bounds.getCentreX(), bar.bounds.getY(),
-                                               bottomColour, bar.bounds.getCentreX(), bar.bounds.getBottom(), false));
-        g.fillRoundedRectangle(bar.bounds, 2.0f);
+            g.setGradientFill(juce::ColourGradient(topColour, bar.bounds.getCentreX(), bar.bounds.getY(),
+                                                   bottomColour, bar.bounds.getCentreX(), bar.bounds.getBottom(), false));
+            g.fillRoundedRectangle(bar.bounds, 2.0f);
+        }
     }
 }
 
@@ -105,7 +107,7 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::rebuildViewModel() {
-    viewModel.update(snapshot, dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
+    viewModel.update(snapshot, viewState, dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
                      getLocalBounds().toFloat(), hoverPosition);
 }
 

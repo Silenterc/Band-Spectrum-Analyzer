@@ -5,6 +5,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../AnalyzerDataSource.h"
+#include "AnalyzerViewState.h"
 #include "helpers/AnalyzerViewModel.h"
 
 /**
@@ -52,9 +53,11 @@ private:
     // Read-only analyzer data source
     AnalyzerDataSource &dataSource;
     // Latest published analyzer snapshot from the processor
-    Analyzer::Snapshot snapshot;
+    Analyzer::CompositeSnapshot snapshot;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
+    // UI-only presentation state such as visible trace set and zoom
+    AnalyzerViewState viewState;
     // Raw mouse position used by the hover model
     std::optional<juce::Point<float>> hoverPosition;
 };
