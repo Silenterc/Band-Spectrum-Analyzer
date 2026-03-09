@@ -184,17 +184,17 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
 }
 
 Analyzer::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
-    return {
-        .analysisMode = static_cast<ParamSpec::AnalysisMode>(static_cast<int>(analysisModeParam->load())),
-        .bandMode = static_cast<ParamSpec::BandMode>(static_cast<int>(bandModeParam->load())),
-        .showRms = showRmsParam->load() > 0.5f,
-        .showPeak = showPeakParam->load() > 0.5f,
-        .showHold = showHoldParam->load() > 0.5f,
-        .holdMs = holdMsParam->load(),
-        .gridMinDb = gridMinDbParam->load(),
-        .gridMaxDb = gridMaxDbParam->load(),
-        .gridStepDb = gridStepDbParam->load()
-    };
+    Analyzer::ParameterState currentParameterState;
+    currentParameterState.analysisMode = static_cast<ParamSpec::AnalysisMode>(static_cast<int>(analysisModeParam->load()));
+    currentParameterState.bandMode = static_cast<ParamSpec::BandMode>(static_cast<int>(bandModeParam->load()));
+    currentParameterState.showRms = showRmsParam->load() > 0.5f;
+    currentParameterState.showPeak = showPeakParam->load() > 0.5f;
+    currentParameterState.showHold = showHoldParam->load() > 0.5f;
+    currentParameterState.holdMs = holdMsParam->load();
+    currentParameterState.gridMinDb = gridMinDbParam->load();
+    currentParameterState.gridMaxDb = gridMaxDbParam->load();
+    currentParameterState.gridStepDb = gridStepDbParam->load();
+    return currentParameterState;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcessor::createParameterLayout() {
