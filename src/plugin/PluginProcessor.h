@@ -68,6 +68,14 @@ public:
         return parameters;
     }
 
+    const std::vector<Analyzer::BandInfo> &getAnalyzerBandInfo() const {
+        return engine.getBandInfo();
+    }
+
+    const Analyzer::Frame &getAnalyzerFrame() const {
+        return engine.getLatestFrame();
+    }
+
 private:
     Analyzer::Engine engine;
     juce::AudioProcessorValueTreeState parameters;

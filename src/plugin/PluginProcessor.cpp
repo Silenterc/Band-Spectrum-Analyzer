@@ -1,8 +1,6 @@
 #include "PluginProcessor.h"
 #include "../ui/PluginEditor.h"
 
-#include <cmath>
-
 //==============================================================================
 SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -80,6 +78,8 @@ void SpectrumAnalyzerAudioProcessor::prepareToPlay(double sampleRate, int sample
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     engine.prepare(sampleRate, samplesPerBlock);
+    previousParameterState = readCurrentParameterState();
+    engine.setParameters(*previousParameterState);
 }
 
 void SpectrumAnalyzerAudioProcessor::releaseResources() {
@@ -114,10 +114,6 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
                                                   juce::MidiBuffer &midiMessages) {
     juce::ignoreUnused(midiMessages);
 
-    const auto currentParams = readCurrentParameterState();
-
-    previousParameterState = currentParams;
-
     // Zeroes out really tiny floats (denormals)
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
@@ -131,6 +127,13 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
+
+    const auto currentParameterState = readCurrentParameterState();
+
+    if (!previousParameterState.has_value() || *previousParameterState != currentParameterState) {
+        engine.setParameters(currentParameterState);
+        previousParameterState = currentParameterState;
+    }
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...

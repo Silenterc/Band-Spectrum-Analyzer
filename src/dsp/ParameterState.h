@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "../plugin/ParamSpec.h"
 
 namespace Analyzer {
@@ -23,4 +25,20 @@ namespace Analyzer {
         // Grid spacing in dB
         float gridStepDb = ParamSpec::defaultGridStepDb;
     };
+
+    inline bool operator==(const ParameterState &lhs, const ParameterState &rhs) {
+        return lhs.analysisMode == rhs.analysisMode
+               && lhs.bandMode == rhs.bandMode
+               && lhs.showRms == rhs.showRms
+               && lhs.showPeak == rhs.showPeak
+               && lhs.showHold == rhs.showHold
+               && std::abs(lhs.holdMs - rhs.holdMs) <= 0.0001f
+               && std::abs(lhs.gridMinDb - rhs.gridMinDb) <= 0.0001f
+               && std::abs(lhs.gridMaxDb - rhs.gridMaxDb) <= 0.0001f
+               && std::abs(lhs.gridStepDb - rhs.gridStepDb) <= 0.0001f;
+    }
+
+    inline bool operator!=(const ParameterState &lhs, const ParameterState &rhs) {
+        return !(lhs == rhs);
+    }
 }
