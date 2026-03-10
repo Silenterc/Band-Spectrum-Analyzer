@@ -13,7 +13,7 @@ namespace Analyzer {
         rebuildBands();
         rebuildFilters();
         reset();
-        publishSnapshot();
+        publishTrace();
     }
 
     void Engine::reset() {
@@ -23,7 +23,7 @@ namespace Analyzer {
             band.filter.reset();
         }
 
-        publishSnapshot();
+        publishTrace();
     }
 
     void Engine::setParameters(const ParameterState &parameters) {
@@ -35,7 +35,7 @@ namespace Analyzer {
             rebuildBands();
 
         rebuildFilters();
-        publishSnapshot();
+        publishTrace();
     }
 
     void Engine::processBlock(const juce::AudioBuffer<float> &buffer) {
@@ -62,14 +62,18 @@ namespace Analyzer {
                 break;
         }
 
-        publishSnapshot();
+        publishTrace();
     }
 
-    RawSnapshot Engine::getSnapshot() const {
+    std::shared_ptr<const std::vector<BandInfo>> Engine::getBandInfo() const {
+        return std::atomic_load(&bandInfo);
+    }
+
+    RawTrace Engine::getTrace() const {
         // TripleBuffer gives us the latest published raw measurements without touching the live write side
-        const auto [snapshot, hasUpdate] = snapshots.get_for_reader();
+        const auto [trace, hasUpdate] = traces.get_for_reader();
         juce::ignoreUnused(hasUpdate);
-        return *snapshot;
+        return *trace;
     }
 
     void Engine::rebuildBands() {
@@ -80,7 +84,8 @@ namespace Analyzer {
         // This is the ratio we spread evenly in log space
         const auto frequencyRatio = maxAnalysisFrequencyHz / Constants::minFrequencyHz;
 
-        bandInfo.resize(static_cast<size_t>(bandCount));
+        auto newBandInfo = std::make_shared<std::vector<BandInfo>>();
+        newBandInfo->resize(static_cast<size_t>(bandCount));
         bands.resize(static_cast<size_t>(bandCount));
         latestMeasurements.resize(static_cast<size_t>(bandCount));
 
@@ -98,9 +103,11 @@ namespace Analyzer {
             info.centerHz = centerHz;
             info.highHz = highHz;
 
-            bandInfo[static_cast<size_t>(bandIndex)] = info;
+            (*newBandInfo)[static_cast<size_t>(bandIndex)] = info;
             bands[static_cast<size_t>(bandIndex)].info = info;
         }
+
+        std::atomic_store(&bandInfo, newBandInfo);
     }
 
     void Engine::rebuildFilters() {
@@ -205,14 +212,17 @@ namespace Analyzer {
         }
     }
 
-    void Engine::publishSnapshot() const {
-        auto *snapshot = snapshots.get_for_writer();
-        snapshot->bandInfo = bandInfo;
+    void Engine::publishTrace() const {
+        auto *trace = traces.get_for_writer();
         // The engine is single-trace for now, so it publishes one raw input trace
-        snapshot->traces.resize(1);
-        snapshot->traces.front().kind = TraceKind::input;
-        snapshot->traces.front().measurements = latestMeasurements;
-        snapshots.publish();
+        trace->kind = TraceKind::input;
+
+        if (trace->measurements.size() != latestMeasurements.size())
+            trace->measurements.resize(latestMeasurements.size());
+
+        // Reuse the trace storage so publish does not pay the full vector assignment path every block
+        std::copy(latestMeasurements.begin(), latestMeasurements.end(), trace->measurements.begin());
+        traces.publish();
     }
 
     int Engine::getBandCount() const {

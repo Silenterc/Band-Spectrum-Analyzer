@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <optional>
+#include <vector>
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -69,7 +71,8 @@ public:
         return parameters;
     }
 
-    Analyzer::RawSnapshot getSnapshot() const override;
+    std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
+    std::vector<Analyzer::RawTrace> getRawTraces() const override;
     Analyzer::MeterSettings getMeterSettings() const override;
 
     float getGridMinDb() const override;

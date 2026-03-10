@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -37,9 +38,14 @@ namespace Analyzer {
         void processBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
-         * Returns a stable published snapshot for one engine
+         * Returns the current immutable band layout
          */
-        RawSnapshot getSnapshot() const;
+        std::shared_ptr<const std::vector<BandInfo>> getBandInfo() const;
+
+        /**
+         * Returns the latest published raw trace for this engine
+         */
+        RawTrace getTrace() const;
 
     private:
         /**
@@ -88,9 +94,9 @@ namespace Analyzer {
         void clearMeasurements();
 
         /**
-         * Publishes the latest frame and band layout without locking
+         * Publishes the latest raw trace without locking
          */
-        void publishSnapshot() const;
+        void publishTrace() const;
 
         /**
          * Returns how many bands the current mode should use
@@ -110,12 +116,12 @@ namespace Analyzer {
         // Temporary mono input vector (re)used by the summed analysis path
         std::vector<float> summedAnalysisInput;
         // Static band metadata for the current layout
-        std::vector<BandInfo> bandInfo;
+        std::shared_ptr<std::vector<BandInfo>> bandInfo = std::make_shared<std::vector<BandInfo>>();
         // Per-band filters and meter state
         std::vector<BandState> bands;
         // Latest raw measurements exposed to the UI
         std::vector<BandMeasurements> latestMeasurements;
-        // Published analyzer snapshots for the UI, 1 W x 1 R threads
-        mutable TripleBuffer<RawSnapshot> snapshots;
+        // Published raw trace for the UI, 1 W x 1 R threads
+        mutable TripleBuffer<RawTrace> traces;
     };
 }

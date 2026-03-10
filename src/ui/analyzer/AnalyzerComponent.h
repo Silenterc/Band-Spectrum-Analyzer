@@ -1,6 +1,8 @@
 #pragma once
 
+#include <memory>
 #include <optional>
+#include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -57,8 +59,10 @@ private:
     AnalyzerDataSource &dataSource;
     // Shared UI theme
     const Ui::Theme &theme;
-    // Latest published raw analyzer snapshot from the processor
-    Analyzer::RawSnapshot snapshot;
+    // Latest immutable band layout from the processor
+    std::shared_ptr<const std::vector<Analyzer::BandInfo>> bandInfo;
+    // Latest raw traces from the processor
+    std::vector<Analyzer::RawTrace> rawTraces;
     // Display-rate meter processor
     AnalyzerMeter displayMeter;
     // Latest meter-processed data

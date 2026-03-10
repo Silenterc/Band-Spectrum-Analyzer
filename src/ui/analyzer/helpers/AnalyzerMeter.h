@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <memory>
 #include <vector>
 
 #include "../../../dsp/AnalyzerData.h"
@@ -19,8 +20,9 @@ public:
     /**
      * Advances the display meter by one UI poll
      */
-    void tick(const Analyzer::RawSnapshot &snapshot, const Analyzer::MeterSettings &meterSettings,
-              float floorDb, float dtSeconds);
+    void tick(const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &bandInfo,
+              const std::vector<Analyzer::RawTrace> &traces,
+              const Analyzer::MeterSettings &meterSettings, float floorDb, float dtSeconds);
 
     /**
      * Returns the latest meter-processed data

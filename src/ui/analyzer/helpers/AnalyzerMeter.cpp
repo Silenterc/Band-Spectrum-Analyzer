@@ -11,21 +11,23 @@ void AnalyzerMeter::reset() {
     renderData.traces.clear();
 }
 
-void AnalyzerMeter::tick(const Analyzer::RawSnapshot &snapshot, const Analyzer::MeterSettings &meterSettings,
+void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &bandInfo,
+                         const std::vector<Analyzer::RawTrace> &traces,
+                         const Analyzer::MeterSettings &meterSettings,
                          float floorDb, float dtSeconds) {
-    renderData.bandInfo = snapshot.bandInfo;
+    renderData.bandInfo = bandInfo != nullptr ? *bandInfo : std::vector<Analyzer::BandInfo>{};
     renderData.traces.clear();
 
-    for (const auto &trace: snapshot.traces) {
-        auto &traceState = getOrCreateTraceState(trace.kind, snapshot.bandInfo.size(), floorDb);
+    for (const auto &trace: traces) {
+        auto &traceState = getOrCreateTraceState(trace.kind, renderData.bandInfo.size(), floorDb);
 
         Analyzer::RenderTrace renderTrace;
         renderTrace.kind = trace.kind;
-        renderTrace.frame.rmsDb.resize(snapshot.bandInfo.size());
-        renderTrace.frame.peakDb.resize(snapshot.bandInfo.size());
-        renderTrace.frame.holdDb.resize(snapshot.bandInfo.size());
+        renderTrace.frame.rmsDb.resize(renderData.bandInfo.size());
+        renderTrace.frame.peakDb.resize(renderData.bandInfo.size());
+        renderTrace.frame.holdDb.resize(renderData.bandInfo.size());
 
-        for (size_t bandIndex = 0; bandIndex < snapshot.bandInfo.size(); ++bandIndex) {
+        for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
             const auto &measurements = trace.measurements[bandIndex];
             const auto peakInputDb = getPeakDb(measurements, floorDb);
             const auto meanPower = getMeanPower(measurements);

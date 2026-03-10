@@ -48,13 +48,4 @@ namespace Analyzer {
         std::vector<BandMeasurements> measurements;
     };
 
-    /**
-     * Raw analyzer data published by the DSP side
-     */
-    struct RawSnapshot {
-        // Shared band layout used by all traces
-        std::vector<BandInfo> bandInfo;
-        // Raw traces for this snapshot
-        std::vector<RawTrace> traces;
-    };
 }

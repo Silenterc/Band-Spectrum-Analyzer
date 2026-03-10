@@ -121,7 +121,7 @@ namespace {
     Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                         const Analyzer::ParameterState &parameters,
                                         float dtSeconds = Analyzer::Constants::meterPollIntervalSeconds) {
-        displayMeter.tick(engine.getSnapshot(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
+        displayMeter.tick(engine.getBandInfo(), {engine.getTrace()}, makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
         return displayMeter.getRenderData();
     }
 
@@ -185,24 +185,23 @@ TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
 
     prepareEngine(engine, parameters);
 
-    const auto snapshot = engine.getSnapshot();
-    const auto &bandInfo = snapshot.bandInfo;
+    const auto bandInfo = engine.getBandInfo();
     constexpr float tolerance = 0.0001f;
 
-    REQUIRE(bandInfo.size() > 2);
+    REQUIRE(bandInfo->size() > 2);
 
-    const auto expectedRatio = bandInfo[1].lowHz / bandInfo[0].lowHz;
+    const auto expectedRatio = (*bandInfo)[1].lowHz / (*bandInfo)[0].lowHz;
 
-    for (size_t bandIndex = 0; bandIndex < bandInfo.size(); ++bandIndex) {
-        const auto &band = bandInfo[bandIndex];
+    for (size_t bandIndex = 0; bandIndex < bandInfo->size(); ++bandIndex) {
+        const auto &band = (*bandInfo)[bandIndex];
 
         REQUIRE(band.lowHz < band.centerHz);
         REQUIRE(band.centerHz < band.highHz);
         REQUIRE(std::abs((band.centerHz * band.centerHz) - (band.lowHz * band.highHz)) < tolerance * band.highHz * band.highHz);
 
         if (bandIndex > 0) {
-            const auto lowRatio = band.lowHz / bandInfo[bandIndex - 1].lowHz;
-            const auto highRatio = band.highHz / bandInfo[bandIndex - 1].highHz;
+            const auto lowRatio = band.lowHz / (*bandInfo)[bandIndex - 1].lowHz;
+            const auto highRatio = band.highHz / (*bandInfo)[bandIndex - 1].highHz;
 
             REQUIRE(std::abs(lowRatio - expectedRatio) < tolerance);
             REQUIRE(std::abs(highRatio - expectedRatio) < tolerance);

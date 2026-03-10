@@ -181,8 +181,12 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
     gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
 }
 
-Analyzer::RawSnapshot SpectrumAnalyzerAudioProcessor::getSnapshot() const {
-    return engine.getSnapshot();
+std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProcessor::getBandInfo() const {
+    return engine.getBandInfo();
+}
+
+std::vector<Analyzer::RawTrace> SpectrumAnalyzerAudioProcessor::getRawTraces() const {
+    return {engine.getTrace()};
 }
 
 Analyzer::MeterSettings SpectrumAnalyzerAudioProcessor::getMeterSettings() const {

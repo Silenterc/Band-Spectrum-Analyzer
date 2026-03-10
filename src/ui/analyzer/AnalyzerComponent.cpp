@@ -3,9 +3,10 @@
 
 AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
     : dataSource(source), theme(themeToUse) {
-    snapshot = dataSource.getSnapshot();
+    bandInfo = dataSource.getBandInfo();
+    rawTraces = dataSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
-    displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), Analyzer::Constants::meterPollIntervalSeconds);
+    displayMeter.tick(bandInfo, rawTraces, dataSource.getMeterSettings(), dataSource.getGridMinDb(), Analyzer::Constants::meterPollIntervalSeconds);
     renderData = displayMeter.getRenderData();
     lastPollTimeMs = juce::Time::getMillisecondCounterHiRes();
     rebuildViewModel();
@@ -150,9 +151,10 @@ void AnalyzerComponent::timerCallback() {
     const auto dtSeconds = static_cast<float>((currentPollTimeMs - lastPollTimeMs) * 0.001);
     lastPollTimeMs = currentPollTimeMs;
 
-    snapshot = dataSource.getSnapshot();
+    bandInfo = dataSource.getBandInfo();
+    rawTraces = dataSource.getRawTraces();
     // Raw DSP measurements become render-ready RMS, peak, and hold values here
-    displayMeter.tick(snapshot, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
+    displayMeter.tick(bandInfo, rawTraces, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
     renderData = displayMeter.getRenderData();
     rebuildViewModel();
     repaint();
