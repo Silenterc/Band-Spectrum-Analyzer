@@ -7,6 +7,7 @@ AnalyzerViewModel::AnalyzerViewModel()
 }
 
 void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                               const Analyzer::MeterSettings &meterSettings,
                                float gridMinDb, float gridMaxDb, float gridStepDb,
                                const juce::Rectangle<float> &localBounds,
                                const std::optional<juce::Point<float>> &hoverPositionToUse) {
@@ -21,8 +22,9 @@ void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const Ana
         const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState);
 
         if (primaryTrace.has_value()) {
-            hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame, gridMinDb,
-                                         visibleMinFrequencyHz, visibleMaxFrequencyHz, *hoverPositionToUse);
+            hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame,
+                                         meterSettings, gridMinDb, visibleMinFrequencyHz, visibleMaxFrequencyHz,
+                                         *hoverPositionToUse);
         } else {
             hoverInfo.reset();
         }
@@ -95,9 +97,13 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
             AnalyzerBarModel barModel;
             barModel.rmsDb = getRmsDb(bandIndex, trace.frame, gridMinDb);
             barModel.peakDb = getPeakDb(bandIndex, trace.frame, gridMinDb);
+            barModel.holdDb = getHoldDb(bandIndex, trace.frame, gridMinDb);
+            barModel.peakBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.peakDb, gridMinDb,
+                                                        gridMaxDb, plotBounds);
             barModel.rmsBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.rmsDb, gridMinDb,
                                                        gridMaxDb, plotBounds);
             barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
+            barModel.holdY = geometry.yForDb(barModel.holdDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.isHovered = hoveredBandIndex == static_cast<int>(bandIndex);
             traceVisual.bars[bandIndex] = barModel;
         }
@@ -135,6 +141,13 @@ float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::RenderFrame
         return gridMinDb;
 
     return renderFrame.peakDb[bandIndex];
+}
+
+float AnalyzerViewModel::getHoldDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.holdDb.size())
+        return gridMinDb;
+
+    return renderFrame.holdDb[bandIndex];
 }
 
 void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &renderData,

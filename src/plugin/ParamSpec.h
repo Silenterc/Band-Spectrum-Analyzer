@@ -17,7 +17,7 @@ namespace ParamSpec {
 
     enum class BandMode {
         bands30 = 0,
-        bands40,
+        bands45,
         bands60
     };
 
@@ -41,7 +41,7 @@ namespace ParamSpec {
 
     inline constexpr std::array<const char *, 3> bandModeChoices{
         "30 Bands",
-        "40 Bands",
+        "45 Bands",
         "60 Bands"
     };
 
@@ -57,12 +57,12 @@ namespace ParamSpec {
         return {id, parameterVersionHint};
     }
 
-    inline constexpr int defaultAnalysisMode = static_cast<int>(AnalysisMode::summed);
-    inline constexpr int defaultBandMode = static_cast<int>(BandMode::bands40);
+    inline constexpr int defaultAnalysisMode = static_cast<int>(AnalysisMode::stereo);
+    inline constexpr int defaultBandMode = static_cast<int>(BandMode::bands45);
 
     inline constexpr bool defaultShowRms = true;
     inline constexpr bool defaultShowPeak = true;
-    inline constexpr bool defaultShowHold = false;
+    inline constexpr bool defaultShowHold = true;
 
     inline constexpr float defaultHoldMs = 500.0f;
     inline constexpr float defaultGridMinDb = -50.0f;

@@ -24,7 +24,7 @@ namespace {
     Analyzer::ParameterState makeDefaultParameters() {
         Analyzer::ParameterState parameters;
         parameters.analysisMode = ParamSpec::AnalysisMode::summed;
-        parameters.bandMode = ParamSpec::BandMode::bands40;
+        parameters.bandMode = ParamSpec::BandMode::bands45;
         parameters.showRms = true;
         parameters.showPeak = true;
         parameters.showHold = false;

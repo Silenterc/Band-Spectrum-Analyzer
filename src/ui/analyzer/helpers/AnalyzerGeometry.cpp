@@ -8,7 +8,7 @@ namespace {
     constexpr float topMargin = 16.0f;
     constexpr float bottomMargin = 34.0f;
     constexpr float tooltipWidth = 132.0f;
-    constexpr float tooltipHeight = 62.0f;
+    constexpr float tooltipHeight = 88.0f;
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<float> &localBounds) const {
@@ -78,7 +78,8 @@ juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t b
 juce::Rectangle<float> AnalyzerGeometry::getTooltipBounds(juce::Point<float> hoverPosition,
                                                           const juce::Rectangle<float> &plotBounds,
                                                           const juce::Rectangle<float> &localBounds) const {
-    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + 12.0f, hoverPosition.y - tooltipHeight * 0.5f,
+    // Keep the box slightly below the cursor so the pointer does not sit on its vertical centre
+    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + 12.0f, hoverPosition.y + 10.0f,
                                                 tooltipWidth, tooltipHeight);
 
     if (tooltipBounds.getRight() > localBounds.getRight() - 8.0f)

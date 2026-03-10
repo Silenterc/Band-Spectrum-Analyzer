@@ -11,7 +11,8 @@ AnalyzerHoverModel::AnalyzerHoverModel(const AnalyzerGeometry &geometryToUse, co
 std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle<float> &localBounds,
                                                            const juce::Rectangle<float> &plotBounds,
                                                            const std::vector<Analyzer::BandInfo> &bandInfo,
-                                                           const Analyzer::RenderFrame &renderFrame, float gridMinDb,
+                                                           const Analyzer::RenderFrame &renderFrame,
+                                                           const Analyzer::MeterSettings &meterSettings, float gridMinDb,
                                                            float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                            juce::Point<float> hoverPosition) const {
     const auto bandIndex = geometry.bandIndexAt(hoverPosition, bandInfo.size(), plotBounds);
@@ -26,15 +27,26 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
     AnalyzerHoverInfo hoverInfo;
     hoverInfo.bounds = geometry.getTooltipBounds(hoverPosition, plotBounds, localBounds);
     hoverInfo.bandIndex = bandIndex;
-    hoverInfo.levelText = formatter.formatDecibels(getDisplayedLevelDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
+    if (meterSettings.showPeak)
+        hoverInfo.peakText = "Peak: " + formatter.formatDecibels(getPeakDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
+
+    if (meterSettings.showRms)
+        hoverInfo.rmsText = "RMS:  " + formatter.formatDecibels(getRmsDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
     hoverInfo.frequencyText = formatter.formatHoverFrequency(hoveredFrequencyHz);
     hoverInfo.noteText = musicTheory.getNearestNoteName(hoveredFrequencyHz);
     return hoverInfo;
 }
 
-float AnalyzerHoverModel::getDisplayedLevelDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
-    if (bandIndex >= renderFrame.peakDb.size() || bandIndex >= renderFrame.rmsDb.size())
+float AnalyzerHoverModel::getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.peakDb.size())
         return gridMinDb;
 
-    return std::max(renderFrame.peakDb[bandIndex], renderFrame.rmsDb[bandIndex]);
+    return renderFrame.peakDb[bandIndex];
+}
+
+float AnalyzerHoverModel::getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
+    if (bandIndex >= renderFrame.rmsDb.size())
+        return gridMinDb;
+
+    return renderFrame.rmsDb[bandIndex];
 }

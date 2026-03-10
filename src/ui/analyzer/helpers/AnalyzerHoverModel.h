@@ -19,8 +19,10 @@ struct AnalyzerHoverInfo {
     juce::Rectangle<float> bounds;
     // Hovered band index used for highlighting
     int bandIndex = -1;
-    // Current displayed level text
-    juce::String levelText;
+    // Current peak level text
+    juce::String peakText;
+    // Current RMS level text
+    juce::String rmsText;
     // Current cursor frequency text
     juce::String frequencyText;
     // Nearest note name for the cursor frequency
@@ -41,12 +43,14 @@ public:
     [[nodiscard]] std::optional<AnalyzerHoverInfo> build(const juce::Rectangle<float> &localBounds,
                                                          const juce::Rectangle<float> &plotBounds,
                                                          const std::vector<Analyzer::BandInfo> &bandInfo,
-                                                         const Analyzer::RenderFrame &renderFrame, float gridMinDb,
+                                                         const Analyzer::RenderFrame &renderFrame,
+                                                         const Analyzer::MeterSettings &meterSettings, float gridMinDb,
                                                          float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                          juce::Point<float> hoverPosition) const;
 
 private:
-    static float getDisplayedLevelDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
+    static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
+    static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
 
     const AnalyzerGeometry &geometry;
     const FrequencyFormatter &formatter;

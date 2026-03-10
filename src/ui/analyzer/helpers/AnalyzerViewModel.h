@@ -38,14 +38,20 @@ struct AnalyzerFrequencyMarker {
  * Draw-ready bar state for one analyzer band
  */
 struct AnalyzerBarModel {
-    // Screen bounds for the RMS fill
+    // Screen bounds for the full peak bar
+    juce::Rectangle<float> peakBounds;
+    // Screen bounds for the RMS section inside the peak bar
     juce::Rectangle<float> rmsBounds;
     // Y position for the peak cap
     float peakY = 0.0f;
+    // Y position for the hold line when hold is enabled
+    float holdY = 0.0f;
     // Current RMS level for that bar
     float rmsDb = 0.0f;
     // Current peak level for that bar
     float peakDb = 0.0f;
+    // Current hold level for that bar
+    float holdDb = 0.0f;
     // Whether this bar is currently hovered
     bool isHovered = false;
 };
@@ -71,6 +77,7 @@ public:
      * Rebuilds the view model from the latest meter data and view state
      */
     void update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                const Analyzer::MeterSettings &meterSettings,
                 float gridMinDb, float gridMaxDb, float gridStepDb,
                 const juce::Rectangle<float> &localBounds,
                 const std::optional<juce::Point<float>> &hoverPosition);
@@ -115,6 +122,7 @@ private:
     bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
+    static float getHoldDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     void updateVisibleFrequencyRange(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState);
 
     AnalyzerGeometry geometry;

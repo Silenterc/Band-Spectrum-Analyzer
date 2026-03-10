@@ -20,6 +20,10 @@ namespace Ui {
         juce::Colour tooltipBackground;
         juce::Colour tooltipBorder;
         juce::Colour tooltipText;
+        juce::Colour rmsBarTop;
+        juce::Colour rmsBarBottom;
+        juce::Colour hoveredRmsBarTop;
+        juce::Colour hoveredRmsBarBottom;
         juce::Colour barTop;
         juce::Colour barBottom;
         juce::Colour hoveredBarTop;

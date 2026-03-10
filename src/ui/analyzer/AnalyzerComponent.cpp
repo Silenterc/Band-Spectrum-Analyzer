@@ -80,18 +80,29 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (bar.rmsDb <= viewModel.getGridMinDb() && bar.peakDb <= viewModel.getGridMinDb())
                 continue;
 
-            const auto topColour = bar.isHovered ? theme.hoveredBarTop : theme.barTop;
-            const auto bottomColour = bar.isHovered ? theme.hoveredBarBottom : theme.barBottom;
+            const auto peakTopColour = bar.isHovered ? theme.hoveredBarTop : theme.barTop;
+            const auto peakBottomColour = bar.isHovered ? theme.hoveredBarBottom : theme.barBottom;
+            const auto rmsTopColour = bar.isHovered ? theme.hoveredRmsBarTop : theme.rmsBarTop;
+            const auto rmsBottomColour = bar.isHovered ? theme.hoveredRmsBarBottom : theme.rmsBarBottom;
+
+            if (bar.peakDb > viewModel.getGridMinDb()) {
+                g.setGradientFill(juce::ColourGradient(peakTopColour, bar.peakBounds.getCentreX(), bar.peakBounds.getY(),
+                                                       peakBottomColour, bar.peakBounds.getCentreX(), bar.peakBounds.getBottom(), false));
+                g.fillRoundedRectangle(bar.peakBounds, 2.0f);
+            }
 
             if (bar.rmsDb > viewModel.getGridMinDb()) {
-                g.setGradientFill(juce::ColourGradient(topColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getY(),
-                                                       bottomColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getBottom(), false));
+                g.setGradientFill(juce::ColourGradient(rmsTopColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getY(),
+                                                       rmsBottomColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getBottom(), false));
                 g.fillRoundedRectangle(bar.rmsBounds, 2.0f);
             }
 
-            if (bar.peakDb > viewModel.getGridMinDb()) {
+            const auto lineDb = bar.holdDb > viewModel.getGridMinDb() ? bar.holdDb : bar.peakDb;
+            const auto lineY = bar.holdDb > viewModel.getGridMinDb() ? bar.holdY : bar.peakY;
+
+            if (lineDb > viewModel.getGridMinDb()) {
                 g.setColour(bar.isHovered ? theme.hoveredBarTop : theme.tooltipText);
-                g.fillRect(bar.rmsBounds.getX(), bar.peakY - 1.0f, bar.rmsBounds.getWidth(), 2.0f);
+                g.fillRect(bar.peakBounds.getX(), lineY - 1.0f, bar.peakBounds.getWidth(), 2.0f);
             }
         }
     }
@@ -109,9 +120,18 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
     g.setColour(theme.tooltipBorder);
     g.drawRoundedRectangle(hoverInfo.bounds, 8.0f, 1.0f);
 
-    const auto tooltipText = hoverInfo.levelText + "\n"
-                             + hoverInfo.frequencyText + "\n"
-                             + hoverInfo.noteText;
+    juce::StringArray tooltipLines;
+
+    if (hoverInfo.peakText.isNotEmpty())
+        tooltipLines.add(hoverInfo.peakText);
+
+    if (hoverInfo.rmsText.isNotEmpty())
+        tooltipLines.add(hoverInfo.rmsText);
+
+    tooltipLines.add(hoverInfo.frequencyText);
+    tooltipLines.add(hoverInfo.noteText);
+
+    const auto tooltipText = tooltipLines.joinIntoString("\n");
 
     g.setColour(theme.tooltipText);
     g.setFont(12.0f);
@@ -119,7 +139,8 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::rebuildViewModel() {
-    viewModel.update(renderData, viewState, dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
+    viewModel.update(renderData, viewState, dataSource.getMeterSettings(),
+                     dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
                      getLocalBounds().toFloat(), hoverPosition);
 }
 

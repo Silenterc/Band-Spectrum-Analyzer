@@ -219,12 +219,12 @@ namespace Analyzer {
         switch (currentParameters.bandMode) {
             case ParamSpec::BandMode::bands30:
                 return 30;
-            case ParamSpec::BandMode::bands40:
-                return 40;
+            case ParamSpec::BandMode::bands45:
+                return 45;
             case ParamSpec::BandMode::bands60:
                 return 60;
         }
 
-        return 40;
+        return 45;
     }
 }
