@@ -19,11 +19,13 @@ namespace Analyzer {
      * Raw audio-rate measurement for one band over the latest engine window
      */
     struct BandMeasurements {
-        // Maximum observed power y*y
+        // Maximum observed instantaneous linear power over the block: max(y * y)
+        // This is still in squared sample units, not dB.
         float peakPower = 0.0f;
-        // Sum of power samples y*y used for mean-power calculation
+        // Sum of instantaneous linear power over the block: sum(y * y)
+        // Divide by numSamples to get mean power before RMS / dB conversion.
         double sumPower = 0.0;
-        // Number of samples that contributed to the sum
+        // Number of filtered samples that contributed to sumPower
         int numSamples = 0;
     };
 

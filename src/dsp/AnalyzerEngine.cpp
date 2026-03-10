@@ -48,13 +48,12 @@ namespace Analyzer {
         if (numInputChannels <= 0 || numSamples == 0)
             return;
 
-        clearMeasurements();
-
         switch (currentParameters.analysisMode) {
             case ParamSpec::AnalysisMode::summed:
                 processSummedBlock(buffer);
                 break;
             case ParamSpec::AnalysisMode::midSide:
+                clearMeasurements();
                 processMidSideBlock(buffer);
                 break;
             case ParamSpec::AnalysisMode::stereo:
@@ -158,16 +157,22 @@ namespace Analyzer {
         for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
             auto &band = bands[bandIndex];
             auto &measurements = latestMeasurements[bandIndex];
+            auto peakPower = 0.0f;
+            auto sumPower = 0.0;
 
             // Measure raw power on the audio side. Display smoothing happens later at poll rate
             for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
                 // Will potentially need to be revised if this filter is good for our purposes
                 const auto filteredSample = band.filter.processSample(0, summedAnalysisInput[sampleIndex]);
                 const auto samplePower = filteredSample * filteredSample;
-                measurements.peakPower = std::max(measurements.peakPower, samplePower);
-                measurements.sumPower += static_cast<double>(samplePower);
-                ++measurements.numSamples;
+                if (samplePower > peakPower)
+                    peakPower = samplePower;
+                sumPower += static_cast<double>(samplePower);
             }
+
+            measurements.peakPower = peakPower;
+            measurements.sumPower = sumPower;
+            measurements.numSamples = numSamples;
         }
     }
 
@@ -181,6 +186,8 @@ namespace Analyzer {
         for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
             auto &band = bands[bandIndex];
             auto &measurements = latestMeasurements[bandIndex];
+            auto peakPower = 0.0f;
+            auto sumPower = 0.0;
 
             // Process left and right independently and merge in the power domain
             for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
@@ -193,10 +200,14 @@ namespace Analyzer {
                 const auto rightPower = rightFilteredSample * rightFilteredSample;
                 const auto combinedPower = 0.5f * (leftPower + rightPower);
 
-                measurements.peakPower = std::max(measurements.peakPower, combinedPower);
-                measurements.sumPower += static_cast<double>(combinedPower);
-                ++measurements.numSamples;
+                if (combinedPower > peakPower)
+                    peakPower = combinedPower;
+                sumPower += static_cast<double>(combinedPower);
             }
+
+            measurements.peakPower = peakPower;
+            measurements.sumPower = sumPower;
+            measurements.numSamples = numSamples;
         }
     }
 
