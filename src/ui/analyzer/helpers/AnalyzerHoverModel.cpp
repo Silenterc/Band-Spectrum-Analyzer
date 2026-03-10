@@ -17,7 +17,7 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
                                                            juce::Point<float> hoverPosition) const {
     const auto bandIndex = geometry.bandIndexAt(hoverPosition, bandInfo.size(), plotBounds);
 
-    if (bandIndex < 0)
+    if (!bandIndex.has_value())
         return std::nullopt;
 
     // Hover frequency follows the cursor on the log axis, not the nearest band center
@@ -26,12 +26,12 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
 
     AnalyzerHoverInfo hoverInfo;
     hoverInfo.bounds = geometry.getTooltipBounds(hoverPosition, plotBounds, localBounds);
-    hoverInfo.bandIndex = bandIndex;
+    hoverInfo.bandIndex = *bandIndex;
     if (meterSettings.showPeak)
-        hoverInfo.peakText = "Peak: " + formatter.formatDecibels(getPeakDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
+        hoverInfo.peakText = "Peak: " + formatter.formatDecibels(getPeakDb(*bandIndex, renderFrame, gridMinDb));
 
     if (meterSettings.showRms)
-        hoverInfo.rmsText = "RMS:  " + formatter.formatDecibels(getRmsDb(static_cast<size_t>(bandIndex), renderFrame, gridMinDb));
+        hoverInfo.rmsText = "RMS:  " + formatter.formatDecibels(getRmsDb(*bandIndex, renderFrame, gridMinDb));
     hoverInfo.frequencyText = formatter.formatHoverFrequency(hoveredFrequencyHz);
     hoverInfo.noteText = musicTheory.getNearestNoteName(hoveredFrequencyHz);
     return hoverInfo;

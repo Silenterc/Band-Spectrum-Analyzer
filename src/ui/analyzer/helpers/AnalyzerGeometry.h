@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -36,7 +37,8 @@ public:
     /**
      * Returns the hovered bar index for equal-width bar drawing
      */
-    int bandIndexAt(juce::Point<float> position, size_t bandCount, const juce::Rectangle<float> &plotBounds) const;
+    std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,
+                                      const juce::Rectangle<float> &plotBounds) const;
 
     /**
      * Returns the draw bounds for one analyzer bar

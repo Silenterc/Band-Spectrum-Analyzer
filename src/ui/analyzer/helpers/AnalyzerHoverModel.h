@@ -18,7 +18,7 @@ struct AnalyzerHoverInfo {
     // Tooltip bounds inside the component
     juce::Rectangle<float> bounds;
     // Hovered band index used for highlighting
-    int bandIndex = -1;
+    size_t bandIndex = 0;
     // Current peak level text
     juce::String peakText;
     // Current RMS level text

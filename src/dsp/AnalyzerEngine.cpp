@@ -43,7 +43,7 @@ namespace Analyzer {
             return;
 
         const auto numInputChannels = buffer.getNumChannels();
-        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
+        const auto numSamples = buffer.getNumSamples();
 
         if (numInputChannels <= 0 || numSamples == 0)
             return;
@@ -77,22 +77,23 @@ namespace Analyzer {
     }
 
     void Engine::rebuildBands() {
-        const auto bandCount = getBandCount();
+        const auto bandCount = static_cast<size_t>(getBandCount());
         const auto maxAnalysisFrequencyHz = std::max(
             static_cast<float>(currentSampleRate * 0.5 * Constants::maxAnalysisFractionOfNyquist),
             Constants::minFrequencyHz * 2.0f);
         // This is the ratio we spread evenly in log space
         const auto frequencyRatio = maxAnalysisFrequencyHz / Constants::minFrequencyHz;
+        const auto normalisedStep = 1.0f / static_cast<float>(bandCount);
 
         auto newBandInfo = std::make_shared<std::vector<BandInfo>>();
-        newBandInfo->resize(static_cast<size_t>(bandCount));
-        bands.resize(static_cast<size_t>(bandCount));
-        latestMeasurements.resize(static_cast<size_t>(bandCount));
+        newBandInfo->resize(bandCount);
+        bands.resize(bandCount);
+        latestMeasurements.resize(bandCount);
 
-        for (int bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
+        auto lowNormalised = 0.0f;
+        for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
             // We step evenly in log space, not linearly in Hz
-            const auto lowNormalised = static_cast<float>(bandIndex) / static_cast<float>(bandCount);
-            const auto highNormalised = static_cast<float>(bandIndex + 1) / static_cast<float>(bandCount);
+            const auto highNormalised = lowNormalised + normalisedStep;
             const auto lowHz = Constants::minFrequencyHz * std::pow(frequencyRatio, lowNormalised);
             const auto highHz = Constants::minFrequencyHz * std::pow(frequencyRatio, highNormalised);
             // Geometric mean is the natural center for a log-spaced band
@@ -103,8 +104,9 @@ namespace Analyzer {
             info.centerHz = centerHz;
             info.highHz = highHz;
 
-            (*newBandInfo)[static_cast<size_t>(bandIndex)] = info;
-            bands[static_cast<size_t>(bandIndex)].info = info;
+            (*newBandInfo)[bandIndex] = info;
+            bands[bandIndex].info = info;
+            lowNormalised = highNormalised;
         }
 
         std::atomic_store(&bandInfo, newBandInfo);

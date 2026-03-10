@@ -83,7 +83,7 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
 
     const auto hoveredBandIndex = hoverPositionToUse.has_value()
                                       ? geometry.bandIndexAt(*hoverPositionToUse, renderData.bandInfo.size(), plotBounds)
-                                      : -1;
+                                      : std::optional<size_t>{};
 
     for (const auto &trace: renderData.traces) {
         if (!isTraceEnabled(trace.kind, viewState))
@@ -104,7 +104,7 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
                                                        gridMaxDb, plotBounds);
             barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.holdY = geometry.yForDb(barModel.holdDb, gridMinDb, gridMaxDb, plotBounds);
-            barModel.isHovered = hoveredBandIndex == static_cast<int>(bandIndex);
+            barModel.isHovered = hoveredBandIndex == bandIndex;
             traceVisual.bars[bandIndex] = barModel;
         }
 

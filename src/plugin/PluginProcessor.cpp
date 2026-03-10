@@ -1,6 +1,13 @@
 #include "PluginProcessor.h"
 #include "../ui/PluginEditor.h"
 
+namespace {
+    template <typename Enum>
+    Enum loadEnumParameter(const std::atomic<float> *parameter) {
+        return static_cast<Enum>(juce::roundToInt(parameter->load()));
+    }
+}
+
 //==============================================================================
 SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -212,8 +219,8 @@ float SpectrumAnalyzerAudioProcessor::getGridStepDb() const {
 
 Analyzer::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
     Analyzer::ParameterState currentParameterState;
-    currentParameterState.analysisMode = static_cast<ParamSpec::AnalysisMode>(static_cast<int>(analysisModeParam->load()));
-    currentParameterState.bandMode = static_cast<ParamSpec::BandMode>(static_cast<int>(bandModeParam->load()));
+    currentParameterState.analysisMode = loadEnumParameter<ParamSpec::AnalysisMode>(analysisModeParam);
+    currentParameterState.bandMode = loadEnumParameter<ParamSpec::BandMode>(bandModeParam);
     currentParameterState.showRms = showRmsParam->load() > 0.5f;
     currentParameterState.showPeak = showPeakParam->load() > 0.5f;
     currentParameterState.showHold = showHoldParam->load() > 0.5f;

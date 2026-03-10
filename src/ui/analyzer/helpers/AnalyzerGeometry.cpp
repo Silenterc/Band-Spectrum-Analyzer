@@ -1,5 +1,6 @@
 #include "AnalyzerGeometry.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -54,14 +55,15 @@ float AnalyzerGeometry::yForDb(float decibels, float minDb, float maxDb,
     return plotBounds.getBottom() - normalised * plotBounds.getHeight();
 }
 
-int AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
-                                  const juce::Rectangle<float> &plotBounds) const {
+std::optional<size_t> AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
+                                                    const juce::Rectangle<float> &plotBounds) const {
     if (bandCount == 0 || !plotBounds.contains(position))
-        return -1;
+        return std::nullopt;
 
-    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
-    const auto bandIndex = static_cast<int>((position.x - plotBounds.getX()) / bandWidth);
-    return juce::jlimit(0, static_cast<int>(bandCount) - 1, bandIndex);
+    const auto bandCountFloat = static_cast<float>(bandCount);
+    const auto bandWidth = plotBounds.getWidth() / bandCountFloat;
+    const auto bandIndex = static_cast<size_t>((position.x - plotBounds.getX()) / bandWidth);
+    return std::min(bandIndex, bandCount - 1);
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t bandCount, float displayedDb, float minDb,
