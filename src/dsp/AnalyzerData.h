@@ -34,7 +34,11 @@ namespace Analyzer {
      */
     enum class TraceKind {
         input,
+        left,
+        right,
         sidechain,
+        sidechainLeft,
+        sidechainRight,
         mid,
         side,
         custom
@@ -49,5 +53,4 @@ namespace Analyzer {
         // Raw per-band measurements
         std::vector<BandMeasurements> measurements;
     };
-
 }

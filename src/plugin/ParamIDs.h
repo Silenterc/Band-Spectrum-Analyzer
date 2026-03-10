@@ -1,7 +1,7 @@
 #pragma once
 
 namespace ParamIDs {
-    inline constexpr const char* analysisMode = "analysisMode"; // Summed / MidSide
+    inline constexpr const char* analysisMode = "analysisMode"; // Mid / Side / Stereo, main or sidechain
     inline constexpr const char* bandMode     = "bandMode";     // 30 / 40 / 60
 
     inline constexpr const char* showRms  = "showRms";

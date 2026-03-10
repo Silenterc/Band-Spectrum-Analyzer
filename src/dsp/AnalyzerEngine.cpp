@@ -8,22 +8,27 @@ namespace Analyzer {
         currentSampleRate = sampleRate;
         currentMaximumBlockSize = maximumBlockSize;
         isPrepared = true;
-        summedAnalysisInput.resize(static_cast<size_t>(maximumBlockSize));
+        sourceBuilder.prepare(maximumBlockSize);
 
         rebuildBands();
-        rebuildFilters();
+        rebuildProcessors();
         reset();
-        publishTrace();
     }
 
     void Engine::reset() {
-        clearMeasurements();
+        auto *publishedTraces = traces.get_for_writer();
+        if (publishedTraces->size() != publishedTraceCount)
+            publishedTraces->resize(publishedTraceCount);
 
-        for (auto &band: bands) {
-            band.filter.reset();
+        size_t traceOffset = 0;
+        for (auto &processor: processors) {
+            const auto outputCount = processor.getOutputCount();
+            processor.reset();
+            processor.writeRawTraces(*publishedTraces, traceOffset);
+            traceOffset += outputCount;
         }
 
-        publishTrace();
+        traces.publish();
     }
 
     void Engine::setParameters(const ParameterState &parameters) {
@@ -34,45 +39,50 @@ namespace Analyzer {
         if (getBandCount() != previousBandCount)
             rebuildBands();
 
-        rebuildFilters();
-        publishTrace();
+        rebuildProcessors();
+        reset();
     }
 
     void Engine::processBlock(const juce::AudioBuffer<float> &buffer) {
-        if (!isPrepared || bands.empty())
+        processBlock(buffer, nullptr);
+    }
+
+    void Engine::processBlock(const juce::AudioBuffer<float> &mainBuffer,
+                              const juce::AudioBuffer<float> *sidechainBuffer) {
+        if (!isPrepared)
             return;
 
-        const auto numInputChannels = buffer.getNumChannels();
-        const auto numSamples = buffer.getNumSamples();
+        const auto numInputChannels = mainBuffer.getNumChannels();
+        const auto numSamples = mainBuffer.getNumSamples();
 
         if (numInputChannels <= 0 || numSamples == 0)
             return;
 
-        switch (currentParameters.analysisMode) {
-            case ParamSpec::AnalysisMode::summed:
-                processSummedBlock(buffer);
-                break;
-            case ParamSpec::AnalysisMode::midSide:
-                clearMeasurements();
-                processMidSideBlock(buffer);
-                break;
-            case ParamSpec::AnalysisMode::stereo:
-                processStereoBlock(buffer);
-                break;
+        const auto sourceSet = sourceBuilder.build(mainBuffer, sidechainBuffer);
+        auto *publishedTraces = traces.get_for_writer();
+        if (publishedTraces->size() != publishedTraceCount)
+            publishedTraces->resize(publishedTraceCount);
+
+        size_t traceOffset = 0;
+        for (auto &processor: processors) {
+            const auto outputCount = processor.getOutputCount();
+            processor.process(sourceSet);
+            processor.writeRawTraces(*publishedTraces, traceOffset);
+            traceOffset += outputCount;
         }
 
-        publishTrace();
+        traces.publish();
     }
 
     std::shared_ptr<const std::vector<BandInfo>> Engine::getBandInfo() const {
         return std::atomic_load(&bandInfo);
     }
 
-    RawTrace Engine::getTrace() const {
-        // TripleBuffer gives us the latest published raw measurements without touching the live write side
-        const auto [trace, hasUpdate] = traces.get_for_reader();
+    std::vector<RawTrace> Engine::getTraces() const {
+        // TripleBuffer gives us the latest published raw traces without touching the live write side
+        const auto [publishedTraces, hasUpdate] = traces.get_for_reader();
         juce::ignoreUnused(hasUpdate);
-        return *trace;
+        return *publishedTraces;
     }
 
     void Engine::rebuildBands() {
@@ -84,10 +94,8 @@ namespace Analyzer {
         const auto frequencyRatio = maxAnalysisFrequencyHz / Constants::minFrequencyHz;
         const auto normalisedStep = 1.0f / static_cast<float>(bandCount);
 
-        auto newBandInfo = std::make_shared<std::vector<BandInfo>>();
+        auto newBandInfo = std::make_shared<std::vector<BandInfo> >();
         newBandInfo->resize(bandCount);
-        bands.resize(bandCount);
-        latestMeasurements.resize(bandCount);
 
         auto lowNormalised = 0.0f;
         for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
@@ -104,138 +112,28 @@ namespace Analyzer {
             info.highHz = highHz;
 
             (*newBandInfo)[bandIndex] = info;
-            bands[bandIndex].info = info;
             lowNormalised = highNormalised;
         }
 
         std::atomic_store(&bandInfo, newBandInfo);
     }
 
-    void Engine::rebuildFilters() {
+    void Engine::rebuildProcessors() {
         if (!isPrepared)
             return;
 
-        juce::dsp::ProcessSpec processSpec{};
-        processSpec.sampleRate = currentSampleRate;
-        processSpec.maximumBlockSize = static_cast<juce::uint32>(currentMaximumBlockSize);
-        processSpec.numChannels = 2;
+        processors.clear();
+        publishedTraceCount = 0;
 
-        for (auto &band: bands) {
-            const auto bandwidth = std::max(band.info.highHz - band.info.lowHz, 1.0f);
-            // Rough q from the band width. Good enough until we calibrate this more carefully
-            // Higher resonance means a narrower, more focused band around the center freq
-            const auto resonance = juce::jlimit(0.1f, 10.0f, band.info.centerHz / bandwidth);
+        const auto specs = planBuilder.build(currentParameters);
+        const auto currentBandInfo = getBandInfo();
+        processors.reserve(specs.size());
 
-            band.filter.prepare(processSpec);
-            band.filter.setType(juce::dsp::StateVariableTPTFilterType::bandpass);
-            band.filter.setCutoffFrequency(band.info.centerHz);
-            band.filter.setResonance(resonance);
-            band.filter.reset();
+        for (const auto &spec: specs) {
+            processors.emplace_back(spec);
+            processors.back().prepare(currentSampleRate, currentMaximumBlockSize, currentBandInfo);
+            publishedTraceCount += processors.back().getOutputCount();
         }
-    }
-
-    void Engine::updateSummedAnalysisInput(const juce::AudioBuffer<float> &buffer) {
-        const auto numChannels = buffer.getNumChannels();
-        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
-        const auto *leftChannel = buffer.getReadPointer(0);
-        const auto *rightChannel = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
-        summedAnalysisInput.resize(numSamples);
-
-        // Precompute the mono sum once so each band can reuse it
-        for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
-            const auto leftSample = leftChannel[sampleIndex];
-            const auto rightSample = rightChannel != nullptr ? rightChannel[sampleIndex] : leftSample;
-            summedAnalysisInput[sampleIndex] = 0.5f * (leftSample + rightSample);
-        }
-    }
-
-    void Engine::processSummedBlock(const juce::AudioBuffer<float> &buffer) {
-        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
-
-        updateSummedAnalysisInput(buffer);
-
-        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
-            auto &band = bands[bandIndex];
-            auto &measurements = latestMeasurements[bandIndex];
-            auto peakPower = 0.0f;
-            auto sumPower = 0.0;
-
-            // Measure raw power on the audio side. Display smoothing happens later at poll rate
-            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
-                // Will potentially need to be revised if this filter is good for our purposes
-                const auto filteredSample = band.filter.processSample(0, summedAnalysisInput[sampleIndex]);
-                const auto samplePower = filteredSample * filteredSample;
-                if (samplePower > peakPower)
-                    peakPower = samplePower;
-                sumPower += static_cast<double>(samplePower);
-            }
-
-            measurements.peakPower = peakPower;
-            measurements.sumPower = sumPower;
-            measurements.numSamples = numSamples;
-        }
-    }
-
-    void Engine::processStereoBlock(const juce::AudioBuffer<float> &buffer) {
-        const auto numChannels = buffer.getNumChannels();
-        const auto numSamples = static_cast<size_t>(buffer.getNumSamples());
-        const auto *leftChannel = buffer.getReadPointer(0);
-        // If we only have 1 channel, this becomes the same as summed/mono
-        const auto *rightChannel = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
-
-        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
-            auto &band = bands[bandIndex];
-            auto &measurements = latestMeasurements[bandIndex];
-            auto peakPower = 0.0f;
-            auto sumPower = 0.0;
-
-            // Process left and right independently and merge in the power domain
-            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
-                const auto leftSample = leftChannel[sampleIndex];
-                const auto rightSample = rightChannel != nullptr ? rightChannel[sampleIndex] : leftSample;
-
-                const auto leftFilteredSample = band.filter.processSample(0, leftSample);
-                const auto rightFilteredSample = band.filter.processSample(1, rightSample);
-                const auto leftPower = leftFilteredSample * leftFilteredSample;
-                const auto rightPower = rightFilteredSample * rightFilteredSample;
-                const auto combinedPower = 0.5f * (leftPower + rightPower);
-
-                if (combinedPower > peakPower)
-                    peakPower = combinedPower;
-                sumPower += static_cast<double>(combinedPower);
-            }
-
-            measurements.peakPower = peakPower;
-            measurements.sumPower = sumPower;
-            measurements.numSamples = numSamples;
-        }
-    }
-
-    void Engine::processMidSideBlock(const juce::AudioBuffer<float> &buffer) {
-        juce::ignoreUnused(buffer);
-
-        // TODO implement mid/side analysis path
-    }
-
-    void Engine::clearMeasurements() {
-        for (auto &measurements: latestMeasurements) {
-            measurements.peakPower = 0.0f;
-            measurements.sumPower = 0.0;
-            measurements.numSamples = 0;
-        }
-    }
-
-    void Engine::publishTrace() const {
-        auto *trace = traces.get_for_writer();
-        // The engine is single-trace for now, so it publishes one raw input trace
-        trace->kind = TraceKind::input;
-
-        if (trace->measurements.size() != latestMeasurements.size())
-            trace->measurements.resize(latestMeasurements.size());
-
-        // Reuse the trace storage so publish does not pay the full vector assignment path every block
-        std::copy(latestMeasurements.begin(), latestMeasurements.end(), trace->measurements.begin());
-        traces.publish();
     }
 
     int Engine::getBandCount() const {

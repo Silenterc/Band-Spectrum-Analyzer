@@ -23,7 +23,7 @@ namespace {
 
     Analyzer::ParameterState makeDefaultParameters() {
         Analyzer::ParameterState parameters;
-        parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+        parameters.analysisMode = ParamSpec::AnalysisMode::mid;
         parameters.bandMode = ParamSpec::BandMode::bands45;
         parameters.showRms = true;
         parameters.showPeak = true;
@@ -121,7 +121,7 @@ namespace {
     Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                         const Analyzer::ParameterState &parameters,
                                         float dtSeconds = Analyzer::Constants::meterPollIntervalSeconds) {
-        displayMeter.tick(engine.getBandInfo(), {engine.getTrace()}, makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
+        displayMeter.tick(engine.getBandInfo(), engine.getTraces(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
         return displayMeter.getRenderData();
     }
 
@@ -232,7 +232,7 @@ TEST_CASE("AnalyzerEngine summed mode tracks a low sine wave") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
@@ -244,7 +244,7 @@ TEST_CASE("AnalyzerEngine summed mode tracks a high sine wave") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
@@ -256,7 +256,7 @@ TEST_CASE("AnalyzerEngine summed mode cancels opposite-phase stereo content") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
@@ -312,7 +312,7 @@ TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
     parameters.showHold = true;
 
     prepareEngine(engine, parameters);
@@ -325,7 +325,7 @@ TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
     parameters.showHold = true;
 
     prepareEngine(engine, parameters);
@@ -338,7 +338,7 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
     parameters.bandMode = ParamSpec::BandMode::bands30;
 
     prepareEngine(engine, parameters);
@@ -360,7 +360,7 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::summed;
+    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
     parameters.bandMode = ParamSpec::BandMode::bands30;
 
     prepareEngine(engine, parameters);

@@ -4,8 +4,10 @@
 #include <vector>
 
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_dsp/juce_dsp.h>
 
+#include "AnalysisGroupProcessor.h"
+#include "AnalysisPlanBuilder.h"
+#include "AnalysisSourceBuilder.h"
 #include "AnalyzerData.h"
 #include "ParameterState.h"
 #include "TripleBuffer.h"
@@ -38,65 +40,31 @@ namespace Analyzer {
         void processBlock(const juce::AudioBuffer<float> &buffer);
 
         /**
+         * Runs one audio block through the analyzer with an optional sidechain source
+         */
+        void processBlock(const juce::AudioBuffer<float> &mainBuffer,
+                          const juce::AudioBuffer<float> *sidechainBuffer);
+
+        /**
          * Returns the current immutable band layout
          */
         std::shared_ptr<const std::vector<BandInfo>> getBandInfo() const;
 
         /**
-         * Returns the latest published raw trace for this engine
+         * Returns the latest published raw traces for this engine
          */
-        RawTrace getTrace() const;
+        std::vector<RawTrace> getTraces() const;
 
     private:
-        /**
-         * Runtime state for one band in the filter bank
-         */
-        struct BandState {
-            // Static freq info for this band
-            BandInfo info;
-            // Bandpass filter
-            juce::dsp::StateVariableTPTFilter<float> filter;
-        };
-
         /**
          * Rebuilds the log-spaced band layout
          */
         void rebuildBands();
 
         /**
-         * Rebuilds the bandpass filters for the current layout
+         * Rebuilds the active group processors for the current parameter state
          */
-        void rebuildFilters();
-
-        /**
-         * Updates the mono summed input stream for the current block
-         */
-        void updateSummedAnalysisInput(const juce::AudioBuffer<float> &buffer);
-
-        /**
-         * Runs the summed mono analysis path for one block
-         */
-        void processSummedBlock(const juce::AudioBuffer<float> &buffer);
-
-        /**
-         * Runs the "stereo" analysis path by processing L and R separately
-         */
-        void processStereoBlock(const juce::AudioBuffer<float> &buffer);
-
-        /**
-         * Placeholder for the future mid/side analysis path
-         */
-        void processMidSideBlock(const juce::AudioBuffer<float> &buffer);
-
-        /**
-         * Clears the current raw measurements before processing a new block
-         */
-        void clearMeasurements();
-
-        /**
-         * Publishes the latest raw trace without locking
-         */
-        void publishTrace() const;
+        void rebuildProcessors();
 
         /**
          * Returns how many bands the current mode should use
@@ -113,15 +81,17 @@ namespace Analyzer {
         // Latest parameter snapshot pushed into the engine
         ParameterState currentParameters{};
 
-        // Temporary mono input vector (re)used by the summed analysis path
-        std::vector<float> summedAnalysisInput;
         // Static band metadata for the current layout
-        std::shared_ptr<std::vector<BandInfo>> bandInfo = std::make_shared<std::vector<BandInfo>>();
-        // Per-band filters and meter state
-        std::vector<BandState> bands;
-        // Latest raw measurements exposed to the UI
-        std::vector<BandMeasurements> latestMeasurements;
-        // Published raw trace for the UI, 1 W x 1 R threads
-        mutable TripleBuffer<RawTrace> traces;
+        std::shared_ptr<std::vector<BandInfo> > bandInfo = std::make_shared<std::vector<BandInfo> >();
+        // Builds block-local source views and owns derived temp buffers
+        AnalysisSourceBuilder sourceBuilder;
+        // Builds the active analysis plan for the current parameter state
+        AnalysisPlanBuilder planBuilder;
+        // Active modular analysis processors
+        std::vector<AnalysisGroupProcessor> processors;
+        // Total number of published traces produced by the active processors
+        size_t publishedTraceCount = 0;
+        // Published raw traces for the UI, 1 W x 1 R threads
+        mutable TripleBuffer<std::vector<RawTrace> > traces;
     };
 }

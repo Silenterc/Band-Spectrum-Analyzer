@@ -14,6 +14,7 @@ SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
 #if ! JucePlugin_IsMidiEffect
 #if ! JucePlugin_IsSynth
           .withInput("Input", juce::AudioChannelSet::stereo(), true)
+          .withInput("Sidechain", juce::AudioChannelSet::stereo(), false)
 #endif
           .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
@@ -113,6 +114,14 @@ bool SpectrumAnalyzerAudioProcessor::isBusesLayoutSupported(const BusesLayout &l
         return false;
 #endif
 
+    if (layouts.inputBuses.size() > 1) {
+        const auto sidechainLayout = layouts.getChannelSet(true, 1);
+        if (!sidechainLayout.isDisabled()
+            && sidechainLayout != juce::AudioChannelSet::mono()
+            && sidechainLayout != juce::AudioChannelSet::stereo())
+            return false;
+    }
+
     return true;
 #endif
 }
@@ -148,7 +157,15 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    engine.processBlock(buffer);
+    auto mainBuffer = getBusBuffer(buffer, true, 0);
+
+    if (getBusCount(true) > 1 && getChannelCountOfBus(true, 1) > 0) {
+        auto sidechainBuffer = getBusBuffer(buffer, true, 1);
+        engine.processBlock(mainBuffer, &sidechainBuffer);
+        return;
+    }
+
+    engine.processBlock(mainBuffer);
 }
 
 //==============================================================================
@@ -193,7 +210,7 @@ std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProc
 }
 
 std::vector<Analyzer::RawTrace> SpectrumAnalyzerAudioProcessor::getRawTraces() const {
-    return {engine.getTrace()};
+    return engine.getTraces();
 }
 
 Analyzer::MeterSettings SpectrumAnalyzerAudioProcessor::getMeterSettings() const {
