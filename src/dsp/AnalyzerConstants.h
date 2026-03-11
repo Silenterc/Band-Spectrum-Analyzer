@@ -8,7 +8,8 @@ namespace Analyzer::Constants {
     inline constexpr float defaultVisibleMaxFrequencyHz = 20000.0f;
     inline constexpr float maxAnalysisFractionOfNyquist = 0.9f;
 
-    inline constexpr int meterPollIntervalMs = 16; // ~ 60 Hz
+    inline constexpr int meterPollIntervalMs = 33; // ~ 30 Hz
+    inline constexpr int idleMeterPollIntervalMs = 120; // ~ 8 Hz while waiting for signal to return
     inline constexpr float meterPollIntervalSeconds = static_cast<float>(meterPollIntervalMs) * 0.001f;
 
     inline constexpr std::array<float, 10> frequencyScaleLabelsHz{

@@ -9,6 +9,7 @@ namespace Analyzer {
         currentMaximumBlockSize = maximumBlockSize;
         isPrepared = true;
         sourceBuilder.prepare(maximumBlockSize);
+        inputActivityDetector.prepare(sampleRate);
 
         rebuildBands();
         rebuildProcessors();
@@ -16,19 +17,10 @@ namespace Analyzer {
     }
 
     void Engine::reset() {
-        auto *publishedTraces = traces.get_for_writer();
-        if (publishedTraces->size() != publishedTraceCount)
-            publishedTraces->resize(publishedTraceCount);
-
-        size_t traceOffset = 0;
-        for (auto &processor: processors) {
-            const auto outputCount = processor.getOutputCount();
-            processor.reset();
-            processor.writeRawTraces(*publishedTraces, traceOffset);
-            traceOffset += outputCount;
-        }
-
-        traces.publish();
+        inputActivityDetector.reset();
+        recentSignalActive.store(false, std::memory_order_relaxed);
+        hasPublishedSilenceWhileInactive = false;
+        publishProcessorState(true);
     }
 
     void Engine::setParameters(const EngineParameterState &parameters) {
@@ -58,6 +50,18 @@ namespace Analyzer {
         if (numInputChannels <= 0 || numSamples == 0)
             return;
 
+        inputActivityDetector.update(mainBuffer, sidechainBuffer);
+        recentSignalActive.store(inputActivityDetector.hasRecentSignal(), std::memory_order_relaxed);
+
+        if (!inputActivityDetector.shouldProcess()) {
+            if (!hasPublishedSilenceWhileInactive) {
+                publishProcessorState(true);
+                hasPublishedSilenceWhileInactive = true;
+            }
+            return;
+        }
+
+        hasPublishedSilenceWhileInactive = false;
         const auto sourceSet = sourceBuilder.build(mainBuffer, sidechainBuffer);
         auto *publishedTraces = traces.get_for_writer();
         if (publishedTraces->size() != publishedTraceCount)
@@ -83,6 +87,10 @@ namespace Analyzer {
         const auto [publishedTraces, hasUpdate] = traces.get_for_reader();
         juce::ignoreUnused(hasUpdate);
         return *publishedTraces;
+    }
+
+    bool Engine::hasRecentSignal() const {
+        return recentSignalActive.load(std::memory_order_relaxed);
     }
 
     void Engine::rebuildBands() {
@@ -147,5 +155,22 @@ namespace Analyzer {
         }
 
         return 45;
+    }
+
+    void Engine::publishProcessorState(const bool resetProcessors) {
+        auto *publishedTraces = traces.get_for_writer();
+        if (publishedTraces->size() != publishedTraceCount)
+            publishedTraces->resize(publishedTraceCount);
+
+        size_t traceOffset = 0;
+        for (auto &processor: processors) {
+            const auto outputCount = processor.getOutputCount();
+            if (resetProcessors)
+                processor.reset();
+            processor.writeRawTraces(*publishedTraces, traceOffset);
+            traceOffset += outputCount;
+        }
+
+        traces.publish();
     }
 }

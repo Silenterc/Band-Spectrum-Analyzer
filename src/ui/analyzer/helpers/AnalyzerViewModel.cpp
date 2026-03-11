@@ -8,33 +8,96 @@ AnalyzerViewModel::AnalyzerViewModel()
     : hoverModel(geometry, formatter, musicTheory) {
 }
 
-void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                               const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-                               const Shared::SignalSlotOrder &signalSlotOrder,
-                               const Analyzer::MeterSettings &meterSettings,
-                               float gridMinDb, float gridMaxDb, float gridStepDb,
-                               const juce::Rectangle<float> &localBounds,
-                               const std::optional<juce::Point<float>> &hoverPositionToUse) {
+void AnalyzerViewModel::updateStaticLayout(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                                           float gridMinDb, float gridMaxDb, float gridStepDb,
+                                           const juce::Rectangle<float> &localBounds) {
     currentGridMinDb = gridMinDb;
     plotBounds = geometry.getPlotBounds(localBounds);
     updateVisibleFrequencyRange(renderData, viewState);
     updateGrid(gridMinDb, gridMaxDb, gridStepDb);
-    updateTraceVisuals(renderData, viewState, signalSlots, signalSlotOrder, gridMinDb, gridMaxDb, hoverPositionToUse);
+    updateBandBounds(renderData.bandInfo.size());
+}
 
-    if (hoverPositionToUse.has_value()) {
-        // Hover uses the first visible trace as its source until we add multi-trace hover policy
-        const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
+void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                                           const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                                           const Shared::SignalSlotOrder &signalSlotOrder,
+                                           float gridMinDb, float gridMaxDb) {
+    traceVisuals.clear();
 
-        if (primaryTrace.has_value()) {
-            hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame,
-                                         meterSettings, gridMinDb, visibleMinFrequencyHz, visibleMaxFrequencyHz,
-                                         *hoverPositionToUse);
-        } else {
-            hoverInfo.reset();
-        }
-    } else {
-        hoverInfo.reset();
+    std::vector<const Analyzer::RenderTrace *> orderedTraces;
+    orderedTraces.reserve(renderData.traces.size());
+
+    for (const auto &trace: renderData.traces) {
+        if (!isTraceEnabled(trace.kind, viewState))
+            continue;
+
+        orderedTraces.push_back(&trace);
     }
+
+    std::sort(orderedTraces.begin(), orderedTraces.end(),
+              [this, &signalSlotOrder](const Analyzer::RenderTrace *lhs, const Analyzer::RenderTrace *rhs) {
+                  return slotOrderModel.getTraceOrder(lhs->kind, signalSlotOrder)
+                         < slotOrderModel.getTraceOrder(rhs->kind, signalSlotOrder);
+              });
+
+    const auto plotBottom = plotBounds.getBottom();
+
+    for (const auto *trace: orderedTraces) {
+        if (trace == nullptr)
+            continue;
+
+        AnalyzerTraceVisual traceVisual;
+        traceVisual.kind = trace->kind;
+        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(trace->kind); slotIndex.has_value()) {
+            const auto &slot = signalSlots[*slotIndex];
+            traceVisual.colour = Ui::getSignalPresetColour(slot.colourIndex).withAlpha(slot.opacity);
+        } else {
+            traceVisual.colour = juce::Colours::white;
+        }
+        traceVisual.bars.resize(renderData.bandInfo.size());
+
+        for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
+            AnalyzerBarModel barModel;
+            barModel.bandBounds = bandBounds[bandIndex];
+            barModel.rmsDb = getRmsDb(bandIndex, trace->frame, gridMinDb);
+            barModel.peakDb = getPeakDb(bandIndex, trace->frame, gridMinDb);
+            barModel.holdDb = getHoldDb(bandIndex, trace->frame, gridMinDb);
+            barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
+            barModel.holdY = geometry.yForDb(barModel.holdDb, gridMinDb, gridMaxDb, plotBounds);
+            barModel.peakBounds = {barModel.bandBounds.getX(), barModel.peakY,
+                                   barModel.bandBounds.getWidth(), plotBottom - barModel.peakY};
+            const auto rmsY = geometry.yForDb(barModel.rmsDb, gridMinDb, gridMaxDb, plotBounds);
+            barModel.rmsBounds = {barModel.bandBounds.getX(), rmsY,
+                                  barModel.bandBounds.getWidth(), plotBottom - rmsY};
+            traceVisual.bars[bandIndex] = barModel;
+        }
+
+        traceVisuals.push_back(std::move(traceVisual));
+    }
+}
+
+void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                                    const Shared::SignalSlotOrder &signalSlotOrder,
+                                    const Analyzer::MeterSettings &meterSettings,
+                                    float gridMinDb,
+                                    const juce::Rectangle<float> &localBounds,
+                                    const std::optional<juce::Point<float>> &hoverPositionToUse) {
+    if (!hoverPositionToUse.has_value()) {
+        hoverInfo.reset();
+        return;
+    }
+
+    // Hover uses the first visible trace as its source until we add multi-trace hover policy
+    const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
+
+    if (!primaryTrace.has_value()) {
+        hoverInfo.reset();
+        return;
+    }
+
+    hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame,
+                                 meterSettings, gridMinDb, visibleMinFrequencyHz, visibleMaxFrequencyHz,
+                                 *hoverPositionToUse);
 }
 
 const juce::Rectangle<float> &AnalyzerViewModel::getPlotBounds() const {
@@ -61,9 +124,18 @@ float AnalyzerViewModel::getGridMinDb() const {
     return currentGridMinDb;
 }
 
+std::optional<juce::Rectangle<float>> AnalyzerViewModel::getBandBounds(const size_t bandIndex) const {
+    if (bandIndex >= bandBounds.size())
+        return std::nullopt;
+
+    return bandBounds[bandIndex];
+}
+
 void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb) {
     gridLines.clear();
     frequencyMarkers.clear();
+    gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
+    frequencyMarkers.reserve(Analyzer::Constants::frequencyScaleLabelsHz.size());
 
     for (float db = gridMinDb; db <= gridMaxDb + 0.001f; db += gridStepDb) {
         AnalyzerGridLine gridLine;
@@ -80,63 +152,18 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     }
 }
 
-void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                                           const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-                                           const Shared::SignalSlotOrder &signalSlotOrder,
-                                           float gridMinDb, float gridMaxDb,
-                                           const std::optional<juce::Point<float>> &hoverPositionToUse) {
-    traceVisuals.clear();
+void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
+    bandBounds.clear();
+    bandBounds.reserve(bandCount);
 
-    const auto hoveredBandIndex = hoverPositionToUse.has_value()
-                                      ? geometry.bandIndexAt(*hoverPositionToUse, renderData.bandInfo.size(), plotBounds)
-                                      : std::optional<size_t>{};
+    if (bandCount == 0)
+        return;
 
-    std::vector<const Analyzer::RenderTrace *> orderedTraces;
-    orderedTraces.reserve(renderData.traces.size());
+    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
 
-    for (const auto &trace: renderData.traces) {
-        if (!isTraceEnabled(trace.kind, viewState))
-            continue;
-
-        orderedTraces.push_back(&trace);
-    }
-
-    std::sort(orderedTraces.begin(), orderedTraces.end(),
-              [this, &signalSlotOrder](const Analyzer::RenderTrace *lhs, const Analyzer::RenderTrace *rhs) {
-                  return slotOrderModel.getTraceOrder(lhs->kind, signalSlotOrder)
-                         < slotOrderModel.getTraceOrder(rhs->kind, signalSlotOrder);
-              });
-
-    for (const auto *trace: orderedTraces) {
-        if (trace == nullptr)
-            continue;
-
-        AnalyzerTraceVisual traceVisual;
-        traceVisual.kind = trace->kind;
-        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(trace->kind); slotIndex.has_value()) {
-            const auto &slot = signalSlots[*slotIndex];
-            traceVisual.colour = Ui::getSignalPresetColour(slot.colourIndex).withAlpha(slot.opacity);
-        } else {
-            traceVisual.colour = juce::Colours::white;
-        }
-        traceVisual.bars.resize(renderData.bandInfo.size());
-
-        for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
-            AnalyzerBarModel barModel;
-            barModel.rmsDb = getRmsDb(bandIndex, trace->frame, gridMinDb);
-            barModel.peakDb = getPeakDb(bandIndex, trace->frame, gridMinDb);
-            barModel.holdDb = getHoldDb(bandIndex, trace->frame, gridMinDb);
-            barModel.peakBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.peakDb, gridMinDb,
-                                                        gridMaxDb, plotBounds);
-            barModel.rmsBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.rmsDb, gridMinDb,
-                                                       gridMaxDb, plotBounds);
-            barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
-            barModel.holdY = geometry.yForDb(barModel.holdDb, gridMinDb, gridMaxDb, plotBounds);
-            barModel.isHovered = hoveredBandIndex == bandIndex;
-            traceVisual.bars[bandIndex] = barModel;
-        }
-
-        traceVisuals.push_back(std::move(traceVisual));
+    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
+        const auto x = plotBounds.getX() + static_cast<float>(bandIndex) * bandWidth;
+        bandBounds.emplace_back(x + 1.0f, plotBounds.getY(), bandWidth - 2.0f, plotBounds.getHeight());
     }
 }
 

@@ -40,6 +40,8 @@ struct AnalyzerFrequencyMarker {
  * Draw-ready bar state for one analyzer band
  */
 struct AnalyzerBarModel {
+    // Full repaint bounds for this band's column inside the plot
+    juce::Rectangle<float> bandBounds;
     // Screen bounds for the full peak bar
     juce::Rectangle<float> peakBounds;
     // Screen bounds for the RMS section inside the peak bar
@@ -54,8 +56,6 @@ struct AnalyzerBarModel {
     float peakDb = 0.0f;
     // Current hold level for that bar
     float holdDb = 0.0f;
-    // Whether this bar is currently hovered
-    bool isHovered = false;
 };
 
 /**
@@ -78,15 +78,29 @@ public:
     AnalyzerViewModel();
 
     /**
-     * Rebuilds the view model from the latest meter data and view state
+     * Rebuilds the static analyzer layout that only changes when bounds or scale change
      */
-    void update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-                const Shared::SignalSlotOrder &signalSlotOrder,
-                const Analyzer::MeterSettings &meterSettings,
-                float gridMinDb, float gridMaxDb, float gridStepDb,
-                const juce::Rectangle<float> &localBounds,
-                const std::optional<juce::Point<float>> &hoverPosition);
+    void updateStaticLayout(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                            float gridMinDb, float gridMaxDb, float gridStepDb,
+                            const juce::Rectangle<float> &localBounds);
+
+    /**
+     * Rebuilds dynamic per-trace bar geometry from the latest meter data
+     */
+    void updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                            const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                            const Shared::SignalSlotOrder &signalSlotOrder,
+                            float gridMinDb, float gridMaxDb);
+
+    /**
+     * Updates hover-only state without rebuilding static or dynamic bar geometry
+     */
+    void updateHover(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                     const Shared::SignalSlotOrder &signalSlotOrder,
+                     const Analyzer::MeterSettings &meterSettings,
+                     float gridMinDb,
+                     const juce::Rectangle<float> &localBounds,
+                     const std::optional<juce::Point<float>> &hoverPosition);
 
     /**
      * Returns the current plot area
@@ -118,13 +132,14 @@ public:
      */
     float getGridMinDb() const;
 
+    /**
+     * Returns repaint bounds for one analyzer band column
+     */
+    std::optional<juce::Rectangle<float>> getBandBounds(size_t bandIndex) const;
+
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
-    void updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                            const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-                            const Shared::SignalSlotOrder &signalSlotOrder,
-                            float gridMinDb, float gridMaxDb,
-                            const std::optional<juce::Point<float>> &hoverPosition);
+    void updateBandBounds(size_t bandCount);
     std::optional<Analyzer::RenderTrace> getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
                                                                 const AnalyzerViewState &viewState,
                                                                 const Shared::SignalSlotOrder &signalSlotOrder) const;
@@ -143,6 +158,7 @@ private:
     juce::Rectangle<float> plotBounds;
     std::vector<AnalyzerGridLine> gridLines;
     std::vector<AnalyzerFrequencyMarker> frequencyMarkers;
+    std::vector<juce::Rectangle<float>> bandBounds;
     std::vector<AnalyzerTraceVisual> traceVisuals;
     std::optional<AnalyzerHoverInfo> hoverInfo;
     float currentGridMinDb = 0.0f;

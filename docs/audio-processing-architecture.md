@@ -11,10 +11,14 @@ flowchart TD
     Params --> Engine[Analyzer::Engine]
     Processor -->|main buffer| Engine
     Processor -->|optional sidechain buffer| Engine
-    Engine --> SourceBuilder[AnalysisSourceBuilder]
+    Engine --> Activity[InputActivityDetector]
+    Activity --> Gate{process analyzer?}
+    Gate -->|yes| SourceBuilder[AnalysisSourceBuilder]
+    Gate -->|no| Silence[publish cleared trace snapshot once]
     Engine --> PlanBuilder[AnalysisPlanBuilder]
     PlanBuilder --> Processors[AnalysisGroupProcessor list]
     Processors --> Published[TripleBuffer vector RawTrace]
+    Silence --> Published
 ```
 
 ## 2. Processor Responsibilities
@@ -42,6 +46,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     Engine[Analyzer::Engine] --> Bands[shared band layout]
+    Engine --> Activity[InputActivityDetector]
     Engine --> SourceBuilder[AnalysisSourceBuilder]
     Engine --> PlanBuilder[AnalysisPlanBuilder]
     Engine --> Processors[vector AnalysisGroupProcessor]
@@ -62,6 +67,7 @@ flowchart TD
 SpectrumAnalyzerAudioProcessor
 └── Analyzer::Engine
     ├── shared_ptr<vector<BandInfo>> bandInfo
+    ├── InputActivityDetector inputActivityDetector
     ├── AnalysisSourceBuilder sourceBuilder
     │   ├── SourceSet
     │   │   ├── mainLeft / mainRight
@@ -147,6 +153,7 @@ Plainly:
 - `SourceSet` says where the samples for this block live.
 - `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and processes the requested lanes.
 - `RawTrace` is the published per-band result for one slot trace.
+- `InputActivityDetector` decides whether recent input energy still justifies running the analyzer DSP.
 
 Examples:
 
@@ -165,6 +172,7 @@ flowchart LR
 
 - The engine writes processor outputs directly into pre-sized triple-buffer writer storage.
 - There is no temporary per-block `traceScratch` vector in the publish path.
+- When recent input falls below the activity threshold, the engine publishes one cleared snapshot and then skips analyzer processing until signal returns.
 
 ## 9. UI Data Flow
 
@@ -172,6 +180,7 @@ flowchart LR
 flowchart TD
     Engine[Analyzer::Engine] --> BandInfo[shared_ptr vector BandInfo]
     Engine --> RawTraces[vector RawTrace]
+    Engine --> ActivityState[recent signal active]
 
     Processor[SpectrumAnalyzerAudioProcessor] --> Slots[Ui::SignalSlotState array]
     Processor --> Freeze[freeze]
@@ -186,6 +195,7 @@ flowchart TD
     Meter --> DataSource
     Grid --> DataSource
     Sidechain --> DataSource
+    ActivityState --> DataSource
 
     DataSource --> AnalyzerComponent
     DataSource --> SignalRack[signal rack UI]
@@ -206,6 +216,7 @@ flowchart TD
   - opacity
 - Global freeze exists as a UI-facing parameter/state.
 - Meter visibility toggles (`Peak`, `RMS`, `Hold`) are UI-controlled existing parameters.
+- Recent-signal activity is runtime engine state exposed through `AnalyzerDataSource`, not serialized UI state.
 
 ## Guiding Rule
 

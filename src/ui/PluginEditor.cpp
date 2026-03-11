@@ -11,6 +11,7 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(Spect
     : AudioProcessorEditor(&audioProcessor),
       theme(Ui::makeTheme(Ui::AccentPalette::blue)),
       analyzerPanel(audioProcessor, audioProcessor, audioProcessor, theme) {
+    setOpaque(true);
     addAndMakeVisible(analyzerPanel);
     setSize(920, 520);
 

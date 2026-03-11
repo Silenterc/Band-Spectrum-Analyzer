@@ -16,6 +16,7 @@ public:
     virtual std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const = 0;
     virtual Shared::SignalSlotOrder getSignalSlotOrder() const = 0;
     virtual bool isSidechainAvailable() const = 0;
+    virtual bool hasRecentSignal() const = 0;
     virtual bool isFrozen() const = 0;
     virtual Analyzer::MeterSettings getMeterSettings() const = 0;
     virtual float getGridMinDb() const = 0;

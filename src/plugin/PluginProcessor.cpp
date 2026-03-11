@@ -312,6 +312,10 @@ bool SpectrumAnalyzerAudioProcessor::isSidechainAvailable() const {
     return getBusCount(true) > 1 && getChannelCountOfBus(true, 1) > 0;
 }
 
+bool SpectrumAnalyzerAudioProcessor::hasRecentSignal() const {
+    return engine.hasRecentSignal();
+}
+
 bool SpectrumAnalyzerAudioProcessor::isFrozen() const {
     return freezeParam->load() > 0.5f;
 }

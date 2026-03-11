@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -10,6 +11,7 @@
 #include "AnalysisSourceBuilder.h"
 #include "AnalyzerData.h"
 #include "EngineParameterState.h"
+#include "InputActivityDetector.h"
 #include "TripleBuffer.h"
 
 namespace Analyzer {
@@ -55,6 +57,11 @@ namespace Analyzer {
          */
         std::vector<RawTrace> getTraces() const;
 
+        /**
+         * Returns whether the recent input history still counts as active.
+         */
+        bool hasRecentSignal() const;
+
     private:
         /**
          * Rebuilds the log-spaced band layout
@@ -70,6 +77,11 @@ namespace Analyzer {
          * Returns how many bands the current mode should use
          */
         int getBandCount() const;
+
+        /**
+         * Publishes current processor output, optionally after resetting processor state.
+         */
+        void publishProcessorState(bool resetProcessors);
 
         // Current playback sample rate
         double currentSampleRate = 44100.0;
@@ -87,11 +99,17 @@ namespace Analyzer {
         AnalysisSourceBuilder sourceBuilder;
         // Builds the active analysis plan for the current parameter state
         AnalysisPlanBuilder planBuilder;
+        // Tracks whether recent input energy justifies analyzer processing
+        InputActivityDetector inputActivityDetector;
         // Active modular analysis processors
         std::vector<AnalysisGroupProcessor> processors;
         // Total number of published traces produced by the active processors
         size_t publishedTraceCount = 0;
         // Published raw traces for the UI, 1 W x 1 R threads
         mutable TripleBuffer<std::vector<RawTrace> > traces;
+        // Runtime flag exposed to the UI so it can idle once the display has decayed to floor
+        std::atomic<bool> recentSignalActive { false };
+        // Ensures silence is published only once per inactive period
+        bool hasPublishedSilenceWhileInactive = false;
     };
 }

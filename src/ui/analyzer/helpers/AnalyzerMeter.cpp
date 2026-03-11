@@ -65,6 +65,29 @@ const Analyzer::RenderData &AnalyzerMeter::getRenderData() const {
     return renderData;
 }
 
+bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
+    constexpr float settleToleranceDb = 0.1f;
+
+    for (const auto &trace: renderData.traces) {
+        for (const auto value: trace.frame.rmsDb) {
+            if (value > floorDb + settleToleranceDb)
+                return false;
+        }
+
+        for (const auto value: trace.frame.peakDb) {
+            if (value > floorDb + settleToleranceDb)
+                return false;
+        }
+
+        for (const auto value: trace.frame.holdDb) {
+            if (value > floorDb + settleToleranceDb)
+                return false;
+        }
+    }
+
+    return true;
+}
+
 void AnalyzerMeter::ensureTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb) {
     auto traceStateIterator = std::find_if(traceStates.begin(), traceStates.end(),
                                            [kind](const TraceState &traceState) { return traceState.kind == kind; });

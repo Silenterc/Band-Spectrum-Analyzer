@@ -91,6 +91,7 @@ public:
     std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const override;
     Shared::SignalSlotOrder getSignalSlotOrder() const override;
     bool isSidechainAvailable() const override;
+    bool hasRecentSignal() const override;
     bool isFrozen() const override;
     Analyzer::MeterSettings getMeterSettings() const override;
 

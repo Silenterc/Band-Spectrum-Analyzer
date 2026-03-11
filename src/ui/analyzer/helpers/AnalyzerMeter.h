@@ -29,6 +29,11 @@ public:
      */
     const Analyzer::RenderData &getRenderData() const;
 
+    /**
+     * Returns whether the display has fully decayed to the visible floor.
+     */
+    bool isSettledAtFloor(float floorDb) const;
+
 private:
     struct RmsHistoryEntry {
         // Mean power measured over one meter tick

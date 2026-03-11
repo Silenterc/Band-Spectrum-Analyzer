@@ -89,14 +89,21 @@ It does not do analyzer rendering itself.
 
 ```mermaid
 flowchart TD
-    Timer[12 Hz timer] --> Pull[pull latest UI snapshot]
+    Timer[UI poll timer\n~30 Hz default] --> Pull[pull latest UI snapshot]
     Pull --> Frozen{Frozen?}
+    Pull --> Activity{recent signal or display decay?}
     Frozen -->|no| Meter[AnalyzerMeter.tick]
     Frozen -->|yes| Keep[keep previous renderData]
+    Activity -->|no| Idle[slow idle polling]
+    Activity -->|yes| Meter
     Meter --> RenderData[RenderData]
     Keep --> RenderData
-    RenderData --> ViewModel[AnalyzerViewModel.update]
-    ViewModel --> Paint[paint]
+    RenderData --> Static[update static layout if bounds/scale changed]
+    RenderData --> Dynamic[update dynamic trace bars]
+    Hover[mouse move/drag/exit] --> HoverModel[update hover only]
+    Static --> Paint[paint]
+    Dynamic --> Paint
+    HoverModel --> Paint
 ```
 
 `AnalyzerComponent` owns:
@@ -113,7 +120,9 @@ Responsibilities:
 
 - poll processor-backed analyzer data
 - convert raw traces into display-rate metered values
-- rebuild draw-ready view state
+- rebuild cached static layout only when geometry or scale inputs change
+- rebuild dynamic bar geometry from the latest render data
+- update hover state independently from the static and dynamic analyzer layers
 - paint the analyzer plot, bars, grid, and hover tooltip
 
 Important behavior:
@@ -122,6 +131,9 @@ Important behavior:
   - `renderData` is not advanced
   - UI presentation still updates from current slot/meter settings
 - visible traces are rebuilt from current signal slot UI state on every refresh
+- the analyzer background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
+- hover movement repaints only the old/new tooltip and hovered band region instead of forcing a full analyzer redraw
+- when the engine reports no recent signal, the analyzer keeps polling only long enough for the UI meter to decay to floor, then switches to a slower idle cadence until signal returns
 
 ## 6. Analyzer Data Flow
 
@@ -169,7 +181,7 @@ Helper roles:
 - `AnalyzerMeter`
   - UI-rate smoothing/decay/hold logic
 - `AnalyzerViewModel`
-  - draw-ready UI state builder
+  - split builder for static layout, dynamic trace visuals, and hover state
 - `AnalyzerGeometry`
   - coordinate transforms and band hit-testing
 - `AnalyzerHoverModel`

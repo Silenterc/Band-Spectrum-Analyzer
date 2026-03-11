@@ -11,6 +11,7 @@ AnalyzerPanelComponent::AnalyzerPanelComponent(AnalyzerDataSource &dataSourceToU
       analyzerComponent(dataSourceToUse, themeToUse),
       signalRackComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
       meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse) {
+    setOpaque(true);
     addAndMakeVisible(analyzerComponent);
     addAndMakeVisible(signalRackComponent);
     addAndMakeVisible(meterControlsComponent);
