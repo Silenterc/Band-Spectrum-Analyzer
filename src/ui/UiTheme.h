@@ -2,6 +2,9 @@
 
 #include <juce_graphics/juce_graphics.h>
 
+#include "SignalSlotUiState.h"
+#include "../shared/SignalPresetCatalog.h"
+
 namespace Ui {
     enum class AccentPalette {
         blue,
@@ -10,25 +13,90 @@ namespace Ui {
         purple
     };
 
+    struct PanelMetrics {
+        int outerPadding = 18;
+        int headerHeight = 34;
+        int headerButtonWidth = 112;
+        int headerButtonVerticalInset = 4;
+        int headerBottomGap = 6;
+        int analyzerToRackGap = 10;
+        int rackHeight = 76;
+        int rackToMeterGap = 10;
+        int meterControlsWidth = 90;
+    };
+
+    struct MeterControlsMetrics {
+        int verticalPadding = 6;
+        int buttonGap = 6;
+    };
+
+    struct RackMetrics {
+        float verticalInset = 4.0f;
+        float itemGap = 8.0f;
+    };
+
+    struct SlotMetrics {
+        float cellPaddingX = 6.0f;
+        float cellPaddingY = 4.0f;
+        float sectionGap = 6.0f;
+        float textStackGap = 2.0f;
+        float swatchSize = 28.0f;
+        float actionSize = 24.0f;
+        float actionGap = 5.0f;
+        float titleFontHeight = 15.0f;
+        float hintFontHeight = 9.0f;
+        float titleHeight = 17.0f;
+        float hintHeight = 10.0f;
+        float gripWidth = 8.0f;
+        float gripHeight = 15.0f;
+        float gripDotDiameter = 2.25f;
+        float shadowOffsetY = 3.0f;
+        float cellCornerRadius = 10.0f;
+        float swatchCornerRadius = 7.0f;
+        float buttonCornerRadius = 6.0f;
+    };
+
+    struct PopupMetrics {
+        float padding = 8.0f;
+        float sectionGap = 8.0f;
+        float rowGap = 4.0f;
+        float headerHeight = 14.0f;
+        float rowHeight = 28.0f;
+        float swatchSize = 32.0f;
+        int colourColumns = 4;
+        float colourGap = 4.0f;
+    };
+
+    struct Metrics {
+        PanelMetrics panel;
+        MeterControlsMetrics meterControls;
+        RackMetrics rack;
+        SlotMetrics slot;
+        PopupMetrics popup;
+    };
+
     struct Theme {
         juce::Colour editorBackground;
         juce::Colour analyzerBackground;
         juce::Colour plotBackground;
+        juce::Colour controlSurface;
+        juce::Colour controlSurfaceHover;
+        juce::Colour controlBorder;
+        juce::Colour controlText;
+        juce::Colour subtleText;
+        juce::Colour accentButton;
+        juce::Colour accentButtonActive;
         juce::Colour gridBorder;
         juce::Colour gridLine;
         juce::Colour axisText;
         juce::Colour tooltipBackground;
         juce::Colour tooltipBorder;
         juce::Colour tooltipText;
-        juce::Colour rmsBarTop;
-        juce::Colour rmsBarBottom;
-        juce::Colour hoveredRmsBarTop;
-        juce::Colour hoveredRmsBarBottom;
-        juce::Colour barTop;
-        juce::Colour barBottom;
-        juce::Colour hoveredBarTop;
-        juce::Colour hoveredBarBottom;
+        Metrics metrics;
     };
 
     Theme makeTheme(AccentPalette accentPalette);
+    const Shared::SignalPresetSpec &getSignalPreset(int colourIndex);
+    juce::Colour getSignalPresetColour(int colourIndex);
+    juce::String getSignalPresetName(int colourIndex);
 }

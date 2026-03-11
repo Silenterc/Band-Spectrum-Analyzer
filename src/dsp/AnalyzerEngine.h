@@ -9,7 +9,7 @@
 #include "AnalysisPlanBuilder.h"
 #include "AnalysisSourceBuilder.h"
 #include "AnalyzerData.h"
-#include "ParameterState.h"
+#include "EngineParameterState.h"
 #include "TripleBuffer.h"
 
 namespace Analyzer {
@@ -31,7 +31,7 @@ namespace Analyzer {
         /**
          * Updates the current analyzer params
          */
-        void setParameters(const ParameterState &parameters);
+        void setParameters(const EngineParameterState &parameters);
 
         /**
          * Runs one audio block through the analyzer
@@ -79,7 +79,7 @@ namespace Analyzer {
         bool isPrepared = false;
 
         // Latest parameter snapshot pushed into the engine
-        ParameterState currentParameters{};
+        EngineParameterState currentParameters{};
 
         // Static band metadata for the current layout
         std::shared_ptr<std::vector<BandInfo> > bandInfo = std::make_shared<std::vector<BandInfo> >();

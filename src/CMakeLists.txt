@@ -23,15 +23,23 @@ target_sources(${PROJECT_NAME}
         dsp/AnalysisSourceBuilder.cpp
         dsp/AnalyzerEngine.cpp
         ui/UiTheme.cpp
+        ui/analyzer/AnalyzerPanelComponent.cpp
         ui/analyzer/AnalyzerComponent.cpp
+        ui/analyzer/AnalyzerMeterControlsComponent.cpp
+        ui/analyzer/SignalRackComponent.cpp
+        ui/analyzer/SignalSlotComponent.cpp
         ui/analyzer/helpers/AnalyzerMeter.cpp
         ui/analyzer/helpers/AnalyzerGeometry.cpp
         ui/analyzer/helpers/AnalyzerHoverModel.cpp
+        ui/analyzer/helpers/SignalRackDragSession.cpp
+        ui/analyzer/helpers/SignalRackLayoutEngine.cpp
+        ui/analyzer/helpers/SignalSlotOrderModel.cpp
         ui/analyzer/helpers/AnalyzerViewModel.cpp
         ui/analyzer/helpers/FrequencyFormatter.cpp
         ui/analyzer/helpers/MusicTheory.cpp
         ui/PluginEditor.cpp
-        plugin/PluginProcessor.cpp)
+        plugin/PluginProcessor.cpp
+        plugin/SignalSlotOrderState.cpp)
 
 
 target_compile_definitions(${PROJECT_NAME}

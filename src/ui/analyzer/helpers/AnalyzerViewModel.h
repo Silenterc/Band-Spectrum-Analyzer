@@ -7,12 +7,14 @@
 
 #include "../../../dsp/AnalyzerData.h"
 #include "../../../dsp/AnalyzerConstants.h"
+#include "../../SignalSlotUiState.h"
 #include "../AnalyzerViewState.h"
 #include "../AnalyzerRenderData.h"
 #include "AnalyzerGeometry.h"
 #include "AnalyzerHoverModel.h"
 #include "FrequencyFormatter.h"
 #include "MusicTheory.h"
+#include "SignalSlotOrderModel.h"
 
 /**
  * One horizontal dB grid marker
@@ -61,7 +63,9 @@ struct AnalyzerBarModel {
  */
 struct AnalyzerTraceVisual {
     // Logical trace identity
-    Analyzer::TraceKind kind = Analyzer::TraceKind::input;
+    Analyzer::TraceKind kind = Analyzer::TraceKind::slot1;
+    // Solid display colour for this trace
+    juce::Colour colour;
     // Draw-ready bar state for this trace
     std::vector<AnalyzerBarModel> bars;
 };
@@ -77,6 +81,8 @@ public:
      * Rebuilds the view model from the latest meter data and view state
      */
     void update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                const Shared::SignalSlotOrder &signalSlotOrder,
                 const Analyzer::MeterSettings &meterSettings,
                 float gridMinDb, float gridMaxDb, float gridStepDb,
                 const juce::Rectangle<float> &localBounds,
@@ -115,10 +121,13 @@ public:
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
     void updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                            const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                            const Shared::SignalSlotOrder &signalSlotOrder,
                             float gridMinDb, float gridMaxDb,
                             const std::optional<juce::Point<float>> &hoverPosition);
     std::optional<Analyzer::RenderTrace> getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
-                                                                const AnalyzerViewState &viewState) const;
+                                                                const AnalyzerViewState &viewState,
+                                                                const Shared::SignalSlotOrder &signalSlotOrder) const;
     bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
@@ -129,6 +138,7 @@ private:
     FrequencyFormatter formatter;
     MusicTheory musicTheory;
     AnalyzerHoverModel hoverModel;
+    SignalSlotOrderModel slotOrderModel;
 
     juce::Rectangle<float> plotBounds;
     std::vector<AnalyzerGridLine> gridLines;

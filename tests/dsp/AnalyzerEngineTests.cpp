@@ -6,6 +6,7 @@
 
 #include "dsp/AnalyzerEngine.h"
 #include "dsp/AnalyzerConstants.h"
+#include "plugin/ParamSpec.h"
 #include "ui/analyzer/helpers/AnalyzerMeter.h"
 
 namespace {
@@ -21,21 +22,35 @@ namespace {
         float polarity = 1.0f;
     };
 
-    Analyzer::ParameterState makeDefaultParameters() {
-        Analyzer::ParameterState parameters;
-        parameters.analysisMode = ParamSpec::AnalysisMode::mid;
-        parameters.bandMode = ParamSpec::BandMode::bands45;
-        parameters.showRms = true;
-        parameters.showPeak = true;
-        parameters.showHold = false;
-        parameters.holdMs = ParamSpec::defaultHoldMs;
-        parameters.gridMinDb = ParamSpec::defaultGridMinDb;
-        parameters.gridMaxDb = ParamSpec::defaultGridMaxDb;
-        parameters.gridStepDb = ParamSpec::defaultGridStepDb;
+    struct TestParameters {
+        Analyzer::EngineParameterState engineParameters;
+        bool showRms = true;
+        bool showPeak = true;
+        bool showHold = false;
+        float holdMs = ParamSpec::defaultHoldMs;
+        float gridMinDb = ParamSpec::defaultGridMinDb;
+        float gridMaxDb = ParamSpec::defaultGridMaxDb;
+        float gridStepDb = ParamSpec::defaultGridStepDb;
+    };
+
+    TestParameters makeDefaultParameters() {
+        TestParameters parameters;
+        parameters.engineParameters.bandMode = Analyzer::BandMode::bands45;
+        parameters.engineParameters.signalSlots[0].enabled = true;
+        parameters.engineParameters.signalSlots[0].source = Analyzer::SignalSource::main;
+        parameters.engineParameters.signalSlots[0].mode = Analyzer::SignalMode::mid;
         return parameters;
     }
 
-    Analyzer::MeterSettings makeMeterSettings(const Analyzer::ParameterState &parameters) {
+    void setPrimarySignal(TestParameters &parameters,
+                          const Analyzer::SignalSource source,
+                          const Analyzer::SignalMode mode) {
+        parameters.engineParameters.signalSlots[0].enabled = true;
+        parameters.engineParameters.signalSlots[0].source = source;
+        parameters.engineParameters.signalSlots[0].mode = mode;
+    }
+
+    Analyzer::MeterSettings makeMeterSettings(const TestParameters &parameters) {
         Analyzer::MeterSettings meterSettings;
         meterSettings.showRms = parameters.showRms;
         meterSettings.showPeak = parameters.showPeak;
@@ -44,9 +59,9 @@ namespace {
         return meterSettings;
     }
 
-    void prepareEngine(Analyzer::Engine &engine, const Analyzer::ParameterState &parameters) {
+    void prepareEngine(Analyzer::Engine &engine, const TestParameters &parameters) {
         engine.prepare(sampleRate, blockSize);
-        engine.setParameters(parameters);
+        engine.setParameters(parameters.engineParameters);
     }
 
     std::vector<TestTone> makeTestTones(const std::vector<float> &frequenciesHz, const std::vector<float> &polarities) {
@@ -119,14 +134,14 @@ namespace {
     }
 
     Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
-                                        const Analyzer::ParameterState &parameters,
+                                        const TestParameters &parameters,
                                         float dtSeconds = Analyzer::Constants::meterPollIntervalSeconds) {
         displayMeter.tick(engine.getBandInfo(), engine.getTraces(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
         return displayMeter.getRenderData();
     }
 
     void requireStrongestBandNearFrequency(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
-                                           const Analyzer::ParameterState &parameters, float frequencyHz) {
+                                           const TestParameters &parameters, float frequencyHz) {
         const auto meterData = buildMeterData(displayMeter, engine, parameters);
         const auto &bandInfo = meterData.bandInfo;
         const auto &frame = meterData.traces.front().frame;
@@ -142,7 +157,7 @@ namespace {
     }
 
     void requireHeldPeakStaysPinnedForOneSilentBlock(AnalyzerMeter &displayMeter, Analyzer::Engine &engine,
-                                                     const Analyzer::ParameterState &parameters, int channels,
+                                                     const TestParameters &parameters, int channels,
                                                      float frequencyHz) {
         const auto meterDataBeforeSilence = buildMeterData(displayMeter, engine, parameters);
         const auto &bandInfo = meterDataBeforeSilence.bandInfo;
@@ -168,7 +183,7 @@ TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.bandMode = ParamSpec::BandMode::bands60;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
 
     prepareEngine(engine, parameters);
 
@@ -232,7 +247,7 @@ TEST_CASE("AnalyzerEngine summed mode tracks a low sine wave") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
@@ -244,7 +259,7 @@ TEST_CASE("AnalyzerEngine summed mode tracks a high sine wave") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
@@ -256,7 +271,7 @@ TEST_CASE("AnalyzerEngine summed mode cancels opposite-phase stereo content") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
@@ -276,7 +291,7 @@ TEST_CASE("AnalyzerEngine stereo mode keeps low opposite-phase stereo content") 
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {lowSineHz, lowSineHz}, {1.0f, -1.0f});
@@ -288,7 +303,7 @@ TEST_CASE("AnalyzerEngine stereo mode keeps high opposite-phase stereo content")
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
@@ -300,7 +315,7 @@ TEST_CASE("AnalyzerEngine stereo mode still works with mono input") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
@@ -312,7 +327,7 @@ TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
     parameters.showHold = true;
 
     prepareEngine(engine, parameters);
@@ -325,7 +340,7 @@ TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
     parameters.showHold = true;
 
     prepareEngine(engine, parameters);
@@ -338,16 +353,16 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
-    parameters.bandMode = ParamSpec::BandMode::bands30;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 
-    parameters.bandMode = ParamSpec::BandMode::bands60;
-    engine.setParameters(parameters);
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    engine.setParameters(parameters.engineParameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
     const auto reconfiguredSnapshot = buildMeterData(displayMeter, engine, parameters);
@@ -360,8 +375,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.analysisMode = ParamSpec::AnalysisMode::mid;
-    parameters.bandMode = ParamSpec::BandMode::bands30;
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
@@ -370,9 +385,9 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     REQUIRE(initialSnapshot.bandInfo.size() == 30);
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 
-    parameters.analysisMode = ParamSpec::AnalysisMode::stereo;
-    parameters.bandMode = ParamSpec::BandMode::bands60;
-    engine.setParameters(parameters);
+    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    engine.setParameters(parameters.engineParameters);
 
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
 

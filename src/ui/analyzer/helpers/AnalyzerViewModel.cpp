@@ -2,11 +2,15 @@
 
 #include <algorithm>
 
+#include "../../UiTheme.h"
+
 AnalyzerViewModel::AnalyzerViewModel()
     : hoverModel(geometry, formatter, musicTheory) {
 }
 
 void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                               const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                               const Shared::SignalSlotOrder &signalSlotOrder,
                                const Analyzer::MeterSettings &meterSettings,
                                float gridMinDb, float gridMaxDb, float gridStepDb,
                                const juce::Rectangle<float> &localBounds,
@@ -15,11 +19,11 @@ void AnalyzerViewModel::update(const Analyzer::RenderData &renderData, const Ana
     plotBounds = geometry.getPlotBounds(localBounds);
     updateVisibleFrequencyRange(renderData, viewState);
     updateGrid(gridMinDb, gridMaxDb, gridStepDb);
-    updateTraceVisuals(renderData, viewState, gridMinDb, gridMaxDb, hoverPositionToUse);
+    updateTraceVisuals(renderData, viewState, signalSlots, signalSlotOrder, gridMinDb, gridMaxDb, hoverPositionToUse);
 
     if (hoverPositionToUse.has_value()) {
         // Hover uses the first visible trace as its source until we add multi-trace hover policy
-        const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState);
+        const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
 
         if (primaryTrace.has_value()) {
             hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame,
@@ -77,6 +81,8 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
 }
 
 void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+                                           const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                                           const Shared::SignalSlotOrder &signalSlotOrder,
                                            float gridMinDb, float gridMaxDb,
                                            const std::optional<juce::Point<float>> &hoverPositionToUse) {
     traceVisuals.clear();
@@ -85,19 +91,41 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
                                       ? geometry.bandIndexAt(*hoverPositionToUse, renderData.bandInfo.size(), plotBounds)
                                       : std::optional<size_t>{};
 
+    std::vector<const Analyzer::RenderTrace *> orderedTraces;
+    orderedTraces.reserve(renderData.traces.size());
+
     for (const auto &trace: renderData.traces) {
         if (!isTraceEnabled(trace.kind, viewState))
             continue;
 
+        orderedTraces.push_back(&trace);
+    }
+
+    std::sort(orderedTraces.begin(), orderedTraces.end(),
+              [this, &signalSlotOrder](const Analyzer::RenderTrace *lhs, const Analyzer::RenderTrace *rhs) {
+                  return slotOrderModel.getTraceOrder(lhs->kind, signalSlotOrder)
+                         < slotOrderModel.getTraceOrder(rhs->kind, signalSlotOrder);
+              });
+
+    for (const auto *trace: orderedTraces) {
+        if (trace == nullptr)
+            continue;
+
         AnalyzerTraceVisual traceVisual;
-        traceVisual.kind = trace.kind;
+        traceVisual.kind = trace->kind;
+        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(trace->kind); slotIndex.has_value()) {
+            const auto &slot = signalSlots[*slotIndex];
+            traceVisual.colour = Ui::getSignalPresetColour(slot.colourIndex).withAlpha(slot.opacity);
+        } else {
+            traceVisual.colour = juce::Colours::white;
+        }
         traceVisual.bars.resize(renderData.bandInfo.size());
 
         for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
             AnalyzerBarModel barModel;
-            barModel.rmsDb = getRmsDb(bandIndex, trace.frame, gridMinDb);
-            barModel.peakDb = getPeakDb(bandIndex, trace.frame, gridMinDb);
-            barModel.holdDb = getHoldDb(bandIndex, trace.frame, gridMinDb);
+            barModel.rmsDb = getRmsDb(bandIndex, trace->frame, gridMinDb);
+            barModel.peakDb = getPeakDb(bandIndex, trace->frame, gridMinDb);
+            barModel.holdDb = getHoldDb(bandIndex, trace->frame, gridMinDb);
             barModel.peakBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.peakDb, gridMinDb,
                                                         gridMaxDb, plotBounds);
             barModel.rmsBounds = geometry.getBarBounds(bandIndex, renderData.bandInfo.size(), barModel.rmsDb, gridMinDb,
@@ -113,7 +141,21 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
 }
 
 std::optional<Analyzer::RenderTrace> AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
-                                                                               const AnalyzerViewState &viewState) const {
+                                                                               const AnalyzerViewState &viewState,
+                                                                               const Shared::SignalSlotOrder &signalSlotOrder) const {
+    for (const auto slotIndex: signalSlotOrder) {
+        const auto kind = Analyzer::traceKindForSlot(slotIndex);
+        if (!isTraceEnabled(kind, viewState))
+            continue;
+
+        const auto traceIterator = std::find_if(renderData.traces.begin(), renderData.traces.end(),
+                                                [kind](const Analyzer::RenderTrace &trace) {
+                                                    return trace.kind == kind;
+                                                });
+        if (traceIterator != renderData.traces.end())
+            return *traceIterator;
+    }
+
     for (const auto &trace: renderData.traces) {
         if (isTraceEnabled(trace.kind, viewState))
             return trace;
@@ -124,7 +166,7 @@ std::optional<Analyzer::RenderTrace> AnalyzerViewModel::getPrimaryVisibleTrace(c
 
 bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const {
     if (viewState.enabledTraces.empty())
-        return true;
+        return false;
 
     return std::find(viewState.enabledTraces.begin(), viewState.enabledTraces.end(), kind) != viewState.enabledTraces.end();
 }

@@ -48,7 +48,7 @@ private:
 
     struct TraceState {
         // Identity of the trace this state belongs to
-        Analyzer::TraceKind kind = Analyzer::TraceKind::input;
+        Analyzer::TraceKind kind = Analyzer::TraceKind::slot1;
         // Displayed peak values after linear dB/s decay
         std::vector<float> peakDb;
         // Displayed hold values

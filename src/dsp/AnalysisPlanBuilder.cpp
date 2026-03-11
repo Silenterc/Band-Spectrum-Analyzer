@@ -1,50 +1,43 @@
 #include "AnalysisPlanBuilder.h"
 
 namespace Analyzer {
-    std::vector<AnalysisGroupSpec> AnalysisPlanBuilder::build(const ParameterState &parameters) const {
+    std::vector<AnalysisGroupSpec> AnalysisPlanBuilder::build(const EngineParameterState &parameters) const {
         std::vector<AnalysisGroupSpec> plan;
 
-        switch (parameters.analysisMode) {
-            case ParamSpec::AnalysisMode::mid:
-                plan.emplace_back(SourceFamily::mainInput,
-                                  std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::mid)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::input, OutputMixMode::singleLane, {0})});
-                break;
-            case ParamSpec::AnalysisMode::side:
-                plan.emplace_back(SourceFamily::mainInput,
-                                  std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::side)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::input, OutputMixMode::singleLane, {0})});
-                break;
-            case ParamSpec::AnalysisMode::stereo:
-                plan.emplace_back(SourceFamily::mainInput,
-                                  std::initializer_list<AnalysisLaneSpec>{
-                                      AnalysisLaneSpec(DerivedSignal::left),
-                                      AnalysisLaneSpec(DerivedSignal::right)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::input, OutputMixMode::averagePower, {0, 1})});
-                break;
-            case ParamSpec::AnalysisMode::sidechainMid:
-                plan.emplace_back(SourceFamily::sidechain,
-                                  std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::mid)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::sidechain, OutputMixMode::singleLane, {0})});
-                break;
-            case ParamSpec::AnalysisMode::sidechainSide:
-                plan.emplace_back(SourceFamily::sidechain,
-                                  std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::side)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::sidechain, OutputMixMode::singleLane, {0})});
-                break;
-            case ParamSpec::AnalysisMode::sidechainStereo:
-                plan.emplace_back(SourceFamily::sidechain,
-                                  std::initializer_list<AnalysisLaneSpec>{
-                                      AnalysisLaneSpec(DerivedSignal::left),
-                                      AnalysisLaneSpec(DerivedSignal::right)},
-                                  std::initializer_list<AnalysisOutputSpec>{
-                                      AnalysisOutputSpec(TraceKind::sidechain, OutputMixMode::averagePower, {0, 1})});
-                break;
+        plan.reserve(Shared::maxSignalSlots);
+
+        for (size_t slotIndex = 0; slotIndex < parameters.signalSlots.size(); ++slotIndex) {
+            const auto &slot = parameters.signalSlots[slotIndex];
+            if (!slot.enabled)
+                continue;
+
+            const auto sourceFamily = slot.source == SignalSource::main
+                                          ? SourceFamily::mainInput
+                                          : SourceFamily::sidechain;
+            const auto traceKind = traceKindForSlot(slotIndex);
+
+            switch (slot.mode) {
+                case SignalMode::mid:
+                    plan.emplace_back(sourceFamily,
+                                      std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::mid)},
+                                      std::initializer_list<AnalysisOutputSpec>{
+                                          AnalysisOutputSpec(traceKind, OutputMixMode::singleLane, {0})});
+                    break;
+                case SignalMode::side:
+                    plan.emplace_back(sourceFamily,
+                                      std::initializer_list<AnalysisLaneSpec>{AnalysisLaneSpec(DerivedSignal::side)},
+                                      std::initializer_list<AnalysisOutputSpec>{
+                                          AnalysisOutputSpec(traceKind, OutputMixMode::singleLane, {0})});
+                    break;
+                case SignalMode::stereo:
+                    plan.emplace_back(sourceFamily,
+                                      std::initializer_list<AnalysisLaneSpec>{
+                                          AnalysisLaneSpec(DerivedSignal::left),
+                                          AnalysisLaneSpec(DerivedSignal::right)},
+                                      std::initializer_list<AnalysisOutputSpec>{
+                                          AnalysisOutputSpec(traceKind, OutputMixMode::averagePower, {0, 1})});
+                    break;
+            }
         }
 
         return plan;

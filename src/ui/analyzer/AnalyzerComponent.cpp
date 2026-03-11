@@ -8,12 +8,16 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme
     // Prime the meter so the first paint already has render-ready values
     displayMeter.tick(bandInfo, rawTraces, dataSource.getMeterSettings(), dataSource.getGridMinDb(), Analyzer::Constants::meterPollIntervalSeconds);
     renderData = displayMeter.getRenderData();
+    lastPaintedRenderData = renderData;
+    wasFrozen = dataSource.isFrozen();
     lastPollTimeMs = juce::Time::getMillisecondCounterHiRes();
     rebuildViewModel();
     startTimer(Analyzer::Constants::meterPollIntervalMs);
 }
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
+    syncFreezeSnapshotIfNeeded();
+
     g.fillAll(theme.analyzerBackground);
 
     const auto plotBounds = viewModel.getPlotBounds();
@@ -24,6 +28,8 @@ void AnalyzerComponent::paint(juce::Graphics &g) {
     drawGrid(g);
     drawBars(g);
     drawHoverInfo(g);
+
+    lastPaintedRenderData = renderData;
 }
 
 void AnalyzerComponent::resized() {
@@ -81,20 +87,16 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (bar.rmsDb <= viewModel.getGridMinDb() && bar.peakDb <= viewModel.getGridMinDb())
                 continue;
 
-            const auto peakTopColour = bar.isHovered ? theme.hoveredBarTop : theme.barTop;
-            const auto peakBottomColour = bar.isHovered ? theme.hoveredBarBottom : theme.barBottom;
-            const auto rmsTopColour = bar.isHovered ? theme.hoveredRmsBarTop : theme.rmsBarTop;
-            const auto rmsBottomColour = bar.isHovered ? theme.hoveredRmsBarBottom : theme.rmsBarBottom;
+            const auto peakColour = bar.isHovered ? traceVisual.colour.brighter(0.18f) : traceVisual.colour;
+            const auto rmsColour = peakColour.withMultipliedAlpha(0.45f);
 
             if (bar.peakDb > viewModel.getGridMinDb()) {
-                g.setGradientFill(juce::ColourGradient(peakTopColour, bar.peakBounds.getCentreX(), bar.peakBounds.getY(),
-                                                       peakBottomColour, bar.peakBounds.getCentreX(), bar.peakBounds.getBottom(), false));
+                g.setColour(peakColour);
                 g.fillRoundedRectangle(bar.peakBounds, 2.0f);
             }
 
             if (bar.rmsDb > viewModel.getGridMinDb()) {
-                g.setGradientFill(juce::ColourGradient(rmsTopColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getY(),
-                                                       rmsBottomColour, bar.rmsBounds.getCentreX(), bar.rmsBounds.getBottom(), false));
+                g.setColour(rmsColour);
                 g.fillRoundedRectangle(bar.rmsBounds, 2.0f);
             }
 
@@ -102,7 +104,7 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             const auto lineY = bar.holdDb > viewModel.getGridMinDb() ? bar.holdY : bar.peakY;
 
             if (lineDb > viewModel.getGridMinDb()) {
-                g.setColour(bar.isHovered ? theme.hoveredBarTop : theme.tooltipText);
+                g.setColour(bar.isHovered ? peakColour.brighter(0.1f) : peakColour.brighter(0.25f));
                 g.fillRect(bar.peakBounds.getX(), lineY - 1.0f, bar.peakBounds.getWidth(), 2.0f);
             }
         }
@@ -140,22 +142,46 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::rebuildViewModel() {
-    viewModel.update(renderData, viewState, dataSource.getMeterSettings(),
+    viewState.enabledTraces.clear();
+    const auto signalSlots = dataSource.getSignalSlots();
+    const auto signalSlotOrder = dataSource.getSignalSlotOrder();
+    for (size_t slotIndex = 0; slotIndex < signalSlots.size(); ++slotIndex) {
+        const auto &slot = signalSlots[slotIndex];
+        if (slot.configuration.enabled && slot.visible)
+            viewState.enabledTraces.push_back(Analyzer::traceKindForSlot(slotIndex));
+    }
+
+    viewModel.update(renderData, viewState, signalSlots, signalSlotOrder, dataSource.getMeterSettings(),
                      dataSource.getGridMinDb(), dataSource.getGridMaxDb(), dataSource.getGridStepDb(),
                      getLocalBounds().toFloat(), hoverPosition);
 }
 
+void AnalyzerComponent::syncFreezeSnapshotIfNeeded() {
+    const auto isFrozen = dataSource.isFrozen();
+    if (isFrozen && !wasFrozen) {
+        renderData = lastPaintedRenderData;
+        rebuildViewModel();
+    }
+
+    wasFrozen = isFrozen;
+}
+
 void AnalyzerComponent::timerCallback() {
+    syncFreezeSnapshotIfNeeded();
+
     const auto currentPollTimeMs = juce::Time::getMillisecondCounterHiRes();
     // The meter uses real elapsed time so decay stays correct even if the timer jitters a bit
     const auto dtSeconds = static_cast<float>((currentPollTimeMs - lastPollTimeMs) * 0.001);
     lastPollTimeMs = currentPollTimeMs;
 
-    bandInfo = dataSource.getBandInfo();
-    rawTraces = dataSource.getRawTraces();
-    // Raw DSP measurements become render-ready RMS, peak, and hold values here
-    displayMeter.tick(bandInfo, rawTraces, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
-    renderData = displayMeter.getRenderData();
+    if (!dataSource.isFrozen()) {
+        bandInfo = dataSource.getBandInfo();
+        rawTraces = dataSource.getRawTraces();
+        // Raw DSP measurements become render-ready RMS, peak, and hold values here
+        displayMeter.tick(bandInfo, rawTraces, dataSource.getMeterSettings(), dataSource.getGridMinDb(), dtSeconds);
+        renderData = displayMeter.getRenderData();
+    }
+
     rebuildViewModel();
     repaint();
 }

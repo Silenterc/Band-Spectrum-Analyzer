@@ -31,6 +31,11 @@ public:
 
 private:
     /**
+     * On a freeze edge, restores the snapshot the user actually saw on screen
+     */
+    void syncFreezeSnapshotIfNeeded();
+
+    /**
      * Draws the dB grid and fixed frequency labels
      */
     void drawGrid(juce::Graphics &g) const;
@@ -67,6 +72,8 @@ private:
     AnalyzerMeter displayMeter;
     // Latest meter-processed data
     Analyzer::RenderData renderData;
+    // Last render data that was actually painted to screen
+    Analyzer::RenderData lastPaintedRenderData;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
     // UI-only presentation state such as visible trace set and zoom
@@ -75,4 +82,6 @@ private:
     std::optional<juce::Point<float>> hoverPosition;
     // Last timer timestamp used to compute dt
     double lastPollTimeMs = 0.0;
+    // Tracks freeze transitions on the message thread
+    bool wasFrozen = false;
 };

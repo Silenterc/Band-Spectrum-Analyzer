@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 namespace Analyzer {
@@ -33,23 +34,51 @@ namespace Analyzer {
      * Identifies one logical analyzer trace in the UI
      */
     enum class TraceKind {
-        input,
-        left,
-        right,
-        sidechain,
-        sidechainLeft,
-        sidechainRight,
-        mid,
-        side,
+        slot1,
+        slot2,
+        slot3,
+        slot4,
         custom
     };
+
+    inline TraceKind traceKindForSlot(const size_t slotIndex) {
+        switch (slotIndex) {
+            case 0:
+                return TraceKind::slot1;
+            case 1:
+                return TraceKind::slot2;
+            case 2:
+                return TraceKind::slot3;
+            case 3:
+                return TraceKind::slot4;
+        }
+
+        return TraceKind::custom;
+    }
+
+    inline std::optional<size_t> slotIndexForTraceKind(const TraceKind kind) {
+        switch (kind) {
+            case TraceKind::slot1:
+                return 0;
+            case TraceKind::slot2:
+                return 1;
+            case TraceKind::slot3:
+                return 2;
+            case TraceKind::slot4:
+                return 3;
+            case TraceKind::custom:
+                break;
+        }
+
+        return std::nullopt;
+    }
 
     /**
      * One raw analyzer trace before display-rate metering
      */
     struct RawTrace {
         // Identity of this trace
-        TraceKind kind = TraceKind::input;
+        TraceKind kind = TraceKind::slot1;
         // Raw per-band measurements
         std::vector<BandMeasurements> measurements;
     };

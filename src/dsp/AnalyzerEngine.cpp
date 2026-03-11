@@ -31,7 +31,7 @@ namespace Analyzer {
         traces.publish();
     }
 
-    void Engine::setParameters(const ParameterState &parameters) {
+    void Engine::setParameters(const EngineParameterState &parameters) {
         const auto previousBandCount = getBandCount();
         currentParameters = parameters;
 
@@ -138,11 +138,11 @@ namespace Analyzer {
 
     int Engine::getBandCount() const {
         switch (currentParameters.bandMode) {
-            case ParamSpec::BandMode::bands30:
+            case BandMode::bands30:
                 return 30;
-            case ParamSpec::BandMode::bands45:
+            case BandMode::bands45:
                 return 45;
-            case ParamSpec::BandMode::bands60:
+            case BandMode::bands60:
                 return 60;
         }
 

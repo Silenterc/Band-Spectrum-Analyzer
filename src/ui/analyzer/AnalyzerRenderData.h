@@ -22,7 +22,7 @@ namespace Analyzer {
      */
     struct RenderTrace {
         // Identity of this trace
-        TraceKind kind = TraceKind::input;
+        TraceKind kind = TraceKind::slot1;
         // Render-ready dB values
         RenderFrame frame;
     };

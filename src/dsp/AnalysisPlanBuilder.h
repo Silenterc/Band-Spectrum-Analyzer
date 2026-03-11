@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "AnalyzerData.h"
-#include "ParameterState.h"
+#include "EngineParameterState.h"
 
 namespace Analyzer {
     /**
@@ -50,7 +50,7 @@ namespace Analyzer {
      * One published trace produced by an analysis group
      */
     struct AnalysisOutputSpec {
-        TraceKind kind = TraceKind::input;
+        TraceKind kind = TraceKind::slot1;
         OutputMixMode mixMode = OutputMixMode::singleLane;
         std::vector<size_t> laneIndices;
 
@@ -84,6 +84,6 @@ namespace Analyzer {
      */
     class AnalysisPlanBuilder {
     public:
-        std::vector<AnalysisGroupSpec> build(const ParameterState &parameters) const;
+        std::vector<AnalysisGroupSpec> build(const EngineParameterState &parameters) const;
     };
 }

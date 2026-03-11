@@ -1,0 +1,62 @@
+#pragma once
+
+#include <array>
+#include <functional>
+#include <memory>
+#include <optional>
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../SignalSlotUiState.h"
+#include "../AnalyzerSettingsActions.h"
+#include "../AnalyzerUiStateSource.h"
+#include "../FlatButtonLookAndFeel.h"
+#include "../UiTheme.h"
+#include "SignalSlotComponent.h"
+#include "helpers/SignalRackDragSession.h"
+#include "helpers/SignalRackLayoutEngine.h"
+#include "helpers/SignalSlotOrderModel.h"
+
+class SignalRackComponent final : public juce::Component,
+                                  private AnalyzerUiStateSource::Listener {
+public:
+    SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToUse,
+                        AnalyzerSettingsActions &settingsActionsToUse,
+                        const Ui::Theme &themeToUse);
+    ~SignalRackComponent() override;
+
+    void resized() override;
+    void paintOverChildren(juce::Graphics &g) override;
+
+private:
+    void refreshFromState(bool force = false);
+    void analyzerUiStateChanged(const Ui::AnalyzerUiState &state) override;
+    void addSignal();
+    void setLocalSlotState(size_t slotIndex, const Ui::SignalSlotState &slotState);
+    void updateLocalSlot(size_t slotIndex, const std::function<void(Ui::SignalSlotState &slotState)> &update);
+    void setLocalSlotOrder(const Shared::SignalSlotOrder &slotOrder);
+    void beginOptimisticUpdate();
+    void endOptimisticUpdate();
+    std::vector<size_t> getVisibleOrderedSlots(const Shared::SignalSlotOrder &slotOrder) const;
+    std::vector<SignalRackItemSpec> makeItemSpecs(const std::vector<size_t> &visibleOrderedSlots) const;
+    SignalSlotComponent *findComponentForSlot(size_t slotIndex) const;
+    static bool isSignalConfigUsed(const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
+                                   Analyzer::SignalSource source, Analyzer::SignalMode mode);
+
+    AnalyzerUiStateSource &uiStateSource;
+    AnalyzerSettingsActions &settingsActions;
+    const Ui::Theme &theme;
+    FlatButtonLookAndFeel flatButtonLookAndFeel;
+    SignalSlotOrderModel slotOrderModel;
+    SignalRackLayoutEngine layoutEngine;
+    SignalRackDragSession dragSession;
+    std::array<std::unique_ptr<SignalSlotComponent>, Shared::maxSignalSlots> slotComponents;
+    juce::Image draggedSnapshot;
+    juce::TextButton addButton { "+" };
+    std::optional<std::array<Ui::SignalSlotState, Shared::maxSignalSlots>> lastSignalSlots;
+    std::optional<Shared::SignalSlotOrder> lastDisplayOrder;
+    std::optional<bool> lastSidechainAvailable;
+    std::optional<size_t> lastDraggedSlotIndex;
+    Ui::AnalyzerUiState currentState;
+    int optimisticUpdateDepth = 0;
+};

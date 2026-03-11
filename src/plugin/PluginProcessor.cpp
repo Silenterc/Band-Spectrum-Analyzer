@@ -19,11 +19,17 @@ SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
           .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
           // TODO: IMPLEMENT UNDO
-      ), parameters(*this, nullptr, "SpecParams", createParameterLayout()) {
+      ),
+      parameters(*this, nullptr, "SpecParams", createParameterLayout()) {
     cacheParameterPointers();
+    registerUiStateParameterListeners();
+    signalSlotOrderState.addListener(*this);
 }
 
 SpectrumAnalyzerAudioProcessor::~SpectrumAnalyzerAudioProcessor() {
+    signalSlotOrderState.removeListener(*this);
+    unregisterUiStateParameterListeners();
+    cancelPendingUpdate();
 }
 
 //==============================================================================
@@ -86,13 +92,21 @@ void SpectrumAnalyzerAudioProcessor::prepareToPlay(double sampleRate, int sample
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     engine.prepare(sampleRate, samplesPerBlock);
-    previousParameterState = readCurrentParameterState();
-    engine.setParameters(*previousParameterState);
+    previousEngineParameters = readCurrentEngineParameters();
+    engine.setParameters(*previousEngineParameters);
 }
 
 void SpectrumAnalyzerAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+}
+
+void SpectrumAnalyzerAudioProcessor::numBusesChanged() {
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::processorLayoutsChanged() {
+    triggerUiStateUpdate();
 }
 
 bool SpectrumAnalyzerAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const {
@@ -144,12 +158,13 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    const auto currentParameterState = readCurrentParameterState();
+    const auto currentEngineParameters = readCurrentEngineParameters();
 
-    if (!previousParameterState.has_value() || *previousParameterState != currentParameterState) {
-        engine.setParameters(currentParameterState);
-        previousParameterState = currentParameterState;
-    }
+    if (!previousEngineParameters.has_value()
+        || *previousEngineParameters != currentEngineParameters)
+        engine.setParameters(currentEngineParameters);
+
+    previousEngineParameters = currentEngineParameters;
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
@@ -174,26 +189,50 @@ bool SpectrumAnalyzerAudioProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
-    return new SpectrumAnalyzerAudioProcessorEditor(*this, *this);
+    return new SpectrumAnalyzerAudioProcessorEditor(*this);
 }
 
 //==============================================================================
 void SpectrumAnalyzerAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused(destData);
+    auto state = parameters.copyState();
+    signalSlotOrderState.writeTo(state);
+
+    if (const auto stateXml = state.createXml())
+        copyXmlToBinary(*stateXml, destData);
 }
 
 void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused(data, sizeInBytes);
+    const auto stateXml = getXmlFromBinary(data, sizeInBytes);
+    if (stateXml == nullptr)
+        return;
+
+    const auto state = juce::ValueTree::fromXml(*stateXml);
+    if (!state.isValid())
+        return;
+
+    signalSlotOrderState.readFrom(state);
+    parameters.replaceState(state);
+    cacheParameterPointers();
+
+    previousEngineParameters = readCurrentEngineParameters();
+    if (previousEngineParameters.has_value())
+        engine.setParameters(*previousEngineParameters);
+
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
-    analysisModeParam = parameters.getRawParameterValue(ParamIDs::analysisMode);
     bandModeParam = parameters.getRawParameterValue(ParamIDs::bandMode);
+    freezeParam = parameters.getRawParameterValue(ParamIDs::freeze);
+
+    for (size_t slotIndex = 0; slotIndex < signalSlotParams.size(); ++slotIndex) {
+        signalSlotParams[slotIndex].enabled = parameters.getRawParameterValue(ParamIDs::signalSlotEnabled(static_cast<int>(slotIndex)));
+        signalSlotParams[slotIndex].visible = parameters.getRawParameterValue(ParamIDs::signalSlotVisible(static_cast<int>(slotIndex)));
+        signalSlotParams[slotIndex].source = parameters.getRawParameterValue(ParamIDs::signalSlotSource(static_cast<int>(slotIndex)));
+        signalSlotParams[slotIndex].mode = parameters.getRawParameterValue(ParamIDs::signalSlotMode(static_cast<int>(slotIndex)));
+        signalSlotParams[slotIndex].colour = parameters.getRawParameterValue(ParamIDs::signalSlotColour(static_cast<int>(slotIndex)));
+        signalSlotParams[slotIndex].opacity = parameters.getRawParameterValue(ParamIDs::signalSlotOpacity(static_cast<int>(slotIndex)));
+    }
 
     showRmsParam = parameters.getRawParameterValue(ParamIDs::showRms);
     showPeakParam = parameters.getRawParameterValue(ParamIDs::showPeak);
@@ -205,12 +244,76 @@ void SpectrumAnalyzerAudioProcessor::cacheParameterPointers() {
     gridStepDbParam = parameters.getRawParameterValue(ParamIDs::gridStepDb);
 }
 
+void SpectrumAnalyzerAudioProcessor::registerUiStateParameterListeners() {
+    parameters.state.addListener(this);
+}
+
+void SpectrumAnalyzerAudioProcessor::unregisterUiStateParameterListeners() {
+    parameters.state.removeListener(this);
+}
+
+void SpectrumAnalyzerAudioProcessor::triggerUiStateUpdate() {
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        handleAsyncUpdate();
+        return;
+    }
+
+    triggerAsyncUpdate();
+}
+
 std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProcessor::getBandInfo() const {
     return engine.getBandInfo();
 }
 
+Ui::AnalyzerUiState SpectrumAnalyzerAudioProcessor::getAnalyzerUiState() const {
+    Ui::AnalyzerUiState state;
+    state.signalSlots = getSignalSlots();
+    state.slotOrder = getSignalSlotOrder();
+    state.meterSettings = getMeterSettings();
+    state.frozen = isFrozen();
+    state.sidechainAvailable = isSidechainAvailable();
+    return state;
+}
+
+void SpectrumAnalyzerAudioProcessor::addAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) {
+    uiStateListeners.add(&listener);
+}
+
+void SpectrumAnalyzerAudioProcessor::removeAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) {
+    uiStateListeners.remove(&listener);
+}
+
 std::vector<Analyzer::RawTrace> SpectrumAnalyzerAudioProcessor::getRawTraces() const {
     return engine.getTraces();
+}
+
+std::array<Ui::SignalSlotState, Shared::maxSignalSlots> SpectrumAnalyzerAudioProcessor::getSignalSlots() const {
+    std::array<Ui::SignalSlotState, Shared::maxSignalSlots> signalSlots{};
+
+    for (size_t slotIndex = 0; slotIndex < signalSlots.size(); ++slotIndex) {
+        auto &slot = signalSlots[slotIndex];
+        const auto &slotParams = signalSlotParams[slotIndex];
+        slot.configuration.enabled = slotParams.enabled->load() > 0.5f;
+        slot.visible = slotParams.visible->load() > 0.5f;
+        slot.configuration.source = loadEnumParameter<Analyzer::SignalSource>(slotParams.source);
+        slot.configuration.mode = loadEnumParameter<Analyzer::SignalMode>(slotParams.mode);
+        slot.colourIndex = juce::roundToInt(slotParams.colour->load());
+        slot.opacity = slotParams.opacity->load();
+    }
+
+    return signalSlots;
+}
+
+Shared::SignalSlotOrder SpectrumAnalyzerAudioProcessor::getSignalSlotOrder() const {
+    return signalSlotOrderState.getOrder();
+}
+
+bool SpectrumAnalyzerAudioProcessor::isSidechainAvailable() const {
+    return getBusCount(true) > 1 && getChannelCountOfBus(true, 1) > 0;
+}
+
+bool SpectrumAnalyzerAudioProcessor::isFrozen() const {
+    return freezeParam->load() > 0.5f;
 }
 
 Analyzer::MeterSettings SpectrumAnalyzerAudioProcessor::getMeterSettings() const {
@@ -234,25 +337,40 @@ float SpectrumAnalyzerAudioProcessor::getGridStepDb() const {
     return gridStepDbParam->load();
 }
 
-Analyzer::ParameterState SpectrumAnalyzerAudioProcessor::readCurrentParameterState() const {
-    Analyzer::ParameterState currentParameterState;
-    currentParameterState.analysisMode = loadEnumParameter<ParamSpec::AnalysisMode>(analysisModeParam);
-    currentParameterState.bandMode = loadEnumParameter<ParamSpec::BandMode>(bandModeParam);
-    currentParameterState.showRms = showRmsParam->load() > 0.5f;
-    currentParameterState.showPeak = showPeakParam->load() > 0.5f;
-    currentParameterState.showHold = showHoldParam->load() > 0.5f;
-    currentParameterState.holdMs = holdMsParam->load();
-    currentParameterState.gridMinDb = gridMinDbParam->load();
-    currentParameterState.gridMaxDb = gridMaxDbParam->load();
-    currentParameterState.gridStepDb = gridStepDbParam->load();
-    return currentParameterState;
+Analyzer::EngineParameterState SpectrumAnalyzerAudioProcessor::readCurrentEngineParameters() const {
+    Analyzer::EngineParameterState currentEngineParameters;
+    currentEngineParameters.bandMode = loadEnumParameter<Analyzer::BandMode>(bandModeParam);
+
+    for (size_t slotIndex = 0; slotIndex < currentEngineParameters.signalSlots.size(); ++slotIndex) {
+        const auto &slotParams = signalSlotParams[slotIndex];
+        auto &slot = currentEngineParameters.signalSlots[slotIndex];
+        slot.enabled = slotParams.enabled->load() > 0.5f;
+        slot.source = loadEnumParameter<Analyzer::SignalSource>(slotParams.source);
+        slot.mode = loadEnumParameter<Analyzer::SignalMode>(slotParams.mode);
+    }
+
+    return currentEngineParameters;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcessor::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    layout.add(ParamSpec::makeAnalysisModeParameter());
     layout.add(ParamSpec::makeBandModeParameter());
+    layout.add(ParamSpec::makeFreezeParameter());
+
+    for (size_t slotIndex = 0; slotIndex < Shared::maxSignalSlots; ++slotIndex) {
+        const auto defaultEnabled = slotIndex == 0;
+        const auto defaultVisible = true;
+        const auto defaultSource = Analyzer::SignalSource::main;
+        const auto defaultMode = slotIndex == 0 ? Analyzer::SignalMode::stereo : Analyzer::SignalMode::mid;
+        const auto defaultColour = static_cast<int>(slotIndex);
+        layout.add(ParamSpec::makeSignalSlotEnabledParameter(static_cast<int>(slotIndex), defaultEnabled));
+        layout.add(ParamSpec::makeSignalSlotVisibleParameter(static_cast<int>(slotIndex), defaultVisible));
+        layout.add(ParamSpec::makeSignalSlotSourceParameter(static_cast<int>(slotIndex), defaultSource));
+        layout.add(ParamSpec::makeSignalSlotModeParameter(static_cast<int>(slotIndex), defaultMode));
+        layout.add(ParamSpec::makeSignalSlotColourParameter(static_cast<int>(slotIndex), defaultColour));
+        layout.add(ParamSpec::makeSignalSlotOpacityParameter(static_cast<int>(slotIndex), Ui::defaultSignalOpacity));
+    }
 
     layout.add(ParamSpec::makeShowRmsParameter());
     layout.add(ParamSpec::makeShowPeakParameter());
@@ -264,6 +382,127 @@ juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcess
     layout.add(ParamSpec::makeGridStepDbParameter());
 
     return layout;
+}
+
+void SpectrumAnalyzerAudioProcessor::setFreezeEnabled(const bool isFrozenValue) {
+    setBoolParameter(ParamIDs::freeze, isFrozenValue);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotEnabled(const size_t slotIndex, const bool isEnabled) {
+    setBoolParameter(ParamIDs::signalSlotEnabled(static_cast<int>(slotIndex)), isEnabled);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex, const bool isVisible) {
+    setBoolParameter(ParamIDs::signalSlotVisible(static_cast<int>(slotIndex)), isVisible);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotSource(const size_t slotIndex, const Analyzer::SignalSource source) {
+    setChoiceParameter(ParamIDs::signalSlotSource(static_cast<int>(slotIndex)), static_cast<int>(source), 2);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotMode(const size_t slotIndex, const Analyzer::SignalMode mode) {
+    setChoiceParameter(ParamIDs::signalSlotMode(static_cast<int>(slotIndex)), static_cast<int>(mode), 3);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
+    signalSlotOrderState.setOrder(slotOrder);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotColour(const size_t slotIndex, const int colourIndex) {
+    setChoiceParameter(ParamIDs::signalSlotColour(static_cast<int>(slotIndex)), colourIndex, Ui::signalPresetCount);
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotOpacity(const size_t slotIndex, const float opacity) {
+    setFloatParameter(ParamIDs::signalSlotOpacity(static_cast<int>(slotIndex)),
+                      juce::jlimit(0.15f, 1.0f, opacity));
+}
+
+void SpectrumAnalyzerAudioProcessor::setShowPeakEnabled(const bool isEnabled) {
+    setBoolParameter(ParamIDs::showPeak, isEnabled);
+}
+
+void SpectrumAnalyzerAudioProcessor::setShowRmsEnabled(const bool isEnabled) {
+    setBoolParameter(ParamIDs::showRms, isEnabled);
+}
+
+void SpectrumAnalyzerAudioProcessor::setShowHoldEnabled(const bool isEnabled) {
+    setBoolParameter(ParamIDs::showHold, isEnabled);
+}
+
+void SpectrumAnalyzerAudioProcessor::setBoolParameter(const juce::String &parameterID, const bool value) {
+    if (auto *parameter = parameters.getParameter(parameterID)) {
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(value ? 1.0f : 0.0f);
+        parameter->endChangeGesture();
+    }
+}
+
+void SpectrumAnalyzerAudioProcessor::setChoiceParameter(const juce::String &parameterID,
+                                                        const int choiceIndex,
+                                                        const int choiceCount) {
+    if (auto *parameter = parameters.getParameter(parameterID)) {
+        const auto normalisedValue = choiceCount > 1
+                                         ? static_cast<float>(choiceIndex) / static_cast<float>(choiceCount - 1)
+                                         : 0.0f;
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(normalisedValue);
+        parameter->endChangeGesture();
+    }
+}
+
+void SpectrumAnalyzerAudioProcessor::setFloatParameter(const juce::String &parameterID, const float plainValue) {
+    if (auto *parameter = parameters.getParameter(parameterID)) {
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(plainValue));
+        parameter->endChangeGesture();
+    }
+}
+
+void SpectrumAnalyzerAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
+                                                             const juce::Identifier &property) {
+    juce::ignoreUnused(treeWhosePropertyHasChanged, property);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::valueTreeChildAdded(juce::ValueTree &parentTree,
+                                                         juce::ValueTree &childWhichHasBeenAdded) {
+    juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::valueTreeChildRemoved(juce::ValueTree &parentTree,
+                                                           juce::ValueTree &childWhichHasBeenRemoved,
+                                                           const int indexFromWhichChildWasRemoved) {
+    juce::ignoreUnused(parentTree, childWhichHasBeenRemoved, indexFromWhichChildWasRemoved);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
+                                                                const int oldIndex,
+                                                                const int newIndex) {
+    juce::ignoreUnused(parentTreeWhoseChildrenHaveMoved, oldIndex, newIndex);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) {
+    juce::ignoreUnused(treeWhoseParentHasChanged);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::signalSlotOrderChanged(const Shared::SignalSlotOrder &slotOrder) {
+    juce::ignoreUnused(slotOrder);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::handleAsyncUpdate() {
+    const auto state = getAnalyzerUiState();
+    if (lastPublishedUiState.has_value() && *lastPublishedUiState == state)
+        return;
+
+    lastPublishedUiState = state;
+    uiStateListeners.call([&state](AnalyzerUiStateSource::Listener &listener) {
+        listener.analyzerUiStateChanged(state);
+    });
 }
 
 //==============================================================================

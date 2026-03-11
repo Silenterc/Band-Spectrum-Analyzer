@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "../plugin/PluginProcessor.h"
 
 #if JucePlugin_Build_Standalone
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -6,13 +7,12 @@
 #endif
 
 //==============================================================================
-SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(juce::AudioProcessor &audioProcessor,
-                                                                           AnalyzerDataSource &analyzerDataSource)
+SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &audioProcessor)
     : AudioProcessorEditor(&audioProcessor),
       theme(Ui::makeTheme(Ui::AccentPalette::blue)),
-      analyzerComponent(analyzerDataSource, theme) {
-    addAndMakeVisible(analyzerComponent);
-    setSize(920, 420);
+      analyzerPanel(audioProcessor, audioProcessor, audioProcessor, theme) {
+    addAndMakeVisible(analyzerPanel);
+    setSize(920, 520);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {
@@ -31,5 +31,5 @@ void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
 }
 
 void SpectrumAnalyzerAudioProcessorEditor::resized() {
-    analyzerComponent.setBounds(getLocalBounds().reduced(18));
+    analyzerPanel.setBounds(getLocalBounds().reduced(theme.metrics.panel.outerPadding));
 }
