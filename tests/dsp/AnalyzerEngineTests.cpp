@@ -6,7 +6,7 @@
 
 #include "dsp/AnalyzerEngine.h"
 #include "dsp/AnalyzerConstants.h"
-#include "plugin/ParamSpec.h"
+#include "shared/DefaultParameterValues.h"
 #include "ui/analyzer/helpers/AnalyzerMeter.h"
 
 namespace {
@@ -27,10 +27,10 @@ namespace {
         bool showRms = true;
         bool showPeak = true;
         bool showHold = false;
-        float holdMs = ParamSpec::defaultHoldMs;
-        float gridMinDb = ParamSpec::defaultGridMinDb;
-        float gridMaxDb = ParamSpec::defaultGridMaxDb;
-        float gridStepDb = ParamSpec::defaultGridStepDb;
+        float holdMs = Defaults::holdMs;
+        float gridMinDb = Defaults::gridMinDb;
+        float gridMaxDb = Defaults::gridMaxDb;
+        float gridStepDb = Defaults::gridStepDb;
     };
 
     TestParameters makeDefaultParameters() {

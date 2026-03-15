@@ -6,6 +6,7 @@
 
 #include "../dsp/BandMode.h"
 #include "ParamIDs.h"
+#include "../shared/DefaultParameterValues.h"
 #include "../shared/SignalSlotConfiguration.h"
 #include "../shared/SignalPresetCatalog.h"
 #include "../ui/SignalSlotUiState.h"
@@ -64,18 +65,6 @@ namespace ParamSpec {
         return {id, parameterVersionHint};
     }
 
-    inline constexpr int defaultBandMode = static_cast<int>(Analyzer::BandMode::bands45);
-
-    inline constexpr bool defaultShowRms = false;
-    inline constexpr bool defaultShowPeak = true;
-    inline constexpr bool defaultShowHold = true;
-    inline constexpr bool defaultFreeze = false;
-
-    inline constexpr float defaultHoldMs = 500.0f;
-    inline constexpr float defaultGridMinDb = -50.0f;
-    inline constexpr float defaultGridMaxDb = 0.0f;
-    inline constexpr float defaultGridStepDb = 5.0f;
-
     inline auto holdMsRange() {
         return juce::NormalisableRange<float>(0.0f, 2000.0f, 1.0f);
     }
@@ -97,7 +86,7 @@ namespace ParamSpec {
             makeParameterID(ParamIDs::bandMode),
             bandModeName,
             toStringArray(bandModeChoices),
-            defaultBandMode
+            static_cast<int>(Defaults::bandMode)
         );
     }
 
@@ -105,7 +94,7 @@ namespace ParamSpec {
         return std::make_unique<juce::AudioParameterBool>(
             makeParameterID(ParamIDs::freeze),
             freezeName,
-            defaultFreeze
+            Defaults::freeze
         );
     }
 
@@ -171,7 +160,7 @@ namespace ParamSpec {
         return std::make_unique<juce::AudioParameterBool>(
             makeParameterID(ParamIDs::showRms),
             showRmsName,
-            defaultShowRms
+            Defaults::showRms
         );
     }
 
@@ -179,7 +168,7 @@ namespace ParamSpec {
         return std::make_unique<juce::AudioParameterBool>(
             makeParameterID(ParamIDs::showPeak),
             showPeakName,
-            defaultShowPeak
+            Defaults::showPeak
         );
     }
 
@@ -187,7 +176,7 @@ namespace ParamSpec {
         return std::make_unique<juce::AudioParameterBool>(
             makeParameterID(ParamIDs::showHold),
             showHoldName,
-            defaultShowHold
+            Defaults::showHold
         );
     }
 
@@ -196,7 +185,7 @@ namespace ParamSpec {
             makeParameterID(ParamIDs::holdMs),
             holdMsName,
             holdMsRange(),
-            defaultHoldMs
+            Defaults::holdMs
         );
     }
 
@@ -205,7 +194,7 @@ namespace ParamSpec {
             makeParameterID(ParamIDs::gridMinDb),
             gridMinDbName,
             gridMinDbRange(),
-            defaultGridMinDb
+            Defaults::gridMinDb
         );
     }
 
@@ -214,7 +203,7 @@ namespace ParamSpec {
             makeParameterID(ParamIDs::gridMaxDb),
             gridMaxDbName,
             gridMaxDbRange(),
-            defaultGridMaxDb
+            Defaults::gridMaxDb
         );
     }
 
@@ -223,7 +212,7 @@ namespace ParamSpec {
             makeParameterID(ParamIDs::gridStepDb),
             gridStepDbName,
             gridStepDbRange(),
-            defaultGridStepDb
+            Defaults::gridStepDb
         );
     }
 }

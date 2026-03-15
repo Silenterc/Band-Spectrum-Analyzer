@@ -5,6 +5,7 @@
 namespace Analyzer {
     AnalysisGroupProcessor::AnalysisGroupProcessor(AnalysisGroupSpec specToUse)
         : spec(std::move(specToUse)) {
+        determineProcessingShape();
     }
 
     void AnalysisGroupProcessor::prepare(double sampleRate, int maximumBlockSize,
@@ -19,9 +20,6 @@ namespace Analyzer {
         outputMeasurements.resize(spec.outputs.size());
 
         laneData.assign(spec.lanes.size(), nullptr);
-        lanePowers.assign(spec.lanes.size(), 0.0f);
-        peakPowers.assign(spec.outputs.size(), 0.0f);
-        sumPowers.assign(spec.outputs.size(), 0.0);
 
         for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
             auto &band = bands[bandIndex];
@@ -52,38 +50,15 @@ namespace Analyzer {
 
     void AnalysisGroupProcessor::process(const SourceSet &sources) {
         auto numSamples = size_t{0};
-        for (size_t laneIndex = 0; laneIndex < spec.lanes.size(); ++laneIndex) {
-            const auto signalView = selectSignalView(sources, spec.sourceFamily, spec.lanes[laneIndex].signal);
-            laneData[laneIndex] = signalView.data;
-            numSamples = signalView.numSamples;
-        }
+        updateLaneData(sources, numSamples);
 
-        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
-            auto &band = bands[bandIndex];
-            std::fill(peakPowers.begin(), peakPowers.end(), 0.0f);
-            std::fill(sumPowers.begin(), sumPowers.end(), 0.0);
-
-            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
-                for (size_t laneIndex = 0; laneIndex < laneData.size(); ++laneIndex) {
-                    const auto filteredSample = band.filter.processSample(static_cast<int>(laneIndex),
-                                                                          laneData[laneIndex][sampleIndex]);
-                    lanePowers[laneIndex] = filteredSample * filteredSample;
-                }
-
-                for (size_t outputIndex = 0; outputIndex < spec.outputs.size(); ++outputIndex) {
-                    const auto samplePower = computeOutputSamplePower(spec.outputs[outputIndex], lanePowers);
-                    if (samplePower > peakPowers[outputIndex])
-                        peakPowers[outputIndex] = samplePower;
-                    sumPowers[outputIndex] += static_cast<double>(samplePower);
-                }
-            }
-
-            for (size_t outputIndex = 0; outputIndex < spec.outputs.size(); ++outputIndex) {
-                auto &measurements = outputMeasurements[outputIndex][bandIndex];
-                measurements.peakPower = peakPowers[outputIndex];
-                measurements.sumPower = sumPowers[outputIndex];
-                measurements.numSamples = static_cast<int>(numSamples);
-            }
+        switch (processingShape) {
+            case ProcessingShape::singleLane:
+                processSingleLane(numSamples);
+                return;
+            case ProcessingShape::stereoAverage:
+                processStereoAverage(numSamples);
+                return;
         }
     }
 
@@ -133,18 +108,95 @@ namespace Analyzer {
         return SignalView();
     }
 
-    float AnalysisGroupProcessor::computeOutputSamplePower(const AnalysisOutputSpec &outputSpec,
-                                                           const std::vector<float> &currentLanePowers) const {
-        if (outputSpec.laneIndices.empty())
-            return 0.0f;
+    void AnalysisGroupProcessor::updateLaneData(const SourceSet &sources, size_t &numSamples) {
+        numSamples = 0;
+        for (size_t laneIndex = 0; laneIndex < spec.lanes.size(); ++laneIndex) {
+            const auto signalView = selectSignalView(sources, spec.sourceFamily, spec.lanes[laneIndex].signal);
+            laneData[laneIndex] = signalView.data;
+            numSamples = signalView.numSamples;
+        }
+    }
 
-        if (outputSpec.mixMode == OutputMixMode::singleLane)
-            return currentLanePowers[outputSpec.laneIndices.front()];
+    void AnalysisGroupProcessor::processSingleLane(const size_t numSamples) {
+        if (spec.outputs.empty() || laneData.empty() || laneData[0] == nullptr)
+            return;
 
-        auto combinedPower = 0.0f;
-        for (auto laneIndex: outputSpec.laneIndices)
-            combinedPower += currentLanePowers[laneIndex];
+        const auto *lane = laneData[0];
 
-        return combinedPower / static_cast<float>(outputSpec.laneIndices.size());
+        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
+            auto &band = bands[bandIndex];
+            auto peakPower = 0.0f;
+            auto sumPower = 0.0;
+
+            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
+                const auto filteredSample = band.filter.processSample(0, lane[sampleIndex]);
+                const auto power = filteredSample * filteredSample;
+                peakPower = std::max(peakPower, power);
+                sumPower += static_cast<double>(power);
+            }
+
+            auto &measurements = outputMeasurements[0][bandIndex];
+            measurements.peakPower = peakPower;
+            measurements.sumPower = sumPower;
+            measurements.numSamples = static_cast<int>(numSamples);
+        }
+    }
+
+    void AnalysisGroupProcessor::processStereoAverage(const size_t numSamples) {
+        if (spec.outputs.empty() || laneData.size() < 2 || laneData[0] == nullptr || laneData[1] == nullptr)
+            return;
+
+        const auto *leftLane = laneData[0];
+        const auto *rightLane = laneData[1];
+
+        for (size_t bandIndex = 0; bandIndex < bands.size(); ++bandIndex) {
+            auto &band = bands[bandIndex];
+            auto peakPower = 0.0f;
+            auto sumPower = 0.0;
+
+            for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
+                const auto leftFiltered = band.filter.processSample(0, leftLane[sampleIndex]);
+                const auto rightFiltered = band.filter.processSample(1, rightLane[sampleIndex]);
+                const auto power = 0.5f * (leftFiltered * leftFiltered + rightFiltered * rightFiltered);
+                peakPower = std::max(peakPower, power);
+                sumPower += static_cast<double>(power);
+            }
+
+            auto &measurements = outputMeasurements[0][bandIndex];
+            measurements.peakPower = peakPower;
+            measurements.sumPower = sumPower;
+            measurements.numSamples = static_cast<int>(numSamples);
+        }
+    }
+
+    void AnalysisGroupProcessor::determineProcessingShape() {
+        processingShape = ProcessingShape::singleLane;
+
+        if (spec.outputs.size() != 1)
+            return;
+
+        const auto &outputSpec = spec.outputs[0];
+
+        if (outputSpec.laneIndices.size() != spec.lanes.size())
+            return;
+
+        if (spec.lanes.size() != 1 && spec.lanes.size() != 2)
+            return;
+
+        if (spec.lanes.size() == 1
+            && outputSpec.mixMode == OutputMixMode::singleLane
+            && outputSpec.laneIndices.size() == 1
+            && outputSpec.laneIndices[0] == 0) {
+            processingShape = ProcessingShape::singleLane;
+            return;
+        }
+
+        if (spec.lanes.size() == 2
+            && outputSpec.mixMode == OutputMixMode::averagePower
+            && outputSpec.laneIndices.size() == 2
+            && outputSpec.laneIndices[0] == 0
+            && outputSpec.laneIndices[1] == 1) {
+            processingShape = ProcessingShape::stereoAverage;
+        }
     }
 }

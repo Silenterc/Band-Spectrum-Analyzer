@@ -3,12 +3,13 @@
 #include <array>
 #include <cmath>
 
+#include "../shared/DefaultParameterValues.h"
 #include "../shared/SignalSlotConfiguration.h"
 #include "../shared/SignalPresetCatalog.h"
 
 namespace Ui {
     inline constexpr int signalPresetCount = Shared::signalPresetCount;
-    inline constexpr float defaultSignalOpacity = 0.78f;
+    inline constexpr float defaultSignalOpacity = Defaults::signalOpacity;
 
     struct SignalSlotState {
         Analyzer::SignalSlotConfiguration configuration;

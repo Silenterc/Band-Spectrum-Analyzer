@@ -1,11 +1,15 @@
 #include "PluginProcessor.h"
 #include "../ui/PluginEditor.h"
+#include "../shared/DefaultParameterValues.h"
 
 namespace {
     template <typename Enum>
     Enum loadEnumParameter(const std::atomic<float> *parameter) {
         return static_cast<Enum>(juce::roundToInt(parameter->load()));
     }
+
+    // Temporary perf-tuning switch: ignore host/plugin state so new instances always use code defaults.
+    constexpr bool bypassStatePersistence = true;
 }
 
 //==============================================================================
@@ -194,6 +198,11 @@ juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
 
 //==============================================================================
 void SpectrumAnalyzerAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
+    if constexpr (bypassStatePersistence) {
+        destData.reset();
+        return;
+    }
+
     auto state = parameters.copyState();
     signalSlotOrderState.writeTo(state);
 
@@ -202,6 +211,11 @@ void SpectrumAnalyzerAudioProcessor::getStateInformation(juce::MemoryBlock &dest
 }
 
 void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
+    if constexpr (bypassStatePersistence) {
+        juce::ignoreUnused(data, sizeInBytes);
+        return;
+    }
+
     const auto stateXml = getXmlFromBinary(data, sizeInBytes);
     if (stateXml == nullptr)
         return;
@@ -363,17 +377,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcess
     layout.add(ParamSpec::makeFreezeParameter());
 
     for (size_t slotIndex = 0; slotIndex < Shared::maxSignalSlots; ++slotIndex) {
-        const auto defaultEnabled = slotIndex == 0;
-        const auto defaultVisible = true;
-        const auto defaultSource = Analyzer::SignalSource::main;
-        const auto defaultMode = slotIndex == 0 ? Analyzer::SignalMode::stereo : Analyzer::SignalMode::mid;
-        const auto defaultColour = static_cast<int>(slotIndex);
+        const auto defaultEnabled = Defaults::isSignalSlotEnabled(slotIndex);
+        const auto defaultVisible = Defaults::isSignalSlotVisible(slotIndex);
+        const auto defaultSource = Defaults::signalSlotSource(slotIndex);
+        const auto defaultMode = Defaults::signalSlotMode(slotIndex);
+        const auto defaultColour = Defaults::signalSlotColour(slotIndex);
         layout.add(ParamSpec::makeSignalSlotEnabledParameter(static_cast<int>(slotIndex), defaultEnabled));
         layout.add(ParamSpec::makeSignalSlotVisibleParameter(static_cast<int>(slotIndex), defaultVisible));
         layout.add(ParamSpec::makeSignalSlotSourceParameter(static_cast<int>(slotIndex), defaultSource));
         layout.add(ParamSpec::makeSignalSlotModeParameter(static_cast<int>(slotIndex), defaultMode));
         layout.add(ParamSpec::makeSignalSlotColourParameter(static_cast<int>(slotIndex), defaultColour));
-        layout.add(ParamSpec::makeSignalSlotOpacityParameter(static_cast<int>(slotIndex), Ui::defaultSignalOpacity));
+        layout.add(ParamSpec::makeSignalSlotOpacityParameter(static_cast<int>(slotIndex), Defaults::signalOpacity));
     }
 
     layout.add(ParamSpec::makeShowRmsParameter());

@@ -30,6 +30,11 @@ namespace Analyzer {
         size_t getOutputCount() const;
 
     private:
+        enum class ProcessingShape {
+        singleLane,
+        stereoAverage
+        };
+
         /**
          * Runtime state for one band in the filter bank
          */
@@ -43,17 +48,17 @@ namespace Analyzer {
         SignalView selectSignalView(const SourceSet &sources, SourceFamily sourceFamily,
                                     DerivedSignal signal) const;
 
-        float computeOutputSamplePower(const AnalysisOutputSpec &outputSpec,
-                                       const std::vector<float> &lanePowers) const;
+        void updateLaneData(const SourceSet &sources, size_t &numSamples);
+        void processSingleLane(size_t numSamples);
+        void processStereoAverage(size_t numSamples);
+        void determineProcessingShape();
 
         AnalysisGroupSpec spec;
+        ProcessingShape processingShape = ProcessingShape::singleLane;
         std::vector<BandState> bands;
         std::vector<std::vector<BandMeasurements>> outputMeasurements;
 
         // Reused process scratch to avoid per-block allocations in the hot path
         std::vector<const float *> laneData;
-        std::vector<float> lanePowers;
-        std::vector<float> peakPowers;
-        std::vector<double> sumPowers;
     };
 }

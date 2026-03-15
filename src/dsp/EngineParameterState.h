@@ -3,11 +3,12 @@
 #include <array>
 
 #include "BandMode.h"
+#include "../shared/DefaultParameterValues.h"
 #include "../shared/SignalSlotConfiguration.h"
 
 namespace Analyzer {
     struct EngineParameterState {
-        BandMode bandMode = BandMode::bands45;
+        BandMode bandMode = Defaults::bandMode;
         std::array<SignalSlotConfiguration, Shared::maxSignalSlots> signalSlots{};
     };
 
