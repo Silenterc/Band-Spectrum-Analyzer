@@ -80,11 +80,12 @@ SpectrumAnalyzerAudioProcessor
     ├── vector<AnalysisGroupProcessor> processors
     │   └── each AnalysisGroupProcessor owns:
     │       ├── AnalysisGroupSpec
+    │       │   ├── TraceKind
     │       │   ├── SourceFamily
-    │       │   ├── vector<AnalysisLaneSpec>
-    │       │   └── vector<AnalysisOutputSpec>
+    │       │   ├── primary DerivedSignal
+    │       │   └── optional secondary DerivedSignal
     │       ├── vector<BandState>
-    │       ├── vector<vector<BandMeasurements>> outputMeasurements
+    │       ├── vector<BandMeasurements> outputMeasurements
     │       └── reused process scratch
     ├── size_t publishedTraceCount
     └── TripleBuffer<vector<RawTrace>> traces
@@ -117,33 +118,32 @@ flowchart LR
     EngineParams[EngineParameterState] --> PlanBuilder[AnalysisPlanBuilder]
     PlanBuilder --> GroupSpecs[vector AnalysisGroupSpec]
     GroupSpecs --> Group[one spec per enabled slot]
+    Group --> TraceKind
     Group --> SourceFamily
-    Group --> Lanes[vector AnalysisLaneSpec]
-    Group --> Outputs[vector AnalysisOutputSpec]
-    Lanes --> DerivedSignal[mid / side / left / right]
-    Outputs --> TraceKind
-    Outputs --> OutputMixMode
+    Group --> Primary[primary DerivedSignal]
+    Group --> Secondary[optional secondary DerivedSignal]
 ```
 
 Current planning rules:
 
 - `Mid`
-  - one lane: `DerivedSignal::mid`
-  - one output: `OutputMixMode::singleLane`
+  - primary signal: `DerivedSignal::mid`
+  - no secondary signal
 - `Side`
-  - one lane: `DerivedSignal::side`
-  - one output: `OutputMixMode::singleLane`
+  - primary signal: `DerivedSignal::side`
+  - no secondary signal
 - `Stereo`
-  - two lanes: `DerivedSignal::left`, `DerivedSignal::right`
-  - one output: `OutputMixMode::averagePower`
+  - primary signal: `DerivedSignal::left`
+  - secondary signal: `DerivedSignal::right`
+  - output trace is averaged stereo power
 
 ## 7. SourceSet To AnalysisGroupProcessor To RawTrace
 
 ```mermaid
 flowchart LR
     SourceSet[SourceSet\nblock-local signal views] --> Select[AnalysisGroupProcessor selects lane sources]
-    Select --> Filter[band filters process selected lanes]
-    Filter --> Mix[AnalysisOutputSpec mixes lane powers]
+    Select --> Filter[band filters process selected lane or lane pair]
+    Filter --> Mix[optional stereo average]
     Mix --> Measurements[outputMeasurements]
     Measurements --> RawTrace[writeRawTraces writes into published RawTrace slots]
 ```
@@ -151,9 +151,10 @@ flowchart LR
 Plainly:
 
 - `SourceSet` says where the samples for this block live.
-- `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and processes the requested lanes.
+- `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and processes either one signal or a left/right pair.
 - `RawTrace` is the published per-band result for one slot trace.
 - `InputActivityDetector` decides whether recent input energy still justifies running the analyzer DSP.
+- If a configured source is unavailable, the processor clears that trace instead of reusing stale measurements.
 
 Examples:
 

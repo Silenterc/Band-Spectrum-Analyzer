@@ -3,8 +3,8 @@
 #include <array>
 
 #include "BandMode.h"
-#include "../shared/DefaultParameterValues.h"
-#include "../shared/SignalSlotConfiguration.h"
+#include "../../shared/DefaultParameterValues.h"
+#include "../../shared/SignalSlotConfiguration.h"
 
 namespace Analyzer {
     struct EngineParameterState {

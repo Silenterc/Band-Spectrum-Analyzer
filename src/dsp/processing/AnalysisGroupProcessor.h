@@ -1,13 +1,14 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <vector>
 
 #include <juce_dsp/juce_dsp.h>
 
-#include "AnalysisPlanBuilder.h"
-#include "AnalysisSourceBuilder.h"
-#include "AnalyzerData.h"
+#include "../core/AnalyzerData.h"
+#include "../planning/AnalysisPlanBuilder.h"
+#include "../sources/AnalysisSourceBuilder.h"
 
 namespace Analyzer {
     /**
@@ -31,8 +32,8 @@ namespace Analyzer {
 
     private:
         enum class ProcessingShape {
-        singleLane,
-        stereoAverage
+            singleLane,
+            stereoAverage
         };
 
         /**
@@ -47,18 +48,17 @@ namespace Analyzer {
 
         SignalView selectSignalView(const SourceSet &sources, SourceFamily sourceFamily,
                                     DerivedSignal signal) const;
-
-        void updateLaneData(const SourceSet &sources, size_t &numSamples);
+        size_t updateLaneData(const SourceSet &sources);
+        void clearOutputMeasurements();
         void processSingleLane(size_t numSamples);
         void processStereoAverage(size_t numSamples);
-        void determineProcessingShape();
 
         AnalysisGroupSpec spec;
         ProcessingShape processingShape = ProcessingShape::singleLane;
         std::vector<BandState> bands;
-        std::vector<std::vector<BandMeasurements>> outputMeasurements;
+        std::vector<BandMeasurements> outputMeasurements;
 
         // Reused process scratch to avoid per-block allocations in the hot path
-        std::vector<const float *> laneData;
+        std::array<const float *, 2> laneData{ nullptr, nullptr };
     };
 }

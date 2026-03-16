@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "../dsp/AnalyzerData.h"
+#include "../dsp/core/AnalyzerData.h"
 #include "SignalSlotUiState.h"
 #include "analyzer/AnalyzerRenderData.h"
 

@@ -5,7 +5,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../../dsp/AnalyzerData.h"
+#include "../../../dsp/core/AnalyzerData.h"
 
 /**
  * Converts analyzer data between domain space and screen space

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "../../../dsp/AnalyzerData.h"
+#include "../../../dsp/core/AnalyzerData.h"
 #include "../../SignalSlotUiState.h"
 
 class SignalSlotOrderModel final {

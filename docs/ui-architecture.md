@@ -114,6 +114,7 @@ flowchart TD
 - `RenderData`
 - `AnalyzerViewModel`
 - `AnalyzerViewState`
+- `Ui::AnalyzerConstants`
 - hover position
 
 Responsibilities:
@@ -134,6 +135,7 @@ Important behavior:
 - the analyzer background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
 - hover movement repaints only the old/new tooltip and hovered band region instead of forcing a full analyzer redraw
 - when the engine reports no recent signal, the analyzer keeps polling only long enough for the UI meter to decay to floor, then switches to a slower idle cadence until signal returns
+- UI-facing analyzer constants such as visible frequency defaults, poll cadence, and frequency scale labels live in `src/ui/analyzer/AnalyzerUiConstants.h`, not in the DSP constants header
 
 ## 6. Analyzer Data Flow
 

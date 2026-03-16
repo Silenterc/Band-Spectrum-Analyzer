@@ -4,9 +4,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "dsp/AnalyzerEngine.h"
-#include "dsp/AnalyzerConstants.h"
+#include "dsp/core/AnalyzerEngine.h"
 #include "shared/DefaultParameterValues.h"
+#include "ui/analyzer/AnalyzerUiConstants.h"
 #include "ui/analyzer/helpers/AnalyzerMeter.h"
 
 namespace {
@@ -106,6 +106,20 @@ namespace {
         }
     }
 
+    void processSidechainSineBlocks(Analyzer::Engine &engine, int mainChannels, int sidechainChannels,
+                                    const std::vector<float> &frequenciesHz,
+                                    const std::vector<float> &polarities, int numBlocks = settleBlocks) {
+        juce::AudioBuffer<float> mainBuffer(mainChannels, blockSize);
+        juce::AudioBuffer<float> sidechainBuffer(sidechainChannels, blockSize);
+        auto tones = makeTestTones(frequenciesHz, polarities);
+        mainBuffer.clear();
+
+        for (int blockIndex = 0; blockIndex < numBlocks; ++blockIndex) {
+            renderSineBlock(sidechainBuffer, tones, testAmplitude);
+            engine.processBlock(mainBuffer, &sidechainBuffer);
+        }
+    }
+
     void processSilenceBlocks(Analyzer::Engine &engine, int channels, int numBlocks) {
         juce::AudioBuffer<float> buffer(channels, blockSize);
         buffer.clear();
@@ -135,7 +149,7 @@ namespace {
 
     Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                         const TestParameters &parameters,
-                                        float dtSeconds = Analyzer::Constants::meterPollIntervalSeconds) {
+                                        float dtSeconds = Ui::AnalyzerConstants::meterPollIntervalSeconds) {
         displayMeter.tick(engine.getBandInfo(), engine.getTraces(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
         return displayMeter.getRenderData();
     }
@@ -321,6 +335,30 @@ TEST_CASE("AnalyzerEngine stereo mode still works with mono input") {
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
+}
+
+TEST_CASE("AnalyzerEngine clears sidechain traces when sidechain input disappears") {
+    Analyzer::Engine engine;
+    AnalyzerMeter displayMeter;
+    auto parameters = makeDefaultParameters();
+    setPrimarySignal(parameters, Analyzer::SignalSource::sidechain, Analyzer::SignalMode::mid);
+
+    prepareEngine(engine, parameters);
+    processSidechainSineBlocks(engine, 2, 1, {lowSineHz}, {1.0f});
+
+    requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
+
+    processSilenceBlocks(engine, 2, 1);
+
+    const auto traces = engine.getTraces();
+    REQUIRE(traces.size() == 1);
+    constexpr float powerTolerance = 0.000001f;
+
+    for (const auto &measurement: traces.front().measurements) {
+        REQUIRE(std::abs(measurement.peakPower) < powerTolerance);
+        REQUIRE(std::abs(measurement.sumPower) < powerTolerance);
+        REQUIRE(measurement.numSamples == 0);
+    }
 }
 
 TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {

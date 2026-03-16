@@ -6,13 +6,13 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
-#include "AnalysisGroupProcessor.h"
-#include "AnalysisPlanBuilder.h"
-#include "AnalysisSourceBuilder.h"
+#include "../planning/AnalysisPlanBuilder.h"
+#include "../processing/AnalysisGroupProcessor.h"
+#include "../processing/InputActivityDetector.h"
+#include "../sources/AnalysisSourceBuilder.h"
+#include "../util/TripleBuffer.h"
 #include "AnalyzerData.h"
 #include "EngineParameterState.h"
-#include "InputActivityDetector.h"
-#include "TripleBuffer.h"
 
 namespace Analyzer {
     /**

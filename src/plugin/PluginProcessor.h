@@ -6,14 +6,14 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#include "../dsp/EngineParameterState.h"
+#include "../dsp/core/EngineParameterState.h"
 #include "../ui/AnalyzerDataSource.h"
 #include "../ui/AnalyzerSettingsActions.h"
 #include "../ui/AnalyzerUiStateSource.h"
 #include "ParamIDs.h"
 #include "ParamSpec.h"
 #include "SignalSlotOrderState.h"
-#include "../dsp/AnalyzerEngine.h"
+#include "../dsp/core/AnalyzerEngine.h"
 
 //==============================================================================
 class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,

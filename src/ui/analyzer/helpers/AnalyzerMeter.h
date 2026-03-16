@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "../../../dsp/AnalyzerData.h"
+#include "../../../dsp/core/AnalyzerData.h"
 #include "../AnalyzerRenderData.h"
 
 /**

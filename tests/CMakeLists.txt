@@ -11,10 +11,10 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
-    ../src/dsp/AnalysisGroupProcessor.cpp
-    ../src/dsp/AnalysisPlanBuilder.cpp
-    ../src/dsp/AnalysisSourceBuilder.cpp
-    ../src/dsp/AnalyzerEngine.cpp
+    ../src/dsp/core/AnalyzerEngine.cpp
+    ../src/dsp/planning/AnalysisPlanBuilder.cpp
+    ../src/dsp/processing/AnalysisGroupProcessor.cpp
+    ../src/dsp/sources/AnalysisSourceBuilder.cpp
     ../src/ui/analyzer/helpers/AnalyzerMeter.cpp)
 
 target_include_directories(band-spectrum-analyzer-tests

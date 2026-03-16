@@ -4,7 +4,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#include "../dsp/BandMode.h"
+#include "../dsp/core/BandMode.h"
 #include "ParamIDs.h"
 #include "../shared/DefaultParameterValues.h"
 #include "../shared/SignalSlotConfiguration.h"

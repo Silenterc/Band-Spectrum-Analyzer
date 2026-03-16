@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dsp/BandMode.h"
+#include "../dsp/core/BandMode.h"
 #include "SignalSlotConfiguration.h"
 
 namespace Defaults {

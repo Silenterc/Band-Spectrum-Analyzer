@@ -135,7 +135,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     gridLines.clear();
     frequencyMarkers.clear();
     gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
-    frequencyMarkers.reserve(Analyzer::Constants::frequencyScaleLabelsHz.size());
+    frequencyMarkers.reserve(Ui::AnalyzerConstants::frequencyScaleLabelsHz.size());
 
     for (float db = gridMinDb; db <= gridMaxDb + 0.001f; db += gridStepDb) {
         AnalyzerGridLine gridLine;
@@ -144,7 +144,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
         gridLines.push_back(gridLine);
     }
 
-    for (auto frequencyHz: Analyzer::Constants::frequencyScaleLabelsHz) {
+    for (auto frequencyHz: Ui::AnalyzerConstants::frequencyScaleLabelsHz) {
         AnalyzerFrequencyMarker frequencyMarker;
         frequencyMarker.x = geometry.xForFrequency(frequencyHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
         frequencyMarker.label = formatter.formatScaleFrequency(frequencyHz);
@@ -222,8 +222,8 @@ float AnalyzerViewModel::getHoldDb(size_t bandIndex, const Analyzer::RenderFrame
 void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &renderData,
                                                     const AnalyzerViewState &viewState) {
     if (renderData.bandInfo.empty()) {
-        visibleMinFrequencyHz = Analyzer::Constants::defaultVisibleMinFrequencyHz;
-        visibleMaxFrequencyHz = Analyzer::Constants::defaultVisibleMaxFrequencyHz;
+        visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
+        visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
         return;
     }
 

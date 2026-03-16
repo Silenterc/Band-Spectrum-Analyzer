@@ -1,5 +1,5 @@
 #include "AnalyzerComponent.h"
-#include "../../dsp/AnalyzerConstants.h"
+#include "AnalyzerUiConstants.h"
 
 #include <cmath>
 
@@ -30,7 +30,7 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme
     bandInfo = dataSource.getBandInfo();
     rawTraces = dataSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
-    displayMeter.tick(bandInfo, rawTraces, meterSettings, gridMinDb, Analyzer::Constants::meterPollIntervalSeconds);
+    displayMeter.tick(bandInfo, rawTraces, meterSettings, gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
     renderData = displayMeter.getRenderData();
     lastPaintedRenderData = renderData;
     wasFrozen = dataSource.isFrozen();
@@ -39,7 +39,7 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme
     refreshStaticViewModelIfNeeded();
     rebuildDynamicViewModel();
     updateHoverState();
-    startTimer(Analyzer::Constants::meterPollIntervalMs);
+    startTimer(Ui::AnalyzerConstants::meterPollIntervalMs);
 }
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
@@ -349,8 +349,8 @@ void AnalyzerComponent::setIdlePolling(const bool shouldUseIdlePolling) {
         return;
 
     isIdlePolling = shouldUseIdlePolling;
-    startTimer(isIdlePolling ? Analyzer::Constants::idleMeterPollIntervalMs
-                             : Analyzer::Constants::meterPollIntervalMs);
+    startTimer(isIdlePolling ? Ui::AnalyzerConstants::idleMeterPollIntervalMs
+                             : Ui::AnalyzerConstants::meterPollIntervalMs);
 }
 
 void AnalyzerComponent::syncFreezeSnapshotIfNeeded() {

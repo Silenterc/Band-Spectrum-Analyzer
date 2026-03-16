@@ -5,8 +5,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../../dsp/AnalyzerData.h"
-#include "../../../dsp/AnalyzerConstants.h"
+#include "../../../dsp/core/AnalyzerData.h"
+#include "../AnalyzerUiConstants.h"
 #include "../../SignalSlotUiState.h"
 #include "../AnalyzerViewState.h"
 #include "../AnalyzerRenderData.h"
@@ -162,6 +162,6 @@ private:
     std::vector<AnalyzerTraceVisual> traceVisuals;
     std::optional<AnalyzerHoverInfo> hoverInfo;
     float currentGridMinDb = 0.0f;
-    float visibleMinFrequencyHz = Analyzer::Constants::defaultVisibleMinFrequencyHz;
-    float visibleMaxFrequencyHz = Analyzer::Constants::defaultVisibleMaxFrequencyHz;
+    float visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
+    float visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
 };
