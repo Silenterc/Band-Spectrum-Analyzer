@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -190,6 +191,17 @@ namespace {
         const auto &heldFrameAfterSilence = meterDataAfterSilence.traces.front().frame;
         constexpr float tolerance = 0.0001f;
         REQUIRE(std::abs(heldFrameAfterSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)] - heldPeakBeforeSilence) < tolerance);
+    }
+
+    Analyzer::RenderData tickMeter(AnalyzerMeter &displayMeter,
+                                   const std::vector<Analyzer::BandInfo> &bandInfo,
+                                   const std::vector<Analyzer::RawTrace> &traces,
+                                   const Analyzer::MeterSettings &meterSettings,
+                                   const float floorDb,
+                                   const float dtSeconds) {
+        const auto sharedBandInfo = std::make_shared<const std::vector<Analyzer::BandInfo>>(bandInfo);
+        displayMeter.tick(sharedBandInfo, traces, meterSettings, floorDb, dtSeconds);
+        return displayMeter.getRenderData();
     }
 }
 
@@ -385,6 +397,46 @@ TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
     requireHeldPeakStaysPinnedForOneSilentBlock(displayMeter, engine, parameters, 1, highSineHz);
+}
+
+TEST_CASE("AnalyzerMeter RMS release stays aligned with peak decay") {
+    AnalyzerMeter displayMeter;
+    Analyzer::MeterSettings meterSettings;
+    meterSettings.showRms = true;
+    meterSettings.showPeak = true;
+    meterSettings.showHold = false;
+
+    constexpr float floorDb = -80.0f;
+    constexpr float dtSeconds = 0.1f;
+    constexpr float toleranceDb = 0.01f;
+
+    const std::vector<Analyzer::BandInfo> bandInfo{
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f}
+    };
+
+    Analyzer::RawTrace activeTrace;
+    activeTrace.kind = Analyzer::TraceKind::slot1;
+    activeTrace.measurements.resize(1);
+    activeTrace.measurements[0].peakPower = 1.0f;
+    activeTrace.measurements[0].sumPower = 1024.0;
+    activeTrace.measurements[0].numSamples = 1024;
+
+    const auto activeData = tickMeter(displayMeter, bandInfo, {activeTrace}, meterSettings, floorDb, dtSeconds);
+    REQUIRE(activeData.traces.size() == 1);
+    REQUIRE(std::abs(activeData.traces.front().frame.rmsDb[0] - 0.0f) < toleranceDb);
+    REQUIRE(std::abs(activeData.traces.front().frame.peakDb[0] - 0.0f) < toleranceDb);
+
+    Analyzer::RawTrace silentTrace = activeTrace;
+    silentTrace.measurements[0].peakPower = 0.0f;
+    silentTrace.measurements[0].sumPower = 0.0;
+
+    const auto firstSilentData = tickMeter(displayMeter, bandInfo, {silentTrace}, meterSettings, floorDb, dtSeconds);
+    REQUIRE(std::abs(firstSilentData.traces.front().frame.rmsDb[0] + 1.5f) < toleranceDb);
+    REQUIRE(std::abs(firstSilentData.traces.front().frame.peakDb[0] + 1.5f) < toleranceDb);
+
+    const auto secondSilentData = tickMeter(displayMeter, bandInfo, {silentTrace}, meterSettings, floorDb, dtSeconds);
+    REQUIRE(std::abs(secondSilentData.traces.front().frame.rmsDb[0] + 3.0f) < toleranceDb);
+    REQUIRE(std::abs(secondSilentData.traces.front().frame.peakDb[0] + 3.0f) < toleranceDb);
 }
 
 TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfiguration") {

@@ -34,6 +34,8 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
             // RMS stays in the power domain until after the rectangular average
             const auto averagedPower = pushMeanPower(traceState.rmsWindows[bandIndex], meanPower, dtSeconds);
             const auto rmsInputDb = juce::Decibels::gainToDecibels(std::sqrt(averagedPower), floorDb);
+            traceState.rmsDb[bandIndex] = std::max(traceState.rmsDb[bandIndex] - rmsDecayDbPerSecond * dtSeconds,
+                                                   rmsInputDb);
 
             // Peak jumps up immediately and only falls by a linear dB per second rate
             traceState.peakDb[bandIndex] = std::max(traceState.peakDb[bandIndex] - peakDecayDbPerSecond * dtSeconds,
@@ -52,7 +54,7 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                     std::max(traceState.peakDb[bandIndex], traceState.holdDb[bandIndex] - holdDecayDbPerSecond * dtSeconds);
             }
 
-            renderTrace.frame.rmsDb[bandIndex] = meterSettings.showRms ? rmsInputDb : floorDb;
+            renderTrace.frame.rmsDb[bandIndex] = meterSettings.showRms ? traceState.rmsDb[bandIndex] : floorDb;
             renderTrace.frame.peakDb[bandIndex] = meterSettings.showPeak ? traceState.peakDb[bandIndex] : floorDb;
             renderTrace.frame.holdDb[bandIndex] = meterSettings.showHold ? traceState.holdDb[bandIndex] : floorDb;
         }
@@ -104,6 +106,7 @@ void AnalyzerMeter::ensureTraceState(Analyzer::TraceKind kind, size_t bandCount,
     if (traceState.peakDb.size() == bandCount)
         return;
 
+    traceState.rmsDb.assign(bandCount, floorDb);
     traceState.peakDb.assign(bandCount, floorDb);
     traceState.holdDb.assign(bandCount, floorDb);
     traceState.holdTimeRemainingMs.assign(bandCount, 0.0f);

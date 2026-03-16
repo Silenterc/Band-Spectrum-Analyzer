@@ -54,6 +54,8 @@ private:
     struct TraceState {
         // Identity of the trace this state belongs to
         Analyzer::TraceKind kind = Analyzer::TraceKind::slot1;
+        // Displayed RMS values after linear dB/s decay
+        std::vector<float> rmsDb;
         // Displayed peak values after linear dB/s decay
         std::vector<float> peakDb;
         // Displayed hold values
@@ -71,6 +73,7 @@ private:
     static float pushMeanPower(RmsWindowState &windowState, float meanPower, float dtSeconds);
 
     static constexpr float rmsWindowMs = 180.0f;
+    static constexpr float rmsDecayDbPerSecond = 15.0f;
     static constexpr float peakDecayDbPerSecond = 15.0f;
     static constexpr float holdDecayDbPerSecond = 12.0f;
 

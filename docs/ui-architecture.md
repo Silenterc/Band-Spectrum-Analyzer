@@ -197,7 +197,7 @@ Helper roles:
 - `AnalyzerRefreshModel`
   - snapshot refresh, freeze-edge handling, and polling decisions
 - `AnalyzerMeter`
-  - UI-rate smoothing/decay/hold logic
+  - UI-rate RMS averaging plus display decay/hold logic
 - `AnalyzerViewModel`
   - split builder for static layout, dynamic trace visuals, and hover state
 - `AnalyzerGeometry`
