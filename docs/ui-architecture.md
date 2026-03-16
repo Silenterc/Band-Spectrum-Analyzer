@@ -1,6 +1,6 @@
 # UI Architecture
 
-This document describes the current editor and analyzer UI architecture from `SpectrumAnalyzerAudioProcessorEditor` down into the analyzer view, signal rack, and UI helper layer.
+This document describes the current editor and analyzer UI architecture from `SpectrumAnalyzerAudioProcessorEditor` down into the analyzer `view/`, `model/`, `popups/`, and helper layers.
 
 ## 1. Top-Level Editor Flow
 
@@ -63,8 +63,20 @@ flowchart LR
   - discrete UI snapshot for freeze, meter toggles, slot state, slot order, and sidechain availability
 - `AnalyzerSettingsActions`
   - write path for user actions
+  - semantic slot operations such as apply, remove, and add
 
 This split keeps UI reads and UI writes explicit.
+
+Current analyzer folder split:
+
+- `src/ui/analyzer/view/`
+  - JUCE components
+- `src/ui/analyzer/model/`
+  - derived UI state, policy, and refresh logic
+- `src/ui/analyzer/popups/`
+  - custom callout content
+- `src/ui/analyzer/helpers/`
+  - low-level geometry, smoothing, hover, and formatting helpers
 
 ## 4. AnalyzerPanelComponent
 
@@ -114,12 +126,14 @@ flowchart TD
 - `RenderData`
 - `AnalyzerViewModel`
 - `AnalyzerViewState`
+- `AnalyzerRefreshModel`
 - `Ui::AnalyzerConstants`
 - hover position
 
 Responsibilities:
 
 - poll processor-backed analyzer data
+- use `AnalyzerRefreshModel` for UI snapshot refresh, freeze-edge handling, and idle-polling decisions
 - convert raw traces into display-rate metered values
 - rebuild cached static layout only when geometry or scale inputs change
 - rebuild dynamic bar geometry from the latest render data
@@ -180,6 +194,8 @@ flowchart LR
 
 Helper roles:
 
+- `AnalyzerRefreshModel`
+  - snapshot refresh, freeze-edge handling, and polling decisions
 - `AnalyzerMeter`
   - UI-rate smoothing/decay/hold logic
 - `AnalyzerViewModel`
@@ -223,6 +239,7 @@ Responsibilities:
 - wire slot actions into `AnalyzerSettingsActions`
 - add a new signal into the first free slot
 - keep direct slot interactions visually immediate with local optimistic updates, then reconcile back to processor state
+- delegate slot default-selection policy to `src/ui/analyzer/model/SignalRackModel.h`
 
 Reordering responsibilities are split out:
 
@@ -235,6 +252,8 @@ Reordering responsibilities are split out:
   - preview-order calculation and final commit order
 - `SignalSlotOrderModel`
   - ordered-slot and trace-order helper logic
+- `SignalRackModel`
+  - pure helpers for choosing a free slot, default signal option, default colour, and append-to-end order
 
 Current behavior:
 
@@ -278,10 +297,26 @@ Supported interactions:
 - click remove:
   - disable slot
 
+Responsibility split:
+
+- `SignalSlotComponent`
+  - slot painting
+  - hit-testing
+  - opacity drag
+  - reorder drag gesture forwarding
+  - callout lifecycle
+- `SignalSelectionPopupContent`
+  - signal-option callout rows and section layout
+- `SignalColourPopupContent`
+  - colour grid callout layout
+- `SignalSlotOptions`
+  - single source of truth for supported source/mode combinations and labels
+
 Picker rules:
 
 - duplicate source/mode combinations are disabled
 - duplicate preset colors are disabled
+- slot picker options are driven from `src/ui/analyzer/model/SignalSlotOptions.h`
 - when sidechain is unavailable:
   - signal picker shows one section with `Mid / Side / Stereo`
 - when sidechain is available:
@@ -391,6 +426,9 @@ The UI is split into:
 - write actions through `AnalyzerSettingsActions`
 - display-rate analyzer rendering in `AnalyzerComponent`
 - signal configuration UI in `SignalRackComponent` and `SignalSlotComponent`
+- slot-option and default-selection policy in `src/ui/analyzer/model/`
+- refresh/state-transition logic in `src/ui/analyzer/model/AnalyzerRefreshModel.*`
+- custom callout content in `src/ui/analyzer/popups/`
 
 The processor remains the bridge between APVTS-backed state and the editor.
 Inside the plugin layer, typed parameter reads and writes now go through `plugin/parameters/ParameterAccess`, backed by the single parameter-definition source in `plugin/parameters/ParameterSchema`.

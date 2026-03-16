@@ -10,10 +10,10 @@
 #include "../../SignalSlotUiState.h"
 #include "../AnalyzerViewState.h"
 #include "../AnalyzerRenderData.h"
-#include "AnalyzerGeometry.h"
-#include "AnalyzerHoverModel.h"
-#include "FrequencyFormatter.h"
-#include "MusicTheory.h"
+#include "../helpers/AnalyzerGeometry.h"
+#include "../helpers/AnalyzerHoverModel.h"
+#include "../helpers/FrequencyFormatter.h"
+#include "../helpers/MusicTheory.h"
 #include "SignalSlotOrderModel.h"
 
 /**

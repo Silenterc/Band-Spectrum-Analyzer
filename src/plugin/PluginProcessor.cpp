@@ -333,6 +333,27 @@ void SpectrumAnalyzerAudioProcessor::setSignalSlotMode(const size_t slotIndex, c
     parameterAccess.writeSlotSignal(slotIndex, parameterAccess.readUiSlot(slotIndex).configuration.source, mode);
 }
 
+void SpectrumAnalyzerAudioProcessor::setSignalSlotSignal(const size_t slotIndex,
+                                                         const Analyzer::SignalSource source,
+                                                         const Analyzer::SignalMode mode) {
+    parameterAccess.writeSlotSignal(slotIndex, source, mode);
+}
+
+void SpectrumAnalyzerAudioProcessor::applySignalSlotState(const size_t slotIndex, const Ui::SignalSlotState &state) {
+    parameterAccess.writeSlotState(slotIndex, state);
+}
+
+void SpectrumAnalyzerAudioProcessor::removeSignalSlot(const size_t slotIndex) {
+    parameterAccess.writeSlotEnabled(slotIndex, false);
+}
+
+void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
+                                                   const Ui::SignalSlotState &state,
+                                                   const Shared::SignalSlotOrder &slotOrder) {
+    parameterAccess.writeSlotState(slotIndex, state);
+    signalSlotOrderState.setOrder(slotOrder);
+}
+
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
     signalSlotOrderState.setOrder(slotOrder);
 }

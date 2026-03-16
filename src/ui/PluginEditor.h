@@ -3,7 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "UiTheme.h"
-#include "analyzer/AnalyzerPanelComponent.h"
+#include "analyzer/view/AnalyzerPanelComponent.h"
 
 class SpectrumAnalyzerAudioProcessor;
 

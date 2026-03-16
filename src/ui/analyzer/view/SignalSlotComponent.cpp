@@ -1,8 +1,10 @@
 #include "SignalSlotComponent.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
+
+#include "../popups/SignalColourPopupContent.h"
+#include "../popups/SignalSelectionPopupContent.h"
 
 namespace {
     float measureTextWidth(const float fontHeight, const juce::String &text) {
@@ -10,267 +12,6 @@ namespace {
         glyphs.addLineOfText(juce::Font(juce::FontOptions(fontHeight)), text, 0.0f, 0.0f);
         return glyphs.getBoundingBox(0, -1, true).getWidth();
     }
-
-    class SignalSelectionRowButton final : public juce::Button {
-    public:
-        SignalSelectionRowButton(const Ui::Theme &themeToUse,
-                                 const juce::String &labelToUse,
-                                 const bool selectedToUse,
-                                 const Analyzer::SignalSource sourceToUse,
-                                 const Analyzer::SignalMode modeToUse)
-            : juce::Button({}),
-              source(sourceToUse),
-              mode(modeToUse),
-              theme(themeToUse),
-              label(labelToUse),
-              selected(selectedToUse) {
-        }
-
-        void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
-            auto bounds = getLocalBounds().toFloat();
-            const auto fill = selected ? theme.controlSurfaceHover.brighter(0.18f)
-                                       : isMouseOverButton ? theme.controlSurfaceHover
-                                                           : theme.controlSurface;
-            g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(0.45f));
-            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
-
-            if (selected) {
-                g.setColour(theme.controlBorder.brighter(0.6f));
-                g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.buttonCornerRadius, 1.5f);
-            }
-
-            g.setColour(isEnabled() ? theme.controlText : theme.subtleText.withMultipliedAlpha(0.75f));
-            g.setFont(14.0f);
-            g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft);
-        }
-
-        Analyzer::SignalSource source;
-        Analyzer::SignalMode mode;
-
-    private:
-        const Ui::Theme &theme;
-        juce::String label;
-        bool selected = false;
-    };
-
-    class SignalSelectionCalloutContent final : public juce::Component {
-    public:
-        SignalSelectionCalloutContent(const Ui::Theme &themeToUse,
-                                      const bool sidechainAvailableToUse,
-                                      const Analyzer::SignalSource currentSourceToUse,
-                                      const Analyzer::SignalMode currentModeToUse,
-                                      std::function<void(Analyzer::SignalSource, Analyzer::SignalMode)> onSelectToUse,
-                                      std::function<void()> onDismissToUse)
-            : theme(themeToUse),
-              sidechainAvailable(sidechainAvailableToUse),
-              onSelect(std::move(onSelectToUse)),
-              onDismiss(std::move(onDismissToUse)) {
-            addAndMakeVisible(mainLabel);
-            mainLabel.setText("Main", juce::dontSendNotification);
-            mainLabel.setFont(juce::FontOptions(11.0f));
-            mainLabel.setColour(juce::Label::textColourId, theme.subtleText);
-            mainLabel.setJustificationType(juce::Justification::centredLeft);
-
-            addAndMakeVisible(sidechainLabel);
-            sidechainLabel.setText("Sidechain", juce::dontSendNotification);
-            sidechainLabel.setFont(juce::FontOptions(11.0f));
-            sidechainLabel.setColour(juce::Label::textColourId, theme.subtleText);
-            sidechainLabel.setJustificationType(juce::Justification::centredLeft);
-
-            auto makeButton = [this, currentSourceToUse, currentModeToUse](
-                                  const juce::String &label,
-                                  const Analyzer::SignalSource source,
-                                  const Analyzer::SignalMode mode) {
-                auto button = std::make_unique<SignalSelectionRowButton>(
-                    theme, label, currentSourceToUse == source && currentModeToUse == mode, source, mode);
-                auto *buttonPtr = button.get();
-                addAndMakeVisible(*button);
-                button->onClick = [this, buttonPtr] {
-                    if (!buttonPtr->isEnabled())
-                        return;
-
-                    if (onSelect)
-                        onSelect(buttonPtr->source, buttonPtr->mode);
-
-                    if (auto *callout = findParentComponentOfClass<juce::CallOutBox>())
-                        callout->dismiss();
-                };
-                return button;
-            };
-
-            buttons[0] = makeButton("Mid", Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
-            buttons[1] = makeButton("Side", Analyzer::SignalSource::main, Analyzer::SignalMode::side);
-            buttons[2] = makeButton("Stereo", Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
-            buttons[3] = makeButton("Mid", Analyzer::SignalSource::sidechain, Analyzer::SignalMode::mid);
-            buttons[4] = makeButton("Side", Analyzer::SignalSource::sidechain, Analyzer::SignalMode::side);
-            buttons[5] = makeButton("Stereo", Analyzer::SignalSource::sidechain, Analyzer::SignalMode::stereo);
-        }
-
-        ~SignalSelectionCalloutContent() override {
-            if (onDismiss)
-                onDismiss();
-        }
-
-        void setAvailability(const std::function<bool(Analyzer::SignalSource, Analyzer::SignalMode)> &isAvailable) {
-            for (auto &button: buttons) {
-                const auto isSidechainButton = button->source == Analyzer::SignalSource::sidechain;
-                button->setVisible(sidechainAvailable || !isSidechainButton);
-                button->setEnabled(isAvailable(button->source, button->mode));
-            }
-
-            mainLabel.setVisible(sidechainAvailable);
-            sidechainLabel.setVisible(sidechainAvailable);
-        }
-
-        void resized() override {
-            const auto &popupMetrics = theme.metrics.popup;
-            auto bounds = getLocalBounds().reduced(static_cast<int>(popupMetrics.padding));
-
-            auto layoutSection = [&](juce::Label &header, const std::initializer_list<int> indices) {
-                if (header.isVisible()) {
-                    header.setBounds(bounds.removeFromTop(static_cast<int>(popupMetrics.headerHeight)));
-                    bounds.removeFromTop(static_cast<int>(popupMetrics.rowGap));
-                }
-
-                bool anyVisible = false;
-                for (const auto index: indices) {
-                    auto &button = buttons[static_cast<size_t>(index)];
-                    if (!button->isVisible())
-                        continue;
-
-                    button->setBounds(bounds.removeFromTop(static_cast<int>(popupMetrics.rowHeight)));
-                    bounds.removeFromTop(static_cast<int>(popupMetrics.rowGap));
-                    anyVisible = true;
-                }
-
-                if (anyVisible)
-                    bounds.removeFromTop(static_cast<int>(popupMetrics.sectionGap - popupMetrics.rowGap));
-            };
-
-            layoutSection(mainLabel, {0, 1, 2});
-            if (sidechainAvailable)
-                layoutSection(sidechainLabel, {3, 4, 5});
-        }
-
-        int getPreferredHeight() const {
-            const auto &popupMetrics = theme.metrics.popup;
-            if (!sidechainAvailable)
-                return static_cast<int>(popupMetrics.padding * 2 + popupMetrics.rowHeight * 3 + popupMetrics.rowGap * 2);
-
-            return static_cast<int>(popupMetrics.padding * 2
-                                    + popupMetrics.headerHeight * 2
-                                    + popupMetrics.rowHeight * 6
-                                    + popupMetrics.rowGap * 6
-                                    + popupMetrics.sectionGap);
-        }
-
-        int getPreferredWidth() const {
-            return 132;
-        }
-
-    private:
-        const Ui::Theme &theme;
-        bool sidechainAvailable = false;
-        juce::Label mainLabel;
-        juce::Label sidechainLabel;
-        std::array<std::unique_ptr<SignalSelectionRowButton>, 6> buttons;
-        std::function<void(Analyzer::SignalSource, Analyzer::SignalMode)> onSelect;
-        std::function<void()> onDismiss;
-    };
-
-    class SignalColourButton final : public juce::Button {
-    public:
-        SignalColourButton(const juce::Colour colourToUse, const bool selectedToUse)
-            : juce::Button({}), colour(colourToUse), selected(selectedToUse) {
-        }
-
-        void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
-            auto bounds = getLocalBounds().toFloat().reduced(4.0f);
-
-            g.setColour(colour.withMultipliedAlpha(isEnabled() ? 1.0f : 0.28f));
-            g.fillEllipse(bounds);
-
-            if (isMouseOverButton) {
-                g.setColour(juce::Colours::white.withAlpha(0.12f));
-                g.fillEllipse(bounds.reduced(2.0f));
-            }
-
-            g.setColour(selected ? juce::Colours::white : juce::Colours::white.withAlpha(0.14f));
-            g.drawEllipse(bounds, selected ? 2.0f : 1.0f);
-
-            if (!isEnabled()) {
-                g.setColour(juce::Colours::white.withAlpha(0.18f));
-                g.drawLine(bounds.getX() + 5.0f, bounds.getBottom() - 5.0f,
-                           bounds.getRight() - 5.0f, bounds.getY() + 5.0f, 1.5f);
-            }
-        }
-
-    private:
-        juce::Colour colour;
-        bool selected = false;
-    };
-
-    class SignalColourCalloutContent final : public juce::Component {
-    public:
-        SignalColourCalloutContent(const Ui::Theme &themeToUse,
-                                   std::function<void(int)> onSelectToUse,
-                                   std::function<void()> onDismissToUse)
-            : onSelect(std::move(onSelectToUse)),
-              theme(themeToUse),
-              onDismiss(std::move(onDismissToUse)) {
-        }
-
-        ~SignalColourCalloutContent() override {
-            if (onDismiss)
-                onDismiss();
-        }
-
-        void addColourButton(std::unique_ptr<SignalColourButton> button) {
-            addAndMakeVisible(*button);
-            colourButtons.push_back(std::move(button));
-        }
-
-        void resized() override {
-            const auto &popupMetrics = theme.metrics.popup;
-            auto bounds = getLocalBounds().reduced(static_cast<int>(popupMetrics.padding));
-            const auto columns = popupMetrics.colourColumns;
-            const auto itemSize = static_cast<int>(popupMetrics.swatchSize);
-            const auto gap = static_cast<int>(popupMetrics.colourGap);
-
-            auto x = bounds.getX();
-            auto y = bounds.getY();
-            for (size_t index = 0; index < colourButtons.size(); ++index) {
-                colourButtons[index]->setBounds(x, y, itemSize, itemSize);
-                x += itemSize + gap;
-                if ((index + 1) % static_cast<size_t>(columns) == 0) {
-                    x = bounds.getX();
-                    y += itemSize + gap;
-                }
-            }
-        }
-
-        std::function<void(int)> onSelect;
-
-        int getPreferredWidth() const {
-            const auto &popupMetrics = theme.metrics.popup;
-            return static_cast<int>(popupMetrics.padding * 2
-                                    + popupMetrics.swatchSize * static_cast<float>(popupMetrics.colourColumns)
-                                    + popupMetrics.colourGap * static_cast<float>(popupMetrics.colourColumns - 1));
-        }
-
-        int getPreferredHeight() const {
-            const auto &popupMetrics = theme.metrics.popup;
-            constexpr int rows = 2;
-            return static_cast<int>(popupMetrics.padding * 2
-                                    + popupMetrics.swatchSize * static_cast<float>(rows)
-                                    + popupMetrics.colourGap * static_cast<float>(rows - 1));
-        }
-
-    private:
-        const Ui::Theme &theme;
-        std::vector<std::unique_ptr<SignalColourButton>> colourButtons;
-        std::function<void()> onDismiss;
-    };
 }
 
 SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
@@ -280,7 +21,7 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
 void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
                                   const Ui::SignalSlotState &settingsToUse,
                                   const std::vector<int> &usedColoursToUse,
-                                  const std::vector<std::pair<Analyzer::SignalSource, Analyzer::SignalMode>> &usedSignalConfigsToUse) {
+                                  const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToUse) {
     slotIndex = slotIndexToUse;
     settings = settingsToUse;
     usedColours = usedColoursToUse;
@@ -307,15 +48,12 @@ size_t SignalSlotComponent::getSlotIndex() const {
 
 int SignalSlotComponent::getPreferredWidth() const {
     const auto &slotMetrics = theme.metrics.slot;
-    const auto modeWidth = std::max({
-        measureTextWidth(slotMetrics.titleFontHeight, "Mid"),
-        measureTextWidth(slotMetrics.titleFontHeight, "Side"),
-        measureTextWidth(slotMetrics.titleFontHeight, "Stereo")
-    });
-    const auto hintWidth = std::max({
-        measureTextWidth(slotMetrics.hintFontHeight, "Main"),
-        measureTextWidth(slotMetrics.hintFontHeight, "Sidechain")
-    });
+    auto modeWidth = 0.0f;
+    for (const auto &option: Ui::signalSlotOptions)
+        modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.label));
+
+    const auto hintWidth = std::max(measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::main)),
+                                    measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::sidechain)));
     const auto textWidth = std::ceil(std::max(modeWidth, hintWidth));
     const auto actionWidth = slotMetrics.actionSize * 3.0f + slotMetrics.actionGap * 2.0f;
 
@@ -362,13 +100,13 @@ void SignalSlotComponent::paint(juce::Graphics &g) {
     auto labelBounds = getLabelBounds();
     g.setColour(theme.controlText);
     g.setFont(slotMetrics.titleFontHeight);
-    g.drawText(getModeLabel(settings.configuration.mode), labelBounds.removeFromTop(static_cast<int>(slotMetrics.titleHeight)).toNearestInt(),
+    g.drawText(Ui::getSignalModeLabel(settings.configuration.mode), labelBounds.removeFromTop(static_cast<int>(slotMetrics.titleHeight)).toNearestInt(),
                juce::Justification::centredLeft);
     labelBounds.removeFromTop(static_cast<int>(slotMetrics.textStackGap));
 
     g.setColour(theme.subtleText);
     g.setFont(slotMetrics.hintFontHeight);
-    g.drawText(getSourceHint(settings.configuration.source), labelBounds.removeFromTop(static_cast<int>(slotMetrics.hintHeight)).toNearestInt(),
+    g.drawText(Ui::getSignalSourceHint(settings.configuration.source), labelBounds.removeFromTop(static_cast<int>(slotMetrics.hintHeight)).toNearestInt(),
                juce::Justification::centredLeft);
 
     const auto dragHandleBounds = getDragHandleBounds();
@@ -664,7 +402,7 @@ void SignalSlotComponent::showSignalMenu() {
         return;
 
     const auto safeThis = juce::Component::SafePointer<SignalSlotComponent>(this);
-    auto content = std::make_unique<SignalSelectionCalloutContent>(
+    auto content = std::make_unique<SignalSelectionPopupContent>(
         theme,
         isSidechainRouted,
         settings.configuration.source,
@@ -702,7 +440,7 @@ void SignalSlotComponent::showColourMenu() {
         return;
 
     const auto safeThis = juce::Component::SafePointer<SignalSlotComponent>(this);
-    auto content = std::make_unique<SignalColourCalloutContent>(
+    auto content = std::make_unique<SignalColourPopupContent>(
         theme,
         [safeThis](const int selectedColourIndex) {
             if (safeThis == nullptr || !safeThis->onColourSelected)
@@ -719,19 +457,10 @@ void SignalSlotComponent::showColourMenu() {
         });
 
     for (int colourIndex = 0; colourIndex < Ui::signalPresetCount; ++colourIndex) {
-        auto button = std::make_unique<SignalColourButton>(Ui::getSignalPresetColour(colourIndex),
-                                                           colourIndex == settings.colourIndex);
-        button->setEnabled(isColourAvailable(colourIndex));
-        button->onClick = [contentPtr = content.get(), colourIndex] {
-            if (!contentPtr->onSelect)
-                return;
-
-            contentPtr->onSelect(colourIndex);
-
-            if (auto *callout = contentPtr->findParentComponentOfClass<juce::CallOutBox>())
-                callout->dismiss();
-        };
-        content->addColourButton(std::move(button));
+        content->addColourButton(Ui::getSignalPresetColour(colourIndex),
+                                 colourIndex == settings.colourIndex,
+                                 isColourAvailable(colourIndex),
+                                 colourIndex);
     }
 
     content->setSize(content->getPreferredWidth(), content->getPreferredHeight());
@@ -739,23 +468,6 @@ void SignalSlotComponent::showColourMenu() {
     auto anchorBounds = parentComponent->getLocalArea(this, getSwatchBounds().toNearestInt());
     anchorBounds = {anchorBounds.getCentreX(), anchorBounds.getY() - 2, 1, 1};
     launchCallout(std::move(content), OpenPopupMenu::colour, anchorBounds);
-}
-
-juce::String SignalSlotComponent::getModeLabel(const Analyzer::SignalMode mode) {
-    switch (mode) {
-        case Analyzer::SignalMode::mid:
-            return "Mid";
-        case Analyzer::SignalMode::side:
-            return "Side";
-        case Analyzer::SignalMode::stereo:
-            return "Stereo";
-    }
-
-    return "Mid";
-}
-
-juce::String SignalSlotComponent::getSourceHint(const Analyzer::SignalSource source) {
-    return source == Analyzer::SignalSource::main ? "Main" : "Sidechain";
 }
 
 void SignalSlotComponent::setHoveredHitArea(const std::optional<SignalSlotHitArea> hitArea) {

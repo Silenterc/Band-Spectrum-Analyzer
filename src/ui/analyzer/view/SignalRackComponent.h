@@ -7,15 +7,16 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../SignalSlotUiState.h"
-#include "../AnalyzerSettingsActions.h"
-#include "../AnalyzerUiStateSource.h"
-#include "../FlatButtonLookAndFeel.h"
-#include "../UiTheme.h"
+#include "../../SignalSlotUiState.h"
+#include "../../AnalyzerSettingsActions.h"
+#include "../../AnalyzerUiStateSource.h"
+#include "../../FlatButtonLookAndFeel.h"
+#include "../../UiTheme.h"
 #include "SignalSlotComponent.h"
-#include "helpers/SignalRackDragSession.h"
-#include "helpers/SignalRackLayoutEngine.h"
-#include "helpers/SignalSlotOrderModel.h"
+#include "../helpers/SignalRackDragSession.h"
+#include "../helpers/SignalRackLayoutEngine.h"
+#include "../model/SignalSlotOrderModel.h"
+#include "../model/SignalSlotOptions.h"
 
 class SignalRackComponent final : public juce::Component,
                                   private AnalyzerUiStateSource::Listener {
@@ -40,8 +41,6 @@ private:
     std::vector<size_t> getVisibleOrderedSlots(const Shared::SignalSlotOrder &slotOrder) const;
     std::vector<SignalRackItemSpec> makeItemSpecs(const std::vector<size_t> &visibleOrderedSlots) const;
     SignalSlotComponent *findComponentForSlot(size_t slotIndex) const;
-    static bool isSignalConfigUsed(const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-                                   Analyzer::SignalSource source, Analyzer::SignalMode mode);
 
     AnalyzerUiStateSource &uiStateSource;
     AnalyzerSettingsActions &settingsActions;

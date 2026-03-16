@@ -21,16 +21,25 @@ public:
     virtual void setShowRmsEnabled(bool isEnabled) = 0;
     virtual void setShowHoldEnabled(bool isEnabled) = 0;
 
-    void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) {
+    virtual void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) {
         setSignalSlotSource(slotIndex, source);
         setSignalSlotMode(slotIndex, mode);
     }
 
-    void applySignalSlotState(size_t slotIndex, const Ui::SignalSlotState &state) {
+    virtual void applySignalSlotState(size_t slotIndex, const Ui::SignalSlotState &state) {
         setSignalSlotSignal(slotIndex, state.configuration.source, state.configuration.mode);
         setSignalSlotColour(slotIndex, state.colourIndex);
         setSignalSlotOpacity(slotIndex, state.opacity);
         setSignalSlotVisible(slotIndex, state.visible);
         setSignalSlotEnabled(slotIndex, state.configuration.enabled);
+    }
+
+    virtual void removeSignalSlot(size_t slotIndex) {
+        setSignalSlotEnabled(slotIndex, false);
+    }
+
+    virtual void addSignalSlot(size_t slotIndex, const Ui::SignalSlotState &state, const Shared::SignalSlotOrder &slotOrder) {
+        applySignalSlotState(slotIndex, state);
+        setSignalSlotOrder(slotOrder);
     }
 };

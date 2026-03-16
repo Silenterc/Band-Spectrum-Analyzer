@@ -4,9 +4,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../AnalyzerSettingsActions.h"
-#include "../AnalyzerUiStateSource.h"
-#include "../UiTheme.h"
+#include "../../AnalyzerSettingsActions.h"
+#include "../../AnalyzerUiStateSource.h"
+#include "../../UiTheme.h"
 
 class AnalyzerMeterControlsComponent final : public juce::Component,
                                              private AnalyzerUiStateSource::Listener {

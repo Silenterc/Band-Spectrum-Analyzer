@@ -2,11 +2,11 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../AnalyzerDataSource.h"
-#include "../AnalyzerSettingsActions.h"
-#include "../AnalyzerUiStateSource.h"
-#include "../FlatButtonLookAndFeel.h"
-#include "../UiTheme.h"
+#include "../../AnalyzerDataSource.h"
+#include "../../AnalyzerSettingsActions.h"
+#include "../../AnalyzerUiStateSource.h"
+#include "../../FlatButtonLookAndFeel.h"
+#include "../../UiTheme.h"
 #include "AnalyzerComponent.h"
 #include "AnalyzerMeterControlsComponent.h"
 #include "SignalRackComponent.h"

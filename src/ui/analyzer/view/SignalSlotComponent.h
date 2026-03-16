@@ -5,8 +5,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../SignalSlotUiState.h"
-#include "../UiTheme.h"
+#include "../../SignalSlotUiState.h"
+#include "../../UiTheme.h"
+#include "../model/SignalSlotOptions.h"
 
 enum class SignalSlotHitArea {
     swatch,
@@ -23,7 +24,7 @@ public:
 
     void setSlot(size_t slotIndexToUse, const Ui::SignalSlotState &settingsToUse,
                  const std::vector<int> &usedColoursToUse,
-                 const std::vector<std::pair<Analyzer::SignalSource, Analyzer::SignalMode>> &usedSignalConfigsToUse);
+                 const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToUse);
     void setSidechainAvailable(bool isAvailable);
     void setDragged(bool isDraggedValue);
     bool getDragged() const;
@@ -68,8 +69,6 @@ private:
                        const juce::Rectangle<int> &anchorBounds);
     void showSignalMenu();
     void showColourMenu();
-    static juce::String getModeLabel(Analyzer::SignalMode mode);
-    static juce::String getSourceHint(Analyzer::SignalSource source);
     void setHoveredHitArea(std::optional<SignalSlotHitArea> hitArea);
     void updateCursor(const juce::Point<float> &position);
 
@@ -77,7 +76,7 @@ private:
     size_t slotIndex = 0;
     Ui::SignalSlotState settings;
     std::vector<int> usedColours;
-    std::vector<std::pair<Analyzer::SignalSource, Analyzer::SignalMode>> usedSignalConfigs;
+    std::vector<Ui::SignalSlotKey> usedSignalConfigs;
     bool isSidechainRouted = false;
     SignalSlotHitArea mouseDownHitArea = SignalSlotHitArea::body;
     juce::Point<float> mouseDownPosition;

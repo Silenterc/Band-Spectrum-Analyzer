@@ -2,25 +2,7 @@
 
 #include <algorithm>
 
-namespace {
-    Shared::SignalSlotOrder appendSlotToEnd(const Shared::SignalSlotOrder &slotOrder, const size_t slotIndex) {
-        Shared::SignalSlotOrder reordered = slotOrder;
-
-        auto writeIt = std::remove(reordered.begin(), reordered.end(), slotIndex);
-        std::fill(writeIt, reordered.end(), slotIndex);
-        reordered[reordered.size() - 1] = slotIndex;
-
-        size_t fillIndex = 0;
-        for (auto readIt = reordered.begin(); readIt != reordered.end(); ++readIt) {
-            if (*readIt == slotIndex && readIt != reordered.end() - 1)
-                continue;
-
-            reordered[fillIndex++] = *readIt;
-        }
-
-        return reordered;
-    }
-}
+#include "../model/SignalRackModel.h"
 
 SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToUse,
                                          AnalyzerSettingsActions &settingsActionsToUse,
@@ -56,7 +38,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
             updateLocalSlot(slotIndex, [](Ui::SignalSlotState &slotState) {
                 slotState.configuration.enabled = false;
             });
-            settingsActions.setSignalSlotEnabled(slotIndex, false);
+            settingsActions.removeSignalSlot(slotIndex);
         };
         slotComponent->onOpacityChanged = [this](const size_t slotIndex, const float opacity) {
             updateLocalSlot(slotIndex, [opacity](Ui::SignalSlotState &slotState) {
@@ -184,14 +166,14 @@ void SignalRackComponent::refreshFromState(const bool force) {
     lastDraggedSlotIndex = draggedSlotIndex;
 
     std::vector<int> usedColours;
-    std::vector<std::pair<Analyzer::SignalSource, Analyzer::SignalMode>> usedSignalConfigs;
+    std::vector<Ui::SignalSlotKey> usedSignalConfigs;
     usedColours.reserve(signalSlots.size());
     usedSignalConfigs.reserve(signalSlots.size());
 
     for (const auto &slot: signalSlots) {
         if (slot.configuration.enabled) {
             usedColours.push_back(slot.colourIndex);
-            usedSignalConfigs.emplace_back(slot.configuration.source, slot.configuration.mode);
+            usedSignalConfigs.push_back(Ui::makeSignalSlotKey(slot.configuration.source, slot.configuration.mode));
         }
     }
 
@@ -233,67 +215,21 @@ void SignalRackComponent::addSignal() {
     const auto &signalSlots = currentState.signalSlots;
     const auto currentSlotOrder = currentState.slotOrder;
 
-    std::optional<size_t> freeSlotIndex;
-    for (size_t slotIndex = 0; slotIndex < signalSlots.size(); ++slotIndex) {
-        if (!signalSlots[slotIndex].configuration.enabled) {
-            freeSlotIndex = slotIndex;
-            break;
-        }
-    }
-
+    const auto freeSlotIndex = Ui::findFreeSignalSlot(signalSlots);
     if (!freeSlotIndex.has_value())
         return;
 
-    const auto sidechainAvailable = currentState.sidechainAvailable;
-    Analyzer::SignalSource defaultSource = Analyzer::SignalSource::main;
-    Analyzer::SignalMode defaultMode = Analyzer::SignalMode::mid;
-
-    constexpr std::array<std::pair<Analyzer::SignalSource, Analyzer::SignalMode>, 6> preferredSignals{{
-        {Analyzer::SignalSource::main, Analyzer::SignalMode::mid},
-        {Analyzer::SignalSource::main, Analyzer::SignalMode::side},
-        {Analyzer::SignalSource::main, Analyzer::SignalMode::stereo},
-        {Analyzer::SignalSource::sidechain, Analyzer::SignalMode::mid},
-        {Analyzer::SignalSource::sidechain, Analyzer::SignalMode::side},
-        {Analyzer::SignalSource::sidechain, Analyzer::SignalMode::stereo}
-    }};
-
-    for (const auto &[source, mode]: preferredSignals) {
-        if (source == Analyzer::SignalSource::sidechain && !sidechainAvailable)
-            continue;
-
-        if (!isSignalConfigUsed(signalSlots, source, mode)) {
-            defaultSource = source;
-            defaultMode = mode;
-            break;
-        }
-    }
-
-    int defaultColour = 0;
-    for (int colourIndex = 0; colourIndex < Ui::signalPresetCount; ++colourIndex) {
-        const auto colourInUse = std::any_of(signalSlots.begin(), signalSlots.end(),
-                                             [colourIndex](const Ui::SignalSlotState &slot) {
-                                                 return slot.configuration.enabled && slot.colourIndex == colourIndex;
-                                             });
-        if (!colourInUse) {
-            defaultColour = colourIndex;
-            break;
-        }
-    }
-
     Ui::SignalSlotState slotState;
-    slotState.configuration.enabled = true;
-    slotState.configuration.source = defaultSource;
-    slotState.configuration.mode = defaultMode;
+    slotState.configuration = Ui::chooseDefaultSignalConfiguration(signalSlots, currentState.sidechainAvailable);
     slotState.visible = true;
-    slotState.colourIndex = defaultColour;
+    slotState.colourIndex = Ui::chooseDefaultSignalColourIndex(signalSlots);
     slotState.opacity = Ui::defaultSignalOpacity;
 
     beginOptimisticUpdate();
-    const auto updatedSlotOrder = appendSlotToEnd(currentSlotOrder, *freeSlotIndex);
+    const auto updatedSlotOrder = Ui::appendSlotToEnd(currentSlotOrder, *freeSlotIndex);
     setLocalSlotState(*freeSlotIndex, slotState);
     setLocalSlotOrder(updatedSlotOrder);
-    settingsActions.applySignalSlotState(*freeSlotIndex, slotState);
-    settingsActions.setSignalSlotOrder(updatedSlotOrder);
+    settingsActions.addSignalSlot(*freeSlotIndex, slotState, updatedSlotOrder);
     endOptimisticUpdate();
 }
 
@@ -335,18 +271,6 @@ void SignalRackComponent::endOptimisticUpdate() {
         currentState = uiStateSource.getAnalyzerUiState();
         refreshFromState(true);
     }
-}
-
-bool SignalRackComponent::isSignalConfigUsed(
-    const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-    const Analyzer::SignalSource source,
-    const Analyzer::SignalMode mode) {
-    return std::any_of(signalSlots.begin(), signalSlots.end(),
-                       [source, mode](const Ui::SignalSlotState &slot) {
-                           return slot.configuration.enabled
-                                  && slot.configuration.source == source
-                                  && slot.configuration.mode == mode;
-                       });
 }
 
 std::vector<size_t> SignalRackComponent::getVisibleOrderedSlots(const Shared::SignalSlotOrder &slotOrder) const {

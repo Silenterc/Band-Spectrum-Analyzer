@@ -24,18 +24,21 @@ target_sources(${PROJECT_NAME}
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
         ui/UiTheme.cpp
-        ui/analyzer/AnalyzerPanelComponent.cpp
-        ui/analyzer/AnalyzerComponent.cpp
-        ui/analyzer/AnalyzerMeterControlsComponent.cpp
-        ui/analyzer/SignalRackComponent.cpp
-        ui/analyzer/SignalSlotComponent.cpp
+        ui/analyzer/view/AnalyzerPanelComponent.cpp
+        ui/analyzer/view/AnalyzerComponent.cpp
+        ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
+        ui/analyzer/view/SignalRackComponent.cpp
+        ui/analyzer/view/SignalSlotComponent.cpp
+        ui/analyzer/popups/SignalColourPopupContent.cpp
+        ui/analyzer/popups/SignalSelectionPopupContent.cpp
+        ui/analyzer/model/AnalyzerRefreshModel.cpp
+        ui/analyzer/model/AnalyzerViewModel.cpp
+        ui/analyzer/model/SignalSlotOrderModel.cpp
         ui/analyzer/helpers/AnalyzerMeter.cpp
         ui/analyzer/helpers/AnalyzerGeometry.cpp
         ui/analyzer/helpers/AnalyzerHoverModel.cpp
         ui/analyzer/helpers/SignalRackDragSession.cpp
         ui/analyzer/helpers/SignalRackLayoutEngine.cpp
-        ui/analyzer/helpers/SignalSlotOrderModel.cpp
-        ui/analyzer/helpers/AnalyzerViewModel.cpp
         ui/analyzer/helpers/FrequencyFormatter.cpp
         ui/analyzer/helpers/MusicTheory.cpp
         ui/PluginEditor.cpp

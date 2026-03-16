@@ -1,5 +1,4 @@
 #include "AnalyzerComponent.h"
-#include "AnalyzerUiConstants.h"
 
 #include <cmath>
 
@@ -26,24 +25,23 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme
     : dataSource(source), theme(themeToUse) {
     setOpaque(true);
 
-    refreshUiSnapshot();
+    refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
     bandInfo = dataSource.getBandInfo();
     rawTraces = dataSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
-    displayMeter.tick(bandInfo, rawTraces, meterSettings, gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
+    displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
     renderData = displayMeter.getRenderData();
     lastPaintedRenderData = renderData;
-    wasFrozen = dataSource.isFrozen();
-    lastPollTimeMs = juce::Time::getMillisecondCounterHiRes();
-    rebuildEnabledTraces();
-    refreshStaticViewModelIfNeeded();
-    rebuildDynamicViewModel();
-    updateHoverState();
+    refreshModel.prime(dataSource);
+    rebuildViewModels();
     startTimer(Ui::AnalyzerConstants::meterPollIntervalMs);
 }
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
-    syncFreezeSnapshotIfNeeded();
+    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
+        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+        rebuildViewModels();
+    }
 
     ensureStaticLayer();
     g.drawImageAt(staticLayer, 0, 0);
@@ -55,9 +53,7 @@ void AnalyzerComponent::paint(juce::Graphics &g) {
 
 void AnalyzerComponent::resized() {
     staticLayerDirty = true;
-    refreshStaticViewModelIfNeeded();
-    rebuildDynamicViewModel();
-    updateHoverState();
+    rebuildViewModels();
 }
 
 void AnalyzerComponent::mouseMove(const juce::MouseEvent &event) {
@@ -235,48 +231,29 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
     g.drawFittedText(tooltipText, hoverInfo.bounds.toNearestInt().reduced(10, 8), juce::Justification::centredLeft, 3);
 }
 
-bool AnalyzerComponent::refreshUiSnapshot() {
-    const auto previousSignalSlots = signalSlots;
-    const auto previousSignalSlotOrder = signalSlotOrder;
-    const auto previousMeterSettings = meterSettings;
-    const auto previousGridMinDb = gridMinDb;
-    const auto previousGridMaxDb = gridMaxDb;
-    const auto previousGridStepDb = gridStepDb;
-
-    signalSlots = dataSource.getSignalSlots();
-    signalSlotOrder = dataSource.getSignalSlotOrder();
-    meterSettings = dataSource.getMeterSettings();
-    gridMinDb = dataSource.getGridMinDb();
-    gridMaxDb = dataSource.getGridMaxDb();
-    gridStepDb = dataSource.getGridStepDb();
-
-    return signalSlots != previousSignalSlots
-           || signalSlotOrder != previousSignalSlotOrder
-           || meterSettings.showRms != previousMeterSettings.showRms
-           || meterSettings.showPeak != previousMeterSettings.showPeak
-           || meterSettings.showHold != previousMeterSettings.showHold
-           || !nearlyEqual(meterSettings.holdMs, previousMeterSettings.holdMs)
-           || !nearlyEqual(gridMinDb, previousGridMinDb)
-           || !nearlyEqual(gridMaxDb, previousGridMaxDb)
-           || !nearlyEqual(gridStepDb, previousGridStepDb);
-}
-
 void AnalyzerComponent::rebuildEnabledTraces() {
     viewState.enabledTraces.clear();
-    for (size_t slotIndex = 0; slotIndex < signalSlots.size(); ++slotIndex) {
-        const auto &slot = signalSlots[slotIndex];
+    for (size_t slotIndex = 0; slotIndex < uiSnapshot.signalSlots.size(); ++slotIndex) {
+        const auto &slot = uiSnapshot.signalSlots[slotIndex];
         if (slot.configuration.enabled && slot.visible)
             viewState.enabledTraces.push_back(Analyzer::traceKindForSlot(slotIndex));
     }
+}
+
+void AnalyzerComponent::rebuildViewModels() {
+    rebuildEnabledTraces();
+    refreshStaticViewModelIfNeeded();
+    rebuildDynamicViewModel();
+    updateHoverState();
 }
 
 void AnalyzerComponent::refreshStaticViewModelIfNeeded() {
     StaticViewStateKey nextKey;
     nextKey.bounds = getLocalBounds();
     nextKey.bandCount = renderData.bandInfo.size();
-    nextKey.gridMinDb = gridMinDb;
-    nextKey.gridMaxDb = gridMaxDb;
-    nextKey.gridStepDb = gridStepDb;
+    nextKey.gridMinDb = uiSnapshot.gridMinDb;
+    nextKey.gridMaxDb = uiSnapshot.gridMaxDb;
+    nextKey.gridStepDb = uiSnapshot.gridStepDb;
     nextKey.useCustomFrequencyRange = viewState.useCustomFrequencyRange;
     nextKey.visibleMinFrequencyHz = viewState.visibleMinFrequencyHz;
     nextKey.visibleMaxFrequencyHz = viewState.visibleMaxFrequencyHz;
@@ -291,15 +268,17 @@ void AnalyzerComponent::refreshStaticViewModelIfNeeded() {
 
     staticViewStateKey = nextKey;
     staticLayerDirty = true;
-    viewModel.updateStaticLayout(renderData, viewState, gridMinDb, gridMaxDb, gridStepDb, getLocalBounds().toFloat());
+    viewModel.updateStaticLayout(renderData, viewState, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb,
+                                 uiSnapshot.gridStepDb, getLocalBounds().toFloat());
 }
 
 void AnalyzerComponent::rebuildDynamicViewModel() {
-    viewModel.updateTraceVisuals(renderData, viewState, signalSlots, signalSlotOrder, gridMinDb, gridMaxDb);
+    viewModel.updateTraceVisuals(renderData, viewState, uiSnapshot.signalSlots, uiSnapshot.signalSlotOrder,
+                                 uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb);
 }
 
 void AnalyzerComponent::updateHoverState() {
-    viewModel.updateHover(renderData, viewState, signalSlotOrder, meterSettings, gridMinDb,
+    viewModel.updateHover(renderData, viewState, uiSnapshot.signalSlotOrder, uiSnapshot.meterSettings, uiSnapshot.gridMinDb,
                           getLocalBounds().toFloat(), hoverPosition);
 }
 
@@ -344,63 +323,34 @@ juce::Rectangle<int> AnalyzerComponent::getHoverDirtyBounds(const std::optional<
     return dirtyBounds;
 }
 
-void AnalyzerComponent::setIdlePolling(const bool shouldUseIdlePolling) {
-    if (isIdlePolling == shouldUseIdlePolling)
-        return;
-
-    isIdlePolling = shouldUseIdlePolling;
-    startTimer(isIdlePolling ? Ui::AnalyzerConstants::idleMeterPollIntervalMs
-                             : Ui::AnalyzerConstants::meterPollIntervalMs);
-}
-
-void AnalyzerComponent::syncFreezeSnapshotIfNeeded() {
-    const auto isFrozen = dataSource.isFrozen();
-    if (isFrozen && !wasFrozen) {
-        renderData = lastPaintedRenderData;
-        refreshUiSnapshot();
-        rebuildEnabledTraces();
-        refreshStaticViewModelIfNeeded();
-        rebuildDynamicViewModel();
-        updateHoverState();
+void AnalyzerComponent::timerCallback() {
+    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
+        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+        rebuildViewModels();
     }
 
-    wasFrozen = isFrozen;
-}
+    const auto refreshDecision = refreshModel.makeTimerDecision(dataSource, bandInfo, displayMeter, uiSnapshot.gridMinDb, uiSnapshot);
+    if (refreshDecision.pollingIntervalChanged)
+        startTimer(refreshDecision.pollIntervalMs);
 
-void AnalyzerComponent::timerCallback() {
-    syncFreezeSnapshotIfNeeded();
+    if (!refreshDecision.frozen) {
+        bandInfo = refreshDecision.nextBandInfo;
 
-    const auto currentPollTimeMs = juce::Time::getMillisecondCounterHiRes();
-    // The meter uses real elapsed time so decay stays correct even if the timer jitters a bit
-    const auto dtSeconds = static_cast<float>((currentPollTimeMs - lastPollTimeMs) * 0.001);
-    lastPollTimeMs = currentPollTimeMs;
-    const auto uiSnapshotChanged = refreshUiSnapshot();
-    const auto nextBandInfo = dataSource.getBandInfo();
-    const auto bandLayoutChanged = bandInfo != nextBandInfo;
-
-    if (!dataSource.isFrozen()) {
-        bandInfo = nextBandInfo;
-
-        const auto shouldAdvanceDisplay = dataSource.hasRecentSignal() || !displayMeter.isSettledAtFloor(gridMinDb);
-        setIdlePolling(!shouldAdvanceDisplay);
-
-        if (!shouldAdvanceDisplay && !uiSnapshotChanged && !bandLayoutChanged)
+        if (!refreshDecision.shouldAdvanceDisplay
+            && !refreshDecision.uiSnapshotChanged
+            && !refreshDecision.bandLayoutChanged)
             return;
 
-        if (shouldAdvanceDisplay || bandLayoutChanged) {
+        if (refreshDecision.shouldAdvanceDisplay || refreshDecision.bandLayoutChanged) {
             rawTraces = dataSource.getRawTraces();
             // Raw DSP measurements become render-ready RMS, peak, and hold values here
-            displayMeter.tick(bandInfo, rawTraces, meterSettings, gridMinDb, dtSeconds);
+            displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, refreshDecision.dtSeconds);
             renderData = displayMeter.getRenderData();
         }
     } else {
-        setIdlePolling(false);
-        bandInfo = nextBandInfo;
+        bandInfo = refreshDecision.nextBandInfo;
     }
 
-    rebuildEnabledTraces();
-    refreshStaticViewModelIfNeeded();
-    rebuildDynamicViewModel();
-    updateHoverState();
+    rebuildViewModels();
     repaint();
 }

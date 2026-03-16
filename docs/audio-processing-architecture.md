@@ -45,7 +45,7 @@ flowchart TD
 - `ParameterAccess` caches APVTS parameter pointers and exposes typed reads/writes for engine state, UI slot state, and meter/grid state.
 - The processor reads only `EngineParameterState` on the audio thread.
 - The UI reads slot presentation state, freeze state, grid settings, and meter settings through `AnalyzerDataSource`.
-- The processor also exposes UI write actions through `AnalyzerSettingsActions`.
+- The processor also exposes UI write actions through `AnalyzerSettingsActions`, including semantic slot operations used by the rack UI.
 - APVTS state plus persistent UI-only slot order are serialized in `getStateInformation()` / `setStateInformation()`.
 
 ## 3. Engine Internals

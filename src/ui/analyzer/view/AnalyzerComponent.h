@@ -6,14 +6,14 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../shared/SignalSlotConfiguration.h"
-#include "../AnalyzerDataSource.h"
-#include "../SignalSlotUiState.h"
-#include "../UiTheme.h"
-#include "AnalyzerRenderData.h"
-#include "AnalyzerViewState.h"
-#include "helpers/AnalyzerMeter.h"
-#include "helpers/AnalyzerViewModel.h"
+#include "../../../shared/SignalSlotConfiguration.h"
+#include "../../AnalyzerDataSource.h"
+#include "../../UiTheme.h"
+#include "../AnalyzerRenderData.h"
+#include "../AnalyzerViewState.h"
+#include "../helpers/AnalyzerMeter.h"
+#include "../model/AnalyzerRefreshModel.h"
+#include "../model/AnalyzerViewModel.h"
 
 /**
  * Draws the analyzer plot from a precomputed view model
@@ -48,11 +48,6 @@ private:
     };
 
     /**
-     * On a freeze edge, restores the snapshot the user actually saw on screen
-     */
-    void syncFreezeSnapshotIfNeeded();
-
-    /**
      * Draws the dB grid and fixed frequency labels
      */
     void drawGrid(juce::Graphics &g) const;
@@ -68,14 +63,11 @@ private:
     void drawHoverInfo(juce::Graphics &g) const;
 
     /**
-     * Refreshes the latest UI-state snapshot from the processor bridge
-     */
-    bool refreshUiSnapshot();
-
-    /**
      * Rebuilds the enabled-trace view state from the stored slot snapshot
      */
     void rebuildEnabledTraces();
+
+    void rebuildViewModels();
 
     /**
      * Updates cached static layout state when geometry or scale inputs change
@@ -108,11 +100,6 @@ private:
     juce::Rectangle<int> getHoverDirtyBounds(const std::optional<AnalyzerHoverInfo> &hoverInfo) const;
 
     /**
-     * Adjusts the polling interval for active vs idle analyzer states
-     */
-    void setIdlePolling(bool shouldUseIdlePolling);
-
-    /**
      * Pulls the latest published snapshot and repaints
      */
     void timerCallback() override;
@@ -133,18 +120,11 @@ private:
     Analyzer::RenderData lastPaintedRenderData;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
+    Ui::AnalyzerRefreshModel refreshModel;
     // UI-only presentation state such as visible trace set and zoom
     AnalyzerViewState viewState;
-    // Latest slot presentation state used by the analyzer view model
-    std::array<Ui::SignalSlotState, Shared::maxSignalSlots> signalSlots{};
-    // Latest UI-configured slot order
-    Shared::SignalSlotOrder signalSlotOrder{};
-    // Latest UI-configured meter settings
-    Analyzer::MeterSettings meterSettings;
-    // Latest UI-configured grid scale
-    float gridMinDb = 0.0f;
-    float gridMaxDb = 0.0f;
-    float gridStepDb = 0.0f;
+    // Latest UI snapshot used by the analyzer view model
+    Ui::AnalyzerUiSnapshot uiSnapshot;
     // Raw mouse position used by the hover model
     std::optional<juce::Point<float>> hoverPosition;
     // Cached static plot background, border, and grid
@@ -153,10 +133,4 @@ private:
     bool staticLayerDirty = true;
     // Last input set that produced the current static layout
     std::optional<StaticViewStateKey> staticViewStateKey;
-    // Last timer timestamp used to compute dt
-    double lastPollTimeMs = 0.0;
-    // Tracks freeze transitions on the message thread
-    bool wasFrozen = false;
-    // Tracks whether the analyzer is currently on its slower idle polling cadence
-    bool isIdlePolling = false;
 };
