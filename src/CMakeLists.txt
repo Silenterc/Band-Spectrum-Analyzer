@@ -20,6 +20,8 @@ juce_add_plugin(${PROJECT_NAME}
 target_sources(${PROJECT_NAME}
     PRIVATE
         dsp/core/AnalyzerEngine.cpp
+        dsp/filterbank/FilterBank.cpp
+        dsp/filterbank/SIMDBPFilter.cpp
         dsp/planning/AnalysisPlanBuilder.cpp
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
