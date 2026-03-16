@@ -344,7 +344,7 @@ Important UI-facing state types:
 - `Analyzer::RenderData`
   - render-ready meter output
 
-The processor owns `SignalSlotOrderState`, which persists the slot order and exposes it through `AnalyzerDataSource`.
+The processor owns `plugin/state/SignalSlotOrderState`, which persists the slot order and exposes it through `AnalyzerDataSource`.
 The engine does not use this order.
 
 Important order/detail notes:
@@ -392,4 +392,6 @@ The UI is split into:
 - display-rate analyzer rendering in `AnalyzerComponent`
 - signal configuration UI in `SignalRackComponent` and `SignalSlotComponent`
 
-The processor remains the bridge between APVTS-backed state and the editor, while the analyzer helpers keep rendering logic out of the top-level components.
+The processor remains the bridge between APVTS-backed state and the editor.
+Inside the plugin layer, typed parameter reads and writes now go through `plugin/parameters/ParameterAccess`, backed by the single parameter-definition source in `plugin/parameters/ParameterSchema`.
+The analyzer helpers keep rendering logic out of the top-level components.

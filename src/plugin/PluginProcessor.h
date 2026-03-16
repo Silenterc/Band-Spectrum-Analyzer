@@ -10,10 +10,10 @@
 #include "../ui/AnalyzerDataSource.h"
 #include "../ui/AnalyzerSettingsActions.h"
 #include "../ui/AnalyzerUiStateSource.h"
-#include "ParamIDs.h"
-#include "ParamSpec.h"
-#include "SignalSlotOrderState.h"
 #include "../dsp/core/AnalyzerEngine.h"
+#include "parameters/ParameterAccess.h"
+#include "parameters/ParameterSchema.h"
+#include "state/SignalSlotOrderState.h"
 
 //==============================================================================
 class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
@@ -114,45 +114,19 @@ public:
     void setShowHoldEnabled(bool isEnabled) override;
 
 private:
-    struct SignalSlotParameterPointers {
-        std::atomic<float> *enabled = nullptr;
-        std::atomic<float> *visible = nullptr;
-        std::atomic<float> *source = nullptr;
-        std::atomic<float> *mode = nullptr;
-        std::atomic<float> *colour = nullptr;
-        std::atomic<float> *opacity = nullptr;
-    };
-
     Analyzer::Engine engine;
     juce::AudioProcessorValueTreeState parameters;
+    PluginParameters::Access parameterAccess;
     SignalSlotOrderState signalSlotOrderState;
-
-    std::atomic<float> *bandModeParam = nullptr;
-    std::atomic<float> *freezeParam = nullptr;
-    std::array<SignalSlotParameterPointers, Shared::maxSignalSlots> signalSlotParams{};
-
-    std::atomic<float> *showRmsParam = nullptr;
-    std::atomic<float> *showPeakParam = nullptr;
-    std::atomic<float> *showHoldParam = nullptr;
-
-    std::atomic<float> *holdMsParam = nullptr;
-    std::atomic<float> *gridMinDbParam = nullptr;
-    std::atomic<float> *gridMaxDbParam = nullptr;
-    std::atomic<float> *gridStepDbParam = nullptr;
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
     std::optional<Ui::AnalyzerUiState> lastPublishedUiState;
     juce::ListenerList<AnalyzerUiStateSource::Listener> uiStateListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    void cacheParameterPointers();
     void registerUiStateParameterListeners();
     void unregisterUiStateParameterListeners();
     void triggerUiStateUpdate();
-    void setBoolParameter(const juce::String &parameterID, bool value);
-    void setChoiceParameter(const juce::String &parameterID, int choiceIndex, int choiceCount);
-    void setFloatParameter(const juce::String &parameterID, float plainValue);
-    Analyzer::EngineParameterState readCurrentEngineParameters() const;
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                   const juce::Identifier &property) override;
     void valueTreeChildAdded(juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) override;

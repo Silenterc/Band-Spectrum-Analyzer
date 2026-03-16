@@ -2,7 +2,7 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
-#include "../shared/SignalSlotConfiguration.h"
+#include "../../shared/SignalSlotConfiguration.h"
 
 class SignalSlotOrderState final {
 public:

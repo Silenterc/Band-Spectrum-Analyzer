@@ -7,7 +7,7 @@ This document describes the current backend and analyzer data flow from `Spectru
 ```mermaid
 flowchart TD
     Host[Host audio block] --> Processor[SpectrumAnalyzerAudioProcessor]
-    Processor --> Params[readCurrentEngineParameters]
+    Processor --> Params[PluginParameters::Access]
     Params --> Engine[Analyzer::Engine]
     Processor -->|main buffer| Engine
     Processor -->|optional sidechain buffer| Engine
@@ -26,16 +26,23 @@ flowchart TD
 ```mermaid
 flowchart TD
     Processor[SpectrumAnalyzerAudioProcessor] --> APVTS[APVTS parameters]
+    Processor --> ParamSchema[ParameterSchema]
+    Processor --> ParamAccess[ParameterAccess]
     Processor --> Engine[Analyzer::Engine]
     Processor --> DataSource[AnalyzerDataSource]
     Processor --> Settings[AnalyzerSettingsActions]
+    Processor --> SlotOrderState[SignalSlotOrderState]
 
-    APVTS --> EngineParams[EngineParameterState]
-    APVTS --> UiSlots[Ui::SignalSlotState array]
-    APVTS --> Meter[MeterSettings]
-    APVTS --> Freeze[freeze state]
+    ParamSchema --> APVTS
+    APVTS --> ParamAccess
+    ParamAccess --> EngineParams[EngineParameterState]
+    ParamAccess --> UiSlots[Ui::SignalSlotState array]
+    ParamAccess --> Meter[MeterSettings]
+    ParamAccess --> Freeze[freeze state]
 ```
 
+- `ParameterSchema` is the single source of truth for parameter ids, labels, choices, ranges, and APVTS layout construction.
+- `ParameterAccess` caches APVTS parameter pointers and exposes typed reads/writes for engine state, UI slot state, and meter/grid state.
 - The processor reads only `EngineParameterState` on the audio thread.
 - The UI reads slot presentation state, freeze state, grid settings, and meter settings through `AnalyzerDataSource`.
 - The processor also exposes UI write actions through `AnalyzerSettingsActions`.
@@ -228,3 +235,5 @@ The processor bridges APVTS-backed settings into:
 
 - engine-facing slot configuration for audio-thread processing
 - UI-facing slot presentation and analyzer display state for the editor
+
+That APVTS bridge is centralized through `src/plugin/parameters/ParameterSchema.h` and `src/plugin/parameters/ParameterAccess.*`, while UI-only slot order persistence lives in `src/plugin/state/SignalSlotOrderState.*`.

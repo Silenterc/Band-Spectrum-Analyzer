@@ -39,8 +39,9 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/helpers/FrequencyFormatter.cpp
         ui/analyzer/helpers/MusicTheory.cpp
         ui/PluginEditor.cpp
+        plugin/parameters/ParameterAccess.cpp
         plugin/PluginProcessor.cpp
-        plugin/SignalSlotOrderState.cpp)
+        plugin/state/SignalSlotOrderState.cpp)
 
 
 target_compile_definitions(${PROJECT_NAME}
