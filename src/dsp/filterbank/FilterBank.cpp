@@ -95,10 +95,12 @@ namespace Analyzer {
                 const auto& band = (*bandInfo)[bandIndex];
                 const auto w0 = 2.0f * juce::MathConstants<float>::pi * band.centerHz / static_cast<float>(sampleRate);
                 const auto bandwidth = std::log2f(band.highHz / band.lowHz);
+                // We want a narrower band for the analyzer
+                const auto scaledBandwidth = 0.6f * bandwidth;
                 const auto sinW0 = juce::dsp::FastMathApproximations::sin(w0);
                 const auto cosW0 = juce::dsp::FastMathApproximations::cos(w0);
                 const auto alpha = sinW0 * juce::dsp::FastMathApproximations::sinh((std::logf(2.0f) * 0.5f)
-                                                                                   * bandwidth * (w0 / sinW0));
+                                                                                   * scaledBandwidth * (w0 / sinW0));
 
                 auto bb0 = alpha;
                 auto bb1 = 0.0f;
