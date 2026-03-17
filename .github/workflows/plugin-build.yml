@@ -17,17 +17,17 @@ jobs:
         include:
           - os: macos-latest
             generator: Ninja
-            build_type: Debug
+            build_type: Release
             multi_config: false
             plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU
           - os: ubuntu-latest
             generator: Ninja
-            build_type: Debug
+            build_type: Release
             multi_config: false
             plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
           - os: windows-latest
             generator: Visual Studio 17 2022
-            build_type: Debug
+            build_type: Release
             multi_config: true
             plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
 
@@ -90,3 +90,48 @@ jobs:
           foreach ($target in "${{ matrix.plugin_targets }}".Split(" ")) {
             cmake --build build-plugin --config ${{ matrix.build_type }} --target $target
           }
+
+      - name: Stage plugin artifacts
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+
+          artifact_dir="build-plugin/ci-artifacts/${{ runner.os }}-${{ matrix.build_type }}"
+          source_dir="build-plugin/src/band-spectrum-analyzer_artefacts/${{ matrix.build_type }}"
+
+          mkdir -p "$artifact_dir"
+
+          if [ -d "$source_dir/VST3" ]; then
+            cp -R "$source_dir/VST3" "$artifact_dir/"
+          fi
+
+          if [ -d "$source_dir/Standalone" ]; then
+            cp -R "$source_dir/Standalone" "$artifact_dir/"
+          fi
+
+          if [ -d "$source_dir/AU" ]; then
+            cp -R "$source_dir/AU" "$artifact_dir/"
+          fi
+
+      - name: Stage plugin artifacts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $artifactDir = "build-plugin/ci-artifacts/${{ runner.os }}-${{ matrix.build_type }}"
+          $sourceDir = "build-plugin/src/band-spectrum-analyzer_artefacts/${{ matrix.build_type }}"
+
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          foreach ($folder in @("VST3", "Standalone", "AU")) {
+            $candidate = Join-Path $sourceDir $folder
+            if (Test-Path $candidate) {
+              Copy-Item -Path $candidate -Destination $artifactDir -Recurse -Force
+            }
+          }
+
+      - name: Upload plugin artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-${{ runner.os }}-${{ matrix.build_type }}
+          path: build-plugin/ci-artifacts/${{ runner.os }}-${{ matrix.build_type }}
+          if-no-files-found: error
