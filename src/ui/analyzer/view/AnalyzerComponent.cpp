@@ -58,25 +58,19 @@ void AnalyzerComponent::resized() {
 }
 
 void AnalyzerComponent::mouseMove(const juce::MouseEvent &event) {
-    const auto previousHoverInfo = viewModel.getHoverInfo();
     hoverPosition = event.position;
-    updateHoverState();
-    repaintHoverDelta(previousHoverInfo);
+    hoverUpdatePending = true;
 }
 
 void AnalyzerComponent::mouseDrag(const juce::MouseEvent &event) {
-    const auto previousHoverInfo = viewModel.getHoverInfo();
     hoverPosition = event.position;
-    updateHoverState();
-    repaintHoverDelta(previousHoverInfo);
+    hoverUpdatePending = true;
 }
 
 void AnalyzerComponent::mouseExit(const juce::MouseEvent &event) {
     juce::ignoreUnused(event);
-    const auto previousHoverInfo = viewModel.getHoverInfo();
     hoverPosition.reset();
-    updateHoverState();
-    repaintHoverDelta(previousHoverInfo);
+    hoverUpdatePending = true;
 }
 
 void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
@@ -214,22 +208,16 @@ void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
     g.setColour(theme.tooltipBorder);
     g.drawRoundedRectangle(hoverInfo.bounds, 8.0f, 1.0f);
 
-    juce::StringArray tooltipLines;
-
-    if (hoverInfo.peakText.isNotEmpty())
-        tooltipLines.add(hoverInfo.peakText);
-
-    if (hoverInfo.rmsText.isNotEmpty())
-        tooltipLines.add(hoverInfo.rmsText);
-
-    tooltipLines.add(hoverInfo.frequencyText);
-    tooltipLines.add(hoverInfo.noteText);
-
-    const auto tooltipText = tooltipLines.joinIntoString("\n");
-
     g.setColour(theme.tooltipText);
     g.setFont(12.0f);
-    g.drawFittedText(tooltipText, hoverInfo.bounds.toNearestInt().reduced(10, 8), juce::Justification::centredLeft, 3);
+    const auto textBounds = hoverInfo.bounds.toNearestInt().reduced(10, 8);
+    constexpr int lineHeight = 16;
+
+    for (size_t lineIndex = 0; lineIndex < hoverInfo.lineCount; ++lineIndex) {
+        const auto y = textBounds.getY() + static_cast<int>(lineIndex) * lineHeight;
+        g.drawText(hoverInfo.lines[lineIndex], textBounds.getX(), y, textBounds.getWidth(), lineHeight,
+                   juce::Justification::centredLeft, false);
+    }
 }
 
 void AnalyzerComponent::rebuildEnabledTraces() {
@@ -382,6 +370,16 @@ void AnalyzerComponent::updateHoverState() {
                           getLocalBounds().toFloat(), hoverPosition);
 }
 
+void AnalyzerComponent::processPendingHoverUpdate() {
+    if (!hoverUpdatePending)
+        return;
+
+    const auto previousHoverInfo = viewModel.getHoverInfo();
+    updateHoverState();
+    repaintHoverDelta(previousHoverInfo);
+    hoverUpdatePending = false;
+}
+
 void AnalyzerComponent::ensureStaticLayer() {
     if (!staticLayerDirty)
         return;
@@ -424,6 +422,8 @@ juce::Rectangle<int> AnalyzerComponent::getHoverDirtyBounds(const std::optional<
 }
 
 void AnalyzerComponent::timerCallback() {
+    processPendingHoverUpdate();
+
     if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
         refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
         rebuildViewModels();

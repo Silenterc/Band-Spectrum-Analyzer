@@ -91,6 +91,7 @@ private:
      * Updates hover state without rebuilding static layout or bars
      */
     void updateHoverState();
+    void processPendingHoverUpdate();
 
     /**
      * Renders the static analyzer layer into its backing image when dirty
@@ -137,6 +138,8 @@ private:
     Ui::AnalyzerUiSnapshot uiSnapshot;
     // Raw mouse position used by the hover model
     std::optional<juce::Point<float>> hoverPosition;
+    // Mouse thread writes hover intent; timer thread coalesces it to the UI refresh cadence
+    bool hoverUpdatePending = false;
     // Cached static plot background, border, and grid
     juce::Image staticLayer;
     // Whether the static layer must be regenerated before painting

@@ -27,13 +27,17 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
     AnalyzerHoverInfo hoverInfo;
     hoverInfo.bounds = geometry.getTooltipBounds(hoverPosition, plotBounds, localBounds);
     hoverInfo.bandIndex = *bandIndex;
+
     if (meterSettings.showPeak)
-        hoverInfo.peakText = "Peak: " + formatter.formatDecibels(getPeakDb(*bandIndex, renderFrame, gridMinDb));
+        hoverInfo.lines[hoverInfo.lineCount++] =
+            "Peak: " + formatter.formatDecibels(getPeakDb(*bandIndex, renderFrame, gridMinDb));
 
     if (meterSettings.showRms)
-        hoverInfo.rmsText = "RMS:  " + formatter.formatDecibels(getRmsDb(*bandIndex, renderFrame, gridMinDb));
-    hoverInfo.frequencyText = formatter.formatHoverFrequency(hoveredFrequencyHz);
-    hoverInfo.noteText = musicTheory.getNearestNoteName(hoveredFrequencyHz);
+        hoverInfo.lines[hoverInfo.lineCount++] =
+            "RMS:  " + formatter.formatDecibels(getRmsDb(*bandIndex, renderFrame, gridMinDb));
+
+    hoverInfo.lines[hoverInfo.lineCount++] = formatter.formatHoverFrequency(hoveredFrequencyHz);
+    hoverInfo.lines[hoverInfo.lineCount++] = musicTheory.getNearestNoteName(hoveredFrequencyHz);
     return hoverInfo;
 }
 

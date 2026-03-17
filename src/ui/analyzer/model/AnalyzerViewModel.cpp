@@ -88,9 +88,9 @@ void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData, cons
     }
 
     // Hover uses the first visible trace as its source until we add multi-trace hover policy
-    const auto primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
+    const auto *primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
 
-    if (!primaryTrace.has_value()) {
+    if (primaryTrace == nullptr) {
         hoverInfo.reset();
         return;
     }
@@ -167,9 +167,9 @@ void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
     }
 }
 
-std::optional<Analyzer::RenderTrace> AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
-                                                                               const AnalyzerViewState &viewState,
-                                                                               const Shared::SignalSlotOrder &signalSlotOrder) const {
+const Analyzer::RenderTrace *AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
+                                                                       const AnalyzerViewState &viewState,
+                                                                       const Shared::SignalSlotOrder &signalSlotOrder) const {
     for (const auto slotIndex: signalSlotOrder) {
         const auto kind = Analyzer::traceKindForSlot(slotIndex);
         if (!isTraceEnabled(kind, viewState))
@@ -180,15 +180,15 @@ std::optional<Analyzer::RenderTrace> AnalyzerViewModel::getPrimaryVisibleTrace(c
                                                     return trace.kind == kind;
                                                 });
         if (traceIterator != renderData.traces.end())
-            return *traceIterator;
+            return &*traceIterator;
     }
 
     for (const auto &trace: renderData.traces) {
         if (isTraceEnabled(trace.kind, viewState))
-            return trace;
+            return &trace;
     }
 
-    return std::nullopt;
+    return nullptr;
 }
 
 bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const {

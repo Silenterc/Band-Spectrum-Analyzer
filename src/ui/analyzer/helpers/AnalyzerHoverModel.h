@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <vector>
 
@@ -19,14 +20,10 @@ struct AnalyzerHoverInfo {
     juce::Rectangle<float> bounds;
     // Hovered band index used for highlighting
     size_t bandIndex = 0;
-    // Current peak level text
-    juce::String peakText;
-    // Current RMS level text
-    juce::String rmsText;
-    // Current cursor frequency text
-    juce::String frequencyText;
-    // Nearest note name for the cursor frequency
-    juce::String noteText;
+    // Prebuilt tooltip lines drawn directly by the component
+    std::array<juce::String, 4> lines;
+    // Number of valid lines stored in `lines`
+    size_t lineCount = 0;
 };
 
 /**
