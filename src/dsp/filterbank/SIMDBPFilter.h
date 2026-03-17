@@ -8,8 +8,8 @@
 
 namespace Analyzer {
     /**
-     * Parameters for a constant 0 dB peak gain BPF.
-     * From The EQ Cookbook
+     * Packed coefficients for one SIMD band-pass group.
+     * Each lane corresponds to one logical analyzer band.
      */
     struct BandPassFilterParams {
         juce::dsp::SIMDRegister<float> a1, a2;
@@ -17,7 +17,9 @@ namespace Analyzer {
     };
 
     /**
-     * SIMD biquad that processes 4 independent bands in parallel using transposed direct form II.
+     * SIMD biquad that advances one packed band-pass group in parallel.
+     * The caller broadcasts one scalar input sample into all lanes, and each lane keeps
+     * its own transposed-direct-form-II state between calls.
      */
     class SIMDBPFilter {
     public:
@@ -25,11 +27,18 @@ namespace Analyzer {
 
         SIMDBPFilter() = default;
 
+        /**
+         * Replaces the packed coefficients and clears the internal delay state.
+         */
         void prepare(const BandPassFilterParams& params);
+
+        /**
+         * Clears both state registers for all SIMD lanes.
+         */
         void reset();
 
         /**
-         * Processes one SIMD sample frame through the transposed direct form II state update.
+         * Processes one broadcast input sample through all packed bands.
          */
         inline SimdFloat process(SimdFloat input) noexcept {
             const auto y = params.b0 * input + s1;
@@ -39,7 +48,9 @@ namespace Analyzer {
         }
 
     private:
+        // Coefficients shared by the lifetime of this SIMD group.
         BandPassFilterParams params;
+        // Per-lane filter state persisted across blocks.
         SimdFloat s1, s2;
     };
 }

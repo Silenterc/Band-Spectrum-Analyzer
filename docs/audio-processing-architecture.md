@@ -91,9 +91,13 @@ SpectrumAnalyzerAudioProcessor
     │       │   ├── SourceFamily
     │       │   ├── primary DerivedSignal
     │       │   └── optional secondary DerivedSignal
-    │       ├── vector<BandState>
+    │       ├── FilterBank
+    │       │   ├── vector<SIMDBPFilter> primaryFilters
+    │       │   ├── vector<SIMDBPFilter> secondaryFilters (stereo mode only)
+    │       │   ├── vector<SIMDRegister<float>> sumPowers
+    │       │   └── vector<SIMDRegister<float>> peakPowers
     │       ├── vector<BandMeasurements> outputMeasurements
-    │       └── reused process scratch
+    │       └── no separate per-band filter objects
     ├── size_t publishedTraceCount
     └── TripleBuffer<vector<RawTrace>> traces
 ```
@@ -158,7 +162,8 @@ flowchart LR
 Plainly:
 
 - `SourceSet` says where the samples for this block live.
-- `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and processes either one signal or a left/right pair.
+- `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and drives one `FilterBank`.
+- `FilterBank` packs as many adjacent logical bands as fit in the current compiled SIMD width so one broadcast input sample updates a whole SIMD group at once.
 - `RawTrace` is the published per-band result for one slot trace.
 - `InputActivityDetector` decides whether recent input energy still justifies running the analyzer DSP.
 - If a configured source is unavailable, the processor clears that trace instead of reusing stale measurements.
@@ -182,7 +187,15 @@ flowchart LR
 - There is no temporary per-block `traceScratch` vector in the publish path.
 - When recent input falls below the activity threshold, the engine publishes one cleared snapshot and then skips analyzer processing until signal returns.
 
-## 9. UI Data Flow
+## 9. FilterBank Notes
+
+- Coefficients are derived from the current `BandInfo` layout using cookbook band-pass equations.
+- One `SIMDBPFilter` instance owns one SIMD group's worth of independent filter lanes.
+- `singleLane` mode uses only `primaryFilters`.
+- `stereoAverage` mode runs matching primary and secondary filter banks and stores averaged stereo power.
+- Measurement accumulation stays in SIMD form until the block ends, then lane values are copied into scalar `BandMeasurements`.
+
+## 10. UI Data Flow
 
 ```mermaid
 flowchart TD
@@ -210,7 +223,7 @@ flowchart TD
     DataSource --> MeterControls[meter toggle UI]
 ```
 
-## 10. Current State
+## 11. Current State
 
 - The backend is slot-based, not single-mode based.
 - `mid`, `side`, and `stereo` are implemented for both main input and sidechain input.

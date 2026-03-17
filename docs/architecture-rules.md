@@ -41,4 +41,5 @@
 - DSP code may not include UI headers.
 - Repeated labels, options, and mappings must be defined once in a shared table.
 - Hot paths stay concrete: avoid unnecessary virtual indirection in DSP and analyzer rendering.
+- Keep long-lived DSP state separate from per-block scratch so reset semantics stay obvious and hot loops stay easy to reason about.
 - If adding a new signal mode touches many unrelated files, the design needs adjustment.

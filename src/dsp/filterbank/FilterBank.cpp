@@ -5,6 +5,7 @@
 #include "FilterBank.h"
 
 #include <algorithm>
+#include <array>
 
 namespace Analyzer {
     void FilterBank::prepare(double newSampleRate,
@@ -70,7 +71,6 @@ namespace Analyzer {
             return;
 
         const auto bandAmount = bandInfo->size();
-        constexpr size_t groupWidth = 4;
         const size_t numGroups = (bandAmount + groupWidth - 1) / groupWidth;
         primaryFilters.reserve(numGroups);
         if (mode == Mode::stereoAverage)
@@ -80,11 +80,12 @@ namespace Analyzer {
         peakPowers.resize(numGroups);
 
         for (size_t groupIndex = 0; groupIndex < numGroups; ++groupIndex) {
-            float a1[groupWidth] = { 0, 0, 0, 0 };
-            float a2[groupWidth] = { 0, 0, 0, 0 };
-            float b0[groupWidth] = { 0, 0, 0, 0 };
-            float b1[groupWidth] = { 0, 0, 0, 0 };
-            float b2[groupWidth] = { 0, 0, 0, 0 };
+            // Each SIMD lane maps to one logical band inside this packed group.
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> a1{};
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> a2{};
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> b0{};
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> b1{};
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> b2{};
 
             for (size_t lane = 0; lane < groupWidth; ++lane) {
                 const size_t bandIndex = groupIndex * groupWidth + lane;
@@ -121,11 +122,11 @@ namespace Analyzer {
             }
 
             BandPassFilterParams packed;
-            packed.a1 = juce::dsp::SIMDRegister<float>::fromNative({a1[0], a1[1], a1[2], a1[3]});
-            packed.a2 = juce::dsp::SIMDRegister<float>::fromNative({a2[0], a2[1], a2[2], a2[3]});
-            packed.b0 = juce::dsp::SIMDRegister<float>::fromNative({b0[0], b0[1], b0[2], b0[3]});
-            packed.b1 = juce::dsp::SIMDRegister<float>::fromNative({b1[0], b1[1], b1[2], b1[3]});
-            packed.b2 = juce::dsp::SIMDRegister<float>::fromNative({b2[0], b2[1], b2[2], b2[3]});
+            packed.a1 = SimdFloat::fromRawArray(a1.data());
+            packed.a2 = SimdFloat::fromRawArray(a2.data());
+            packed.b0 = SimdFloat::fromRawArray(b0.data());
+            packed.b1 = SimdFloat::fromRawArray(b1.data());
+            packed.b2 = SimdFloat::fromRawArray(b2.data());
 
             SIMDBPFilter primaryFilter;
             primaryFilter.prepare(packed);
@@ -149,6 +150,7 @@ namespace Analyzer {
         const auto filterCount = primaryFilters.size();
 
         for (size_t sampleIndex = 0; sampleIndex < signalView.numSamples; ++sampleIndex) {
+            // Broadcast the scalar input sample into all lanes so one pass updates four bands.
             const SimdFloat input(signalView.data[sampleIndex]);
 
             for (size_t filterIndex = 0; filterIndex < filterCount; ++filterIndex) {
@@ -194,14 +196,13 @@ namespace Analyzer {
     void FilterBank::writeMeasurements(const size_t bandAmount,
                                        const size_t numSamples,
                                        std::vector<BandMeasurements>& outputMeasurements) {
-        constexpr size_t groupWidth = 4;
-
         for (size_t filterIndex = 0; filterIndex < primaryFilters.size(); ++filterIndex) {
-            alignas(16) float summedPowers[groupWidth];
-            alignas(16) float peakPowerValues[groupWidth];
-            sumPowers[filterIndex].copyToRawArray(summedPowers);
-            peakPowers[filterIndex].copyToRawArray(peakPowerValues);
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> summedPowers{};
+            alignas(sizeof(SimdFloat)) std::array<float, groupWidth> peakPowerValues{};
+            sumPowers[filterIndex].copyToRawArray(summedPowers.data());
+            peakPowers[filterIndex].copyToRawArray(peakPowerValues.data());
 
+            // Convert packed SIMD lanes back into the scalar storage consumed by the rest of the analyzer.
             for (size_t lane = 0; lane < groupWidth; ++lane) {
                 const size_t bandIndex = filterIndex * groupWidth + lane;
                 if (bandIndex >= bandAmount)
