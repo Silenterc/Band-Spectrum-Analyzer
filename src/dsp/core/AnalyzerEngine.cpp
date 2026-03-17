@@ -40,7 +40,10 @@ namespace Analyzer {
 
     void Engine::reset() {
         inputActivityDetector.reset();
-        currentFrameFillSamples = 0;
+        frameSlots = {};
+        frameSlots[0].active = true;
+        nextFrameSlotToStart = 1;
+        samplesUntilNextFrameStart = Constants::analysisHopSamples;
         recentSignalActive.store(false, std::memory_order_relaxed);
         hasPublishedSilenceWhileInactive = false;
         publishProcessorState(true);
@@ -78,7 +81,10 @@ namespace Analyzer {
 
         if (!inputActivityDetector.shouldProcess()) {
             if (!hasPublishedSilenceWhileInactive) {
-                currentFrameFillSamples = 0;
+                frameSlots = {};
+                frameSlots[0].active = true;
+                nextFrameSlotToStart = 1;
+                samplesUntilNextFrameStart = Constants::analysisHopSamples;
                 publishProcessorState(true);
                 hasPublishedSilenceWhileInactive = true;
             }
@@ -89,24 +95,39 @@ namespace Analyzer {
         const auto sourceSet = sourceBuilder.build(mainBuffer, sidechainBuffer);
         size_t processedSamples = 0;
         while (processedSamples < static_cast<size_t>(numSamples)) {
-            const auto remainingFrameSamples = Constants::analysisFrameSamples - currentFrameFillSamples;
-            const auto sliceSamples = std::min(static_cast<size_t>(numSamples) - processedSamples, remainingFrameSamples);
+            const auto sliceSamples = std::min(static_cast<size_t>(numSamples) - processedSamples, samplesUntilNextFrameStart);
             const auto slicedSources = sliceSourceSet(sourceSet, processedSamples, sliceSamples);
 
             for (auto &processor: processors) {
                 processor.process(slicedSources);
-                processor.accumulateCurrentSlice();
+                for (size_t frameSlotIndex = 0; frameSlotIndex < frameSlots.size(); ++frameSlotIndex) {
+                    if (frameSlots[frameSlotIndex].active)
+                        processor.accumulateCurrentSlice(frameSlotIndex);
+                }
+            }
+
+            for (auto &frameSlot: frameSlots) {
+                if (frameSlot.active)
+                    frameSlot.fillSamples += sliceSamples;
             }
 
             processedSamples += sliceSamples;
-            currentFrameFillSamples += sliceSamples;
+            samplesUntilNextFrameStart -= sliceSamples;
 
-            if (currentFrameFillSamples == Constants::analysisFrameSamples) {
-                publishProcessorState(false);
-                for (auto &processor: processors)
-                    processor.clearAccumulatedFrame();
+            if (samplesUntilNextFrameStart == 0) {
+                const auto slotToRestart = nextFrameSlotToStart;
 
-                currentFrameFillSamples = 0;
+                if (frameSlots[slotToRestart].active
+                    && frameSlots[slotToRestart].fillSamples == Constants::analysisFrameSamples) {
+                    publishProcessorState(false, slotToRestart);
+                    for (auto &processor: processors)
+                        processor.clearAccumulatedFrame(slotToRestart);
+                }
+
+                frameSlots[slotToRestart].active = true;
+                frameSlots[slotToRestart].fillSamples = 0;
+                nextFrameSlotToStart = (nextFrameSlotToStart + 1) % frameSlots.size();
+                samplesUntilNextFrameStart = Constants::analysisHopSamples;
             }
         }
     }
@@ -190,7 +211,7 @@ namespace Analyzer {
         return 45;
     }
 
-    void Engine::publishProcessorState(const bool resetProcessors) {
+    void Engine::publishProcessorState(const bool resetProcessors, const size_t frameSlotIndex) {
         auto *publishedTraces = traces.get_for_writer();
         if (publishedTraces->size() != publishedTraceCount)
             publishedTraces->resize(publishedTraceCount);
@@ -200,7 +221,7 @@ namespace Analyzer {
             const auto outputCount = processor.getOutputCount();
             if (resetProcessors)
                 processor.reset();
-            processor.writeRawTraces(*publishedTraces, traceOffset);
+            processor.writeRawTraces(*publishedTraces, traceOffset, frameSlotIndex);
             traceOffset += outputCount;
         }
 

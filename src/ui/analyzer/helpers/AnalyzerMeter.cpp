@@ -5,6 +5,10 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
+namespace {
+    constexpr float holdResetToleranceDb = 0.5f;
+}
+
 void AnalyzerMeter::reset() {
     traceStates.clear();
     renderData.bandInfo.clear();
@@ -43,6 +47,9 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
 
             if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex]) {
                 traceState.holdDb[bandIndex] = traceState.peakDb[bandIndex];
+                traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
+            } else if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex] - holdResetToleranceDb) {
+                // Peaks within the tolerance keep the hold alive without lowering the held value.
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
             } else if (traceState.holdTimeRemainingMs[bandIndex] > 0.0f) {
                 // Hold stays pinned until its timer runs out

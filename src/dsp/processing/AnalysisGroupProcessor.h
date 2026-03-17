@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -23,10 +24,10 @@ namespace Analyzer {
         void reset();
 
         void process(const SourceSet& sources);
-        void accumulateCurrentSlice();
-        void clearAccumulatedFrame();
+        void accumulateCurrentSlice(size_t frameSlotIndex);
+        void clearAccumulatedFrame(size_t frameSlotIndex);
 
-        void writeRawTraces(std::vector<RawTrace>& destination, size_t startIndex) const;
+        void writeRawTraces(std::vector<RawTrace>& destination, size_t startIndex, size_t frameSlotIndex) const;
 
         size_t getOutputCount() const;
 
@@ -40,7 +41,7 @@ namespace Analyzer {
         FilterBank filterBank;
         // Scratch measurements for the current sliced input segment.
         std::vector<BandMeasurements> outputMeasurements;
-        // Measurements accumulated across the current fixed-size analysis frame.
-        std::vector<BandMeasurements> accumulatedMeasurements;
+        // Two overlapping fixed-size analysis frames are active at most with the current 50% hop.
+        std::array<std::vector<BandMeasurements>, 2> accumulatedMeasurements;
     };
 }

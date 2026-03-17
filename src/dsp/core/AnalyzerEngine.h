@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -11,6 +12,7 @@
 #include "../processing/InputActivityDetector.h"
 #include "../sources/AnalysisSourceBuilder.h"
 #include "../util/TripleBuffer.h"
+#include "AnalyzerConstants.h"
 #include "AnalyzerData.h"
 #include "EngineParameterState.h"
 
@@ -63,6 +65,11 @@ namespace Analyzer {
         bool hasRecentSignal() const;
 
     private:
+        struct FrameSlotState {
+            bool active = false;
+            size_t fillSamples = 0;
+        };
+
         static SignalView sliceSignalView(const SignalView &view, size_t offset, size_t numSamples);
         static SourceSet sliceSourceSet(const SourceSet &sourceSet, size_t offset, size_t numSamples);
 
@@ -82,9 +89,9 @@ namespace Analyzer {
         int getBandCount() const;
 
         /**
-         * Publishes current processor output, optionally after resetting processor state.
+         * Publishes one accumulated analysis frame, optionally after resetting processor state.
          */
-        void publishProcessorState(bool resetProcessors);
+        void publishProcessorState(bool resetProcessors, size_t frameSlotIndex = 0);
 
         // Current playback sample rate
         double currentSampleRate = 44100.0;
@@ -110,8 +117,12 @@ namespace Analyzer {
         size_t publishedTraceCount = 0;
         // Published raw traces for the UI, 1 W x 1 R threads
         mutable TripleBuffer<std::vector<RawTrace> > traces;
-        // Number of samples already accumulated into the in-progress fixed analyzer frame.
-        size_t currentFrameFillSamples = 0;
+        // Two overlapping frame slots are enough for the current 50% hop.
+        std::array<FrameSlotState, 2> frameSlots{};
+        // Slot index that should start the next analysis frame at the next hop boundary.
+        size_t nextFrameSlotToStart = 1;
+        // Number of samples remaining until the next hop boundary.
+        size_t samplesUntilNextFrameStart = Constants::analysisHopSamples;
         // Runtime flag exposed to the UI so it can idle once the display has decayed to floor
         std::atomic<bool> recentSignalActive { false };
         // Ensures silence is published only once per inactive period

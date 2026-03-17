@@ -11,7 +11,7 @@ namespace Defaults {
     inline constexpr bool showHold = true;
     inline constexpr bool freeze = false;
 
-    inline constexpr float holdMs = 500.0f;
+    inline constexpr float holdMs = 2000.0f;
     inline constexpr float gridMinDb = -50.0f;
     inline constexpr float gridMaxDb = 0.0f;
     inline constexpr float gridStepDb = 5.0f;

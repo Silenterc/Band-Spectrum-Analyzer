@@ -14,9 +14,11 @@ flowchart TD
     Engine --> Activity[InputActivityDetector]
     Activity --> Gate{process analyzer?}
     Gate -->|yes| SourceBuilder[AnalysisSourceBuilder]
+    SourceBuilder --> Slice[fixed-size analysis frame slicer]
     Gate -->|no| Silence[publish cleared trace snapshot once]
     Engine --> PlanBuilder[AnalysisPlanBuilder]
     PlanBuilder --> Processors[AnalysisGroupProcessor list]
+    Slice --> Processors
     Processors --> Published[TripleBuffer vector RawTrace]
     Silence --> Published
 ```
@@ -96,8 +98,12 @@ SpectrumAnalyzerAudioProcessor
     │       │   ├── vector<SIMDBPFilter> secondaryFilters (stereo mode only)
     │       │   ├── vector<SIMDRegister<float>> sumPowers
     │       │   └── vector<SIMDRegister<float>> peakPowers
-    │       ├── vector<BandMeasurements> outputMeasurements
+    │       ├── vector<BandMeasurements> outputMeasurements (slice scratch)
+    │       ├── array<vector<BandMeasurements>, 2> accumulatedMeasurements (overlapping frame slots)
     │       └── no separate per-band filter objects
+    ├── array<FrameSlotState, 2> frameSlots
+    ├── size_t nextFrameSlotToStart
+    ├── size_t samplesUntilNextFrameStart
     ├── size_t publishedTraceCount
     └── TripleBuffer<vector<RawTrace>> traces
 ```
@@ -153,19 +159,22 @@ Current planning rules:
 
 ```mermaid
 flowchart LR
-    SourceSet[SourceSet\nblock-local signal views] --> Select[AnalysisGroupProcessor selects lane sources]
+    SourceSet[SourceSet\nblock-local signal views] --> Slice[Engine slices exact analysis-frame segments]
+    Slice --> Select[AnalysisGroupProcessor selects lane sources]
     Select --> Filter[band filters process selected lane or lane pair]
     Filter --> Mix[optional stereo average]
-    Mix --> Measurements[outputMeasurements]
-    Measurements --> RawTrace[writeRawTraces writes into published RawTrace slots]
+    Mix --> SliceMeasurements[slice measurements]
+    SliceMeasurements --> Accumulate[accumulate into active overlapping analysis frames]
+    Accumulate --> RawTrace[writeRawTraces writes completed frame into published RawTrace slots]
 ```
 
 Plainly:
 
-- `SourceSet` says where the samples for this block live.
+- `SourceSet` says where the samples for this host block live.
 - `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and drives one `FilterBank`.
 - `FilterBank` packs as many adjacent logical bands as fit in the current compiled SIMD width so one broadcast input sample updates a whole SIMD group at once.
-- `RawTrace` is the published per-band result for one slot trace.
+- The engine slices host blocks into exact fixed-size analyzer frames (`2048` samples currently) with a `1024`-sample hop, so publish cadence is independent from host block size and adjacent frames overlap by 50%.
+- `RawTrace` is the published per-band result for one completed analysis frame of one slot trace.
 - `InputActivityDetector` decides whether recent input energy still justifies running the analyzer DSP.
 - If a configured source is unavailable, the processor clears that trace instead of reusing stale measurements.
 
@@ -179,22 +188,22 @@ Examples:
 
 ```mermaid
 flowchart LR
-    ProcessorState[AnalysisGroupProcessor outputMeasurements] --> Write[writeRawTraces]
+    ProcessorState[AnalysisGroupProcessor accumulatedMeasurements] --> Write[writeRawTraces]
     Write --> Writer[TripleBuffer writer storage]
     Writer --> Publish[traces.publish]
 ```
 
-- The engine writes processor outputs directly into pre-sized triple-buffer writer storage.
-- There is no temporary per-block `traceScratch` vector in the publish path.
+- The engine writes completed fixed-size analysis frames directly into pre-sized triple-buffer writer storage.
+- There is no temporary per-publish `traceScratch` vector in the publish path.
 - When recent input falls below the activity threshold, the engine publishes one cleared snapshot and then skips analyzer processing until signal returns.
 
 ## 9. FilterBank Notes
 
 - Coefficients are derived from the current `BandInfo` layout using cookbook band-pass equations.
-- One `SIMDBPFilter` instance owns one SIMD group's worth of independent filter lanes.
+- One `SIMDBPFilter` instance owns one SIMD group's worth of independent filter lanes and runs two identical biquad stages in series internally.
 - `singleLane` mode uses only `primaryFilters`.
 - `stereoAverage` mode runs matching primary and secondary filter banks and stores averaged stereo power.
-- Measurement accumulation stays in SIMD form until the block ends, then lane values are copied into scalar `BandMeasurements`.
+- Measurement accumulation stays in SIMD form until the current slice ends, then lane values are copied into scalar `BandMeasurements` and accumulated into whichever overlapping frame slots are active for that slice.
 
 ## 10. UI Data Flow
 
@@ -229,6 +238,7 @@ flowchart TD
 - The backend is slot-based, not single-mode based.
 - `mid`, `side`, and `stereo` are implemented for both main input and sidechain input.
 - Sidechain bus support is implemented in the processor and source builder.
+- DSP publishes fixed-size analyzer frames (`2048` samples) with a `1024`-sample hop, not one snapshot per host block.
 - The analyzer UI supports up to `4` signal slots, each with:
   - enabled state
   - visibility

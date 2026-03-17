@@ -13,7 +13,8 @@ namespace Analyzer {
 
         const auto bandCount = bandInfo != nullptr ? bandInfo->size() : 0;
         outputMeasurements.assign(bandCount, {});
-        accumulatedMeasurements.assign(bandCount, {});
+        for (auto &frameMeasurements: accumulatedMeasurements)
+            frameMeasurements.assign(bandCount, {});
 
         filterBank.prepare(sampleRate,
                            std::move(bandInfo),
@@ -47,31 +48,40 @@ namespace Analyzer {
         filterBank.processBlock(primarySignalView, &secondarySignalView, outputMeasurements);
     }
 
-    void AnalysisGroupProcessor::accumulateCurrentSlice() {
-        if (accumulatedMeasurements.size() != outputMeasurements.size())
-            accumulatedMeasurements.assign(outputMeasurements.size(), {});
+    void AnalysisGroupProcessor::accumulateCurrentSlice(const size_t frameSlotIndex) {
+        jassert(frameSlotIndex < accumulatedMeasurements.size());
+        auto &frameMeasurements = accumulatedMeasurements[frameSlotIndex];
+        if (frameMeasurements.size() != outputMeasurements.size())
+            frameMeasurements.assign(outputMeasurements.size(), {});
 
         for (size_t bandIndex = 0; bandIndex < outputMeasurements.size(); ++bandIndex) {
             const auto &sliceMeasurements = outputMeasurements[bandIndex];
-            auto &accumulated = accumulatedMeasurements[bandIndex];
+            auto &accumulated = frameMeasurements[bandIndex];
             accumulated.peakPower = std::max(accumulated.peakPower, sliceMeasurements.peakPower);
             accumulated.sumPower += sliceMeasurements.sumPower;
             accumulated.numSamples += sliceMeasurements.numSamples;
         }
     }
 
-    void AnalysisGroupProcessor::clearAccumulatedFrame() {
-        clearAccumulatedMeasurements();
+    void AnalysisGroupProcessor::clearAccumulatedFrame(const size_t frameSlotIndex) {
+        jassert(frameSlotIndex < accumulatedMeasurements.size());
+        std::fill(accumulatedMeasurements[frameSlotIndex].begin(),
+                  accumulatedMeasurements[frameSlotIndex].end(),
+                  BandMeasurements{});
     }
 
-    void AnalysisGroupProcessor::writeRawTraces(std::vector<RawTrace>& destination, const size_t startIndex) const {
+    void AnalysisGroupProcessor::writeRawTraces(std::vector<RawTrace>& destination,
+                                                const size_t startIndex,
+                                                const size_t frameSlotIndex) const {
+        jassert(frameSlotIndex < accumulatedMeasurements.size());
         auto& trace = destination[startIndex];
         trace.kind = spec.kind;
 
-        if (trace.measurements.size() != accumulatedMeasurements.size())
-            trace.measurements.resize(accumulatedMeasurements.size());
+        const auto &frameMeasurements = accumulatedMeasurements[frameSlotIndex];
+        if (trace.measurements.size() != frameMeasurements.size())
+            trace.measurements.resize(frameMeasurements.size());
 
-        std::copy(accumulatedMeasurements.begin(), accumulatedMeasurements.end(), trace.measurements.begin());
+        std::copy(frameMeasurements.begin(), frameMeasurements.end(), trace.measurements.begin());
     }
 
     size_t AnalysisGroupProcessor::getOutputCount() const {
@@ -112,6 +122,8 @@ namespace Analyzer {
     }
 
     void AnalysisGroupProcessor::clearAccumulatedMeasurements() {
-        std::fill(accumulatedMeasurements.begin(), accumulatedMeasurements.end(), BandMeasurements{});
+        for (auto &frameMeasurements: accumulatedMeasurements) {
+            std::fill(frameMeasurements.begin(), frameMeasurements.end(), BandMeasurements{});
+        }
     }
 }

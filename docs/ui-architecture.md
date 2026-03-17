@@ -108,6 +108,8 @@ flowchart TD
     Frozen -->|yes| Keep[keep previous renderData]
     Activity -->|no| Idle[slow idle polling]
     Activity -->|yes| Meter
+    Pull --> RawFrame[latest completed DSP analysis frame]
+    RawFrame --> Meter
     Meter --> LiveRender[live RenderData]
     LiveRender --> Compose[compose slot-frozen display traces]
     Keep --> RenderData
@@ -135,6 +137,7 @@ flowchart TD
 Responsibilities:
 
 - poll processor-backed analyzer data
+- read the latest completed DSP analysis frame from the triple buffer
 - use `AnalyzerRefreshModel` for UI snapshot refresh, freeze-edge handling, and idle-polling decisions
 - convert raw traces into display-rate metered values
 - compose per-slot frozen traces from cached last-painted `RenderTrace` data
@@ -151,6 +154,7 @@ Important behavior:
 - if an individual slot is frozen while global freeze is off:
   - the analyzer keeps metering live traces
   - that slot reuses its cached rendered trace until it is unfrozen
+- the UI poll rate is only a display concern; DSP analysis frames are produced independently on the audio thread
 - visible traces are rebuilt from current signal slot UI state on every refresh
 - the analyzer background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
 - hover movement repaints only the old/new tooltip and hovered band region instead of forcing a full analyzer redraw
@@ -175,7 +179,7 @@ flowchart LR
 
 Stages:
 
-1. DSP publishes raw per-band measurements as `RawTrace`
+1. DSP publishes raw per-band measurements as `RawTrace` only when a fixed-size internal analysis frame completes
 2. `AnalyzerMeter` converts those into:
    - RMS dB
    - peak dB
@@ -204,6 +208,7 @@ Helper roles:
   - snapshot refresh, freeze-edge handling, and polling decisions
 - `AnalyzerMeter`
   - UI-rate RMS averaging plus display decay/hold logic
+  - peak hold refreshes immediately on a new maximum and also refreshes its timer for near-matching peaks within a small dB tolerance
 - `AnalyzerViewModel`
   - split builder for static layout, dynamic trace visuals, and hover state
 - `AnalyzerGeometry`
