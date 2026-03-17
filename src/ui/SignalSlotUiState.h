@@ -14,6 +14,7 @@ namespace Ui {
     struct SignalSlotState {
         Analyzer::SignalSlotConfiguration configuration;
         bool visible = true;
+        bool frozen = false;
         int colourIndex = 0;
         float opacity = defaultSignalOpacity;
     };
@@ -21,6 +22,7 @@ namespace Ui {
     inline bool operator==(const SignalSlotState &lhs, const SignalSlotState &rhs) {
         return lhs.configuration == rhs.configuration
                && lhs.visible == rhs.visible
+               && lhs.frozen == rhs.frozen
                && lhs.colourIndex == rhs.colourIndex
                && std::abs(lhs.opacity - rhs.opacity) <= 0.0001f;
     }

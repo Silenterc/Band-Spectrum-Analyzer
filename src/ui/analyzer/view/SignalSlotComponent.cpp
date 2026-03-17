@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "../../UiButtonDrawing.h"
+#include "../../UiIcons.h"
 #include "../popups/SignalColourPopupContent.h"
 #include "../popups/SignalSelectionPopupContent.h"
 
@@ -55,7 +57,7 @@ int SignalSlotComponent::getPreferredWidth() const {
     const auto hintWidth = std::max(measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::main)),
                                     measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::sidechain)));
     const auto textWidth = std::ceil(std::max(modeWidth, hintWidth));
-    const auto actionWidth = slotMetrics.actionSize * 3.0f + slotMetrics.actionGap * 2.0f;
+    const auto actionWidth = getActionClusterWidth();
 
     const auto totalWidth = slotMetrics.cellPaddingX + slotMetrics.swatchSize + slotMetrics.sectionGap + textWidth
                             + slotMetrics.sectionGap + actionWidth + slotMetrics.cellPaddingX;
@@ -78,7 +80,6 @@ void SignalSlotComponent::paint(juce::Graphics &g) {
         g.setFont(fontHeight);
         g.drawText(label, buttonBounds.toNearestInt(), juce::Justification::centred);
     };
-
     if (isDragged) {
         g.setColour(juce::Colours::black.withAlpha(0.22f));
         g.fillRoundedRectangle(bounds.translated(0.0f, slotMetrics.shadowOffsetY), slotMetrics.cellCornerRadius);
@@ -134,6 +135,15 @@ void SignalSlotComponent::paint(juce::Graphics &g) {
                      visibilityFill,
                      theme.controlText,
                      11.0f);
+
+    const auto freezeBounds = getFreezeBounds();
+    const auto freezeHovered = hoveredHitArea == SignalSlotHitArea::freeze;
+    const auto freezeStyle = Ui::getSnowflakeButtonStyle(theme, settings.frozen, freezeHovered);
+    Ui::drawSnowflakeActionButton(g,
+                                  freezeBounds,
+                                  theme,
+                                  freezeStyle,
+                                  4.0f);
 
     const auto removeBounds = getRemoveBounds();
     drawActionButton(removeBounds,
@@ -250,6 +260,11 @@ void SignalSlotComponent::mouseUp(const juce::MouseEvent &event) {
             if (onVisibilityChanged)
                 onVisibilityChanged(slotIndex, settings.visible);
             break;
+        case SignalSlotHitArea::freeze:
+            settings.frozen = !settings.frozen;
+            if (onFrozenChanged)
+                onFrozenChanged(slotIndex, settings.frozen);
+            break;
         case SignalSlotHitArea::remove:
             if (onRemoveClicked)
                 onRemoveClicked(slotIndex);
@@ -285,7 +300,7 @@ juce::Rectangle<float> SignalSlotComponent::getLabelBounds() const {
     const auto &slotMetrics = theme.metrics.slot;
     auto contentBounds = getLocalBounds().toFloat().reduced(slotMetrics.cellPaddingX, slotMetrics.cellPaddingY);
     contentBounds.removeFromLeft(slotMetrics.swatchSize + slotMetrics.sectionGap);
-    contentBounds.removeFromRight(slotMetrics.actionSize * 3.0f + slotMetrics.actionGap * 2.0f + slotMetrics.sectionGap);
+    contentBounds.removeFromRight(getActionClusterWidth() + slotMetrics.sectionGap);
     const auto textHeight = slotMetrics.titleHeight + slotMetrics.textStackGap + slotMetrics.hintHeight;
     const auto y = contentBounds.getCentreY() - textHeight * 0.5f;
     return {contentBounds.getX(), y, contentBounds.getWidth(), textHeight};
@@ -294,7 +309,7 @@ juce::Rectangle<float> SignalSlotComponent::getLabelBounds() const {
 juce::Rectangle<float> SignalSlotComponent::getDragHandleBounds() const {
     const auto &slotMetrics = theme.metrics.slot;
     auto contentBounds = getLocalBounds().toFloat().reduced(slotMetrics.cellPaddingX, slotMetrics.cellPaddingY);
-    const auto actionsWidth = slotMetrics.actionSize * 3.0f + slotMetrics.actionGap * 2.0f;
+    const auto actionsWidth = getActionClusterWidth();
     const auto x = contentBounds.getRight() - actionsWidth;
     const auto y = contentBounds.getCentreY() - slotMetrics.actionSize * 0.5f;
     return {x, y, slotMetrics.actionSize, slotMetrics.actionSize};
@@ -308,12 +323,23 @@ juce::Rectangle<float> SignalSlotComponent::getVisibilityBounds() const {
     return {x, y, slotMetrics.actionSize, slotMetrics.actionSize};
 }
 
-juce::Rectangle<float> SignalSlotComponent::getRemoveBounds() const {
+juce::Rectangle<float> SignalSlotComponent::getFreezeBounds() const {
     const auto &slotMetrics = theme.metrics.slot;
     auto visibilityBounds = getVisibilityBounds();
     const auto x = visibilityBounds.getRight() + slotMetrics.actionGap;
-    const auto y = visibilityBounds.getCentreY() - slotMetrics.actionSize * 0.5f;
-    return {x, y, slotMetrics.actionSize, slotMetrics.actionSize};
+    return {x, visibilityBounds.getY(), slotMetrics.actionSize, slotMetrics.actionSize};
+}
+
+juce::Rectangle<float> SignalSlotComponent::getRemoveBounds() const {
+    const auto &slotMetrics = theme.metrics.slot;
+    auto freezeBounds = getFreezeBounds();
+    const auto x = freezeBounds.getRight() + slotMetrics.actionGap;
+    return {x, freezeBounds.getY(), slotMetrics.actionSize, slotMetrics.actionSize};
+}
+
+float SignalSlotComponent::getActionClusterWidth() const {
+    const auto &slotMetrics = theme.metrics.slot;
+    return slotMetrics.actionSize * 4.0f + slotMetrics.actionGap * 3.0f;
 }
 
 SignalSlotHitArea SignalSlotComponent::getHitAreaAt(const juce::Point<float> &position) const {
@@ -325,6 +351,9 @@ SignalSlotHitArea SignalSlotComponent::getHitAreaAt(const juce::Point<float> &po
 
     if (getVisibilityBounds().contains(position))
         return SignalSlotHitArea::visibility;
+
+    if (getFreezeBounds().contains(position))
+        return SignalSlotHitArea::freeze;
 
     if (getRemoveBounds().contains(position))
         return SignalSlotHitArea::remove;
@@ -359,6 +388,7 @@ SignalSlotComponent::OpenPopupMenu SignalSlotComponent::popupMenuForHitArea(cons
             return OpenPopupMenu::signal;
         case SignalSlotHitArea::dragHandle:
         case SignalSlotHitArea::visibility:
+        case SignalSlotHitArea::freeze:
         case SignalSlotHitArea::remove:
             return OpenPopupMenu::none;
     }
@@ -486,6 +516,14 @@ void SignalSlotComponent::updateCursor(const juce::Point<float> &position) {
 
     if (getDragHandleBounds().contains(position) || isReorderDragging) {
         setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+        return;
+    }
+
+    if (getLabelBounds().contains(position)
+        || getVisibilityBounds().contains(position)
+        || getFreezeBounds().contains(position)
+        || getRemoveBounds().contains(position)) {
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
         return;
     }
 

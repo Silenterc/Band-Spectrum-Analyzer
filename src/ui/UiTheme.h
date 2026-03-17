@@ -15,9 +15,8 @@ namespace Ui {
 
     struct PanelMetrics {
         int outerPadding = 18;
-        int headerHeight = 34;
-        int headerButtonWidth = 112;
-        int headerButtonVerticalInset = 4;
+        int headerHeight = 40;
+        int headerButtonSize = 34;
         int headerBottomGap = 6;
         int analyzerToRackGap = 10;
         int rackHeight = 76;

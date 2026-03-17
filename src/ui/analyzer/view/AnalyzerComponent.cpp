@@ -1,5 +1,6 @@
 #include "AnalyzerComponent.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -30,7 +31,7 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme
     rawTraces = dataSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
     displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
-    renderData = displayMeter.getRenderData();
+    renderData = composeDisplayRenderData(displayMeter.getRenderData());
     lastPaintedRenderData = renderData;
     refreshModel.prime(dataSource);
     rebuildViewModels();
@@ -240,6 +241,105 @@ void AnalyzerComponent::rebuildEnabledTraces() {
     }
 }
 
+void AnalyzerComponent::syncFrozenSlotCache(
+    const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &previousSignalSlots) {
+    for (size_t slotIndex = 0; slotIndex < uiSnapshot.signalSlots.size(); ++slotIndex) {
+        const auto &previousSlot = previousSignalSlots[slotIndex];
+        const auto &currentSlot = uiSnapshot.signalSlots[slotIndex];
+
+        if (!currentSlot.configuration.enabled || !currentSlot.frozen) {
+            clearFrozenTrace(slotIndex);
+            continue;
+        }
+
+        if (!previousSlot.frozen && currentSlot.frozen)
+            captureFrozenTrace(slotIndex, lastPaintedRenderData);
+    }
+}
+
+Analyzer::RenderData AnalyzerComponent::composeDisplayRenderData(const Analyzer::RenderData &liveRenderData) {
+    Analyzer::RenderData displayRenderData;
+    displayRenderData.bandInfo = liveRenderData.bandInfo;
+    displayRenderData.traces.reserve(liveRenderData.traces.size());
+
+    std::array<bool, Shared::maxSignalSlots> hasLiveTrace{};
+
+    for (const auto &liveTrace: liveRenderData.traces) {
+        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(liveTrace.kind); slotIndex.has_value()) {
+            hasLiveTrace[*slotIndex] = true;
+
+            if (!uiSnapshot.signalSlots[*slotIndex].configuration.enabled) {
+                clearFrozenTrace(*slotIndex);
+                continue;
+            }
+
+            if (uiSnapshot.signalSlots[*slotIndex].frozen) {
+                // Individual slot freeze is a pure UI concern: keep showing the cached
+                // rendered trace while the live meter continues updating in the background.
+                if (frozenSlotTraces[*slotIndex].has_value()
+                    && isTraceCompatible(*frozenSlotTraces[*slotIndex], displayRenderData.bandInfo.size())) {
+                    displayRenderData.traces.push_back(*frozenSlotTraces[*slotIndex]);
+                } else {
+                    frozenSlotTraces[*slotIndex] = liveTrace;
+                    displayRenderData.traces.push_back(liveTrace);
+                }
+                continue;
+            }
+
+            displayRenderData.traces.push_back(liveTrace);
+            continue;
+        }
+
+        displayRenderData.traces.push_back(liveTrace);
+    }
+
+    for (size_t slotIndex = 0; slotIndex < uiSnapshot.signalSlots.size(); ++slotIndex) {
+        const auto &slot = uiSnapshot.signalSlots[slotIndex];
+        if (!slot.configuration.enabled || !slot.frozen || hasLiveTrace[slotIndex])
+            continue;
+
+        if (frozenSlotTraces[slotIndex].has_value()
+            && isTraceCompatible(*frozenSlotTraces[slotIndex], displayRenderData.bandInfo.size())) {
+            displayRenderData.traces.push_back(*frozenSlotTraces[slotIndex]);
+        }
+    }
+
+    return displayRenderData;
+}
+
+void AnalyzerComponent::captureFrozenTrace(const size_t slotIndex, const Analyzer::RenderData &sourceRenderData) {
+    if (slotIndex >= frozenSlotTraces.size())
+        return;
+
+    if (const auto trace = findTrace(sourceRenderData, Analyzer::traceKindForSlot(slotIndex)); trace.has_value())
+        frozenSlotTraces[slotIndex] = *trace;
+}
+
+void AnalyzerComponent::clearFrozenTrace(const size_t slotIndex) {
+    if (slotIndex >= frozenSlotTraces.size())
+        return;
+
+    frozenSlotTraces[slotIndex].reset();
+}
+
+std::optional<Analyzer::RenderTrace> AnalyzerComponent::findTrace(const Analyzer::RenderData &sourceRenderData,
+                                                                  const Analyzer::TraceKind kind) {
+    const auto iterator = std::find_if(sourceRenderData.traces.begin(), sourceRenderData.traces.end(),
+                                       [kind](const Analyzer::RenderTrace &trace) {
+                                           return trace.kind == kind;
+                                       });
+    if (iterator == sourceRenderData.traces.end())
+        return std::nullopt;
+
+    return *iterator;
+}
+
+bool AnalyzerComponent::isTraceCompatible(const Analyzer::RenderTrace &trace, const size_t bandCount) {
+    return trace.frame.rmsDb.size() == bandCount
+           && trace.frame.peakDb.size() == bandCount
+           && trace.frame.holdDb.size() == bandCount;
+}
+
 void AnalyzerComponent::rebuildViewModels() {
     rebuildEnabledTraces();
     refreshStaticViewModelIfNeeded();
@@ -329,7 +429,9 @@ void AnalyzerComponent::timerCallback() {
         rebuildViewModels();
     }
 
+    const auto previousSignalSlots = uiSnapshot.signalSlots;
     const auto refreshDecision = refreshModel.makeTimerDecision(dataSource, bandInfo, displayMeter, uiSnapshot.gridMinDb, uiSnapshot);
+    syncFrozenSlotCache(previousSignalSlots);
     if (refreshDecision.pollingIntervalChanged)
         startTimer(refreshDecision.pollIntervalMs);
 
@@ -345,8 +447,9 @@ void AnalyzerComponent::timerCallback() {
             rawTraces = dataSource.getRawTraces();
             // Raw DSP measurements become render-ready RMS, peak, and hold values here
             displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, refreshDecision.dtSeconds);
-            renderData = displayMeter.getRenderData();
         }
+
+        renderData = composeDisplayRenderData(displayMeter.getRenderData());
     } else {
         bandInfo = refreshDecision.nextBandInfo;
     }

@@ -13,6 +13,7 @@ namespace PluginParameters {
             auto &slot = slotParams[slotIndex];
             slot.enabled = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::enabled, slotIndex));
             slot.visible = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::visible, slotIndex));
+            slot.frozen = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::frozen, slotIndex));
             slot.source = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::source, slotIndex));
             slot.mode = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::mode, slotIndex));
             slot.colour = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::colour, slotIndex));
@@ -55,6 +56,7 @@ namespace PluginParameters {
         Ui::SignalSlotState state;
         state.configuration.enabled = readBool(slot.enabled);
         state.visible = readBool(slot.visible);
+        state.frozen = readBool(slot.frozen);
         state.configuration.source = readChoice(slot.source, Schema::signalSourceChoices);
         state.configuration.mode = readChoice(slot.mode, Schema::signalModeChoices);
         state.colourIndex = juce::jlimit(0, Shared::signalPresetCount - 1, juce::roundToInt(slot.colour->load()));
@@ -100,6 +102,7 @@ namespace PluginParameters {
         writeSlotColour(slotIndex, state.colourIndex);
         writeSlotOpacity(slotIndex, state.opacity);
         writeSlotVisible(slotIndex, state.visible);
+        writeSlotFrozen(slotIndex, state.frozen);
         writeSlotEnabled(slotIndex, state.configuration.enabled);
     }
 
@@ -118,6 +121,10 @@ namespace PluginParameters {
 
     void Access::writeSlotVisible(const size_t slotIndex, const bool value) {
         writeBool(Schema::slotParameterId(Schema::SlotField::visible, slotIndex), value);
+    }
+
+    void Access::writeSlotFrozen(const size_t slotIndex, const bool value) {
+        writeBool(Schema::slotParameterId(Schema::SlotField::frozen, slotIndex), value);
     }
 
     void Access::writeSlotColour(const size_t slotIndex, const int colourIndex) {

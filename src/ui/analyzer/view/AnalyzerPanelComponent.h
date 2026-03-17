@@ -5,8 +5,8 @@
 #include "../../AnalyzerDataSource.h"
 #include "../../AnalyzerSettingsActions.h"
 #include "../../AnalyzerUiStateSource.h"
-#include "../../FlatButtonLookAndFeel.h"
 #include "../../UiTheme.h"
+#include "AnalyzerFreezeButton.h"
 #include "AnalyzerComponent.h"
 #include "AnalyzerMeterControlsComponent.h"
 #include "SignalRackComponent.h"
@@ -26,14 +26,14 @@ public:
 private:
     void analyzerUiStateChanged(const Ui::AnalyzerUiState &state) override;
     void syncFreezeButtonState(const Ui::AnalyzerUiState &state);
+    void setLocalFrozenState(bool isFrozen);
 
     AnalyzerUiStateSource &uiStateSource;
     AnalyzerSettingsActions &settingsActions;
     const Ui::Theme &theme;
-    FlatButtonLookAndFeel flatButtonLookAndFeel;
     AnalyzerComponent analyzerComponent;
     SignalRackComponent signalRackComponent;
     AnalyzerMeterControlsComponent meterControlsComponent;
-    juce::TextButton freezeButton { "Freeze" };
+    AnalyzerFreezeButton freezeButton;
     Ui::AnalyzerUiState currentState;
 };

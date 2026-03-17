@@ -113,6 +113,7 @@ flowchart LR
 
     Slot --> UiState[Ui::SignalSlotState]
     UiState --> Visible[visible]
+    UiState --> Frozen[frozen]
     UiState --> Colour[colourIndex]
     UiState --> Opacity[opacity]
 ```
@@ -231,11 +232,12 @@ flowchart TD
 - The analyzer UI supports up to `4` signal slots, each with:
   - enabled state
   - visibility
+  - frozen state
   - source
   - mode
   - color
   - opacity
-- Global freeze exists as a UI-facing parameter/state.
+- Global freeze exists as a UI-facing parameter/state, and each slot now also has an independent UI-facing frozen state.
 - Meter visibility toggles (`Peak`, `RMS`, `Hold`) are UI-controlled existing parameters.
 - Recent-signal activity is runtime engine state exposed through `AnalyzerDataSource`, not serialized UI state.
 

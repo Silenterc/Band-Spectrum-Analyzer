@@ -1,3 +1,7 @@
+juce_add_binary_data(BsaUiAssets
+    SOURCES
+        ui/assets/icons/snowflake.svg)
+
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
@@ -25,6 +29,7 @@ target_sources(${PROJECT_NAME}
         dsp/planning/AnalysisPlanBuilder.cpp
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
+        ui/UiIcons.cpp
         ui/UiTheme.cpp
         ui/analyzer/view/AnalyzerPanelComponent.cpp
         ui/analyzer/view/AnalyzerComponent.cpp
@@ -59,7 +64,7 @@ target_compile_definitions(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        # AudioPluginData           # If we'd created a binary data target, we'd link to it here
+        BsaUiAssets
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC

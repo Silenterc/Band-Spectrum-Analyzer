@@ -104,6 +104,7 @@ public:
     void setFreezeEnabled(bool isFrozen) override;
     void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
     void setSignalSlotVisible(size_t slotIndex, bool isVisible) override;
+    void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) override;
     void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) override;
     void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) override;
     void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) override;

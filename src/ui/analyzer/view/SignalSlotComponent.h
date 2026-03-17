@@ -14,6 +14,7 @@ enum class SignalSlotHitArea {
     label,
     dragHandle,
     visibility,
+    freeze,
     remove,
     body
 };
@@ -34,6 +35,7 @@ public:
     std::function<void(size_t, Analyzer::SignalSource, Analyzer::SignalMode)> onSignalSelected;
     std::function<void(size_t, int)> onColourSelected;
     std::function<void(size_t, bool)> onVisibilityChanged;
+    std::function<void(size_t, bool)> onFrozenChanged;
     std::function<void(size_t)> onRemoveClicked;
     std::function<void(size_t, float)> onOpacityChanged;
     std::function<void(size_t, float)> onReorderDragStarted;
@@ -59,7 +61,9 @@ private:
     juce::Rectangle<float> getLabelBounds() const;
     juce::Rectangle<float> getDragHandleBounds() const;
     juce::Rectangle<float> getVisibilityBounds() const;
+    juce::Rectangle<float> getFreezeBounds() const;
     juce::Rectangle<float> getRemoveBounds() const;
+    float getActionClusterWidth() const;
     SignalSlotHitArea getHitAreaAt(const juce::Point<float> &position) const;
     bool isColourAvailable(int colourIndex) const;
     bool isSignalAvailable(Analyzer::SignalSource source, Analyzer::SignalMode mode) const;

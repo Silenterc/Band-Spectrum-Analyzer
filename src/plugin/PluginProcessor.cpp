@@ -325,6 +325,10 @@ void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex
     parameterAccess.writeSlotVisible(slotIndex, isVisible);
 }
 
+void SpectrumAnalyzerAudioProcessor::setSignalSlotFrozen(const size_t slotIndex, const bool isFrozenValue) {
+    parameterAccess.writeSlotFrozen(slotIndex, isFrozenValue);
+}
+
 void SpectrumAnalyzerAudioProcessor::setSignalSlotSource(const size_t slotIndex, const Analyzer::SignalSource source) {
     parameterAccess.writeSlotSignal(slotIndex, source, parameterAccess.readUiSlot(slotIndex).configuration.mode);
 }

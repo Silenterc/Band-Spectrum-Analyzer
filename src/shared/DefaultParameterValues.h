@@ -27,6 +27,11 @@ namespace Defaults {
         return true;
     }
 
+    inline constexpr bool isSignalSlotFrozen(const size_t slotIndex) {
+        (void) slotIndex;
+        return false;
+    }
+
     inline constexpr Analyzer::SignalSource signalSlotSource(const size_t slotIndex) {
         (void) slotIndex;
         return Analyzer::SignalSource::main;

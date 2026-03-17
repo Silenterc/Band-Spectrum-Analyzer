@@ -31,6 +31,7 @@ namespace PluginParameters {
         void writeSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode);
         void writeSlotEnabled(size_t slotIndex, bool value);
         void writeSlotVisible(size_t slotIndex, bool value);
+        void writeSlotFrozen(size_t slotIndex, bool value);
         void writeSlotColour(size_t slotIndex, int colourIndex);
         void writeSlotOpacity(size_t slotIndex, float opacity);
         void writeShowPeak(bool value);
@@ -41,6 +42,7 @@ namespace PluginParameters {
         struct SlotRefs {
             std::atomic<float> *enabled = nullptr;
             std::atomic<float> *visible = nullptr;
+            std::atomic<float> *frozen = nullptr;
             std::atomic<float> *source = nullptr;
             std::atomic<float> *mode = nullptr;
             std::atomic<float> *colour = nullptr;

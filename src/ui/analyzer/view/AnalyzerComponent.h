@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -66,6 +67,13 @@ private:
      * Rebuilds the enabled-trace view state from the stored slot snapshot
      */
     void rebuildEnabledTraces();
+    void syncFrozenSlotCache(const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &previousSignalSlots);
+    Analyzer::RenderData composeDisplayRenderData(const Analyzer::RenderData &liveRenderData);
+    void captureFrozenTrace(size_t slotIndex, const Analyzer::RenderData &sourceRenderData);
+    void clearFrozenTrace(size_t slotIndex);
+    static std::optional<Analyzer::RenderTrace> findTrace(const Analyzer::RenderData &sourceRenderData,
+                                                          Analyzer::TraceKind kind);
+    static bool isTraceCompatible(const Analyzer::RenderTrace &trace, size_t bandCount);
 
     void rebuildViewModels();
 
@@ -118,6 +126,8 @@ private:
     Analyzer::RenderData renderData;
     // Last render data that was actually painted to screen
     Analyzer::RenderData lastPaintedRenderData;
+    // Per-slot frozen display snapshots reused while a slot is individually frozen
+    std::array<std::optional<Analyzer::RenderTrace>, Shared::maxSignalSlots> frozenSlotTraces;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
     Ui::AnalyzerRefreshModel refreshModel;

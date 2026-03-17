@@ -34,9 +34,16 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
             });
             settingsActions.setSignalSlotVisible(slotIndex, isVisible);
         };
+        slotComponent->onFrozenChanged = [this](const size_t slotIndex, const bool isFrozen) {
+            updateLocalSlot(slotIndex, [isFrozen](Ui::SignalSlotState &slotState) {
+                slotState.frozen = isFrozen;
+            });
+            settingsActions.setSignalSlotFrozen(slotIndex, isFrozen);
+        };
         slotComponent->onRemoveClicked = [this](const size_t slotIndex) {
             updateLocalSlot(slotIndex, [](Ui::SignalSlotState &slotState) {
                 slotState.configuration.enabled = false;
+                slotState.frozen = false;
             });
             settingsActions.removeSignalSlot(slotIndex);
         };
@@ -222,6 +229,7 @@ void SignalRackComponent::addSignal() {
     Ui::SignalSlotState slotState;
     slotState.configuration = Ui::chooseDefaultSignalConfiguration(signalSlots, currentState.sidechainAvailable);
     slotState.visible = true;
+    slotState.frozen = false;
     slotState.colourIndex = Ui::chooseDefaultSignalColourIndex(signalSlots);
     slotState.opacity = Ui::defaultSignalOpacity;
 

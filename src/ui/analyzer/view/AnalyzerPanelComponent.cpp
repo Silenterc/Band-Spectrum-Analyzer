@@ -7,28 +7,28 @@ AnalyzerPanelComponent::AnalyzerPanelComponent(AnalyzerDataSource &dataSourceToU
     : uiStateSource(uiStateSourceToUse),
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
-      flatButtonLookAndFeel(themeToUse),
       analyzerComponent(dataSourceToUse, themeToUse),
       signalRackComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
-      meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse) {
+      meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
+      freezeButton(themeToUse) {
     setOpaque(true);
     addAndMakeVisible(analyzerComponent);
     addAndMakeVisible(signalRackComponent);
     addAndMakeVisible(meterControlsComponent);
     addAndMakeVisible(freezeButton);
 
-    freezeButton.setClickingTogglesState(false);
-    freezeButton.setLookAndFeel(&flatButtonLookAndFeel);
     freezeButton.onClick = [this] {
-        settingsActions.setFreezeEnabled(!currentState.frozen);
+        const auto nextFrozen = !currentState.frozen;
+        setLocalFrozenState(nextFrozen);
+        settingsActions.setFreezeEnabled(nextFrozen);
     };
+    freezeButton.setTooltip("Freeze analyzer");
 
     uiStateSource.addAnalyzerUiStateListener(*this);
     analyzerUiStateChanged(uiStateSource.getAnalyzerUiState());
 }
 
 AnalyzerPanelComponent::~AnalyzerPanelComponent() {
-    freezeButton.setLookAndFeel(nullptr);
     uiStateSource.removeAnalyzerUiStateListener(*this);
 }
 
@@ -41,8 +41,12 @@ void AnalyzerPanelComponent::resized() {
 
     auto bounds = getLocalBounds();
     auto headerBounds = bounds.removeFromTop(metrics.headerHeight);
-    freezeButton.setBounds(headerBounds.removeFromRight(metrics.headerButtonWidth)
-                                       .reduced(0, metrics.headerButtonVerticalInset));
+    const auto buttonSide = metrics.headerButtonSize;
+    const auto buttonY = headerBounds.getY() + (headerBounds.getHeight() - buttonSide) / 2;
+    freezeButton.setBounds(headerBounds.getRight() - buttonSide,
+                           buttonY,
+                           buttonSide,
+                           buttonSide);
     bounds.removeFromTop(metrics.headerBottomGap);
     auto rackBounds = bounds.removeFromBottom(metrics.rackHeight);
     bounds.removeFromBottom(metrics.analyzerToRackGap);
@@ -59,8 +63,10 @@ void AnalyzerPanelComponent::analyzerUiStateChanged(const Ui::AnalyzerUiState &s
 }
 
 void AnalyzerPanelComponent::syncFreezeButtonState(const Ui::AnalyzerUiState &state) {
-    freezeButton.setButtonText(state.frozen ? "Frozen" : "Freeze");
-    freezeButton.setColour(juce::TextButton::buttonColourId, state.frozen ? theme.accentButtonActive : theme.controlSurface);
-    freezeButton.setColour(juce::TextButton::buttonOnColourId, theme.accentButtonActive);
-    freezeButton.setColour(juce::TextButton::textColourOffId, theme.controlText);
+    freezeButton.setFrozen(state.frozen);
+}
+
+void AnalyzerPanelComponent::setLocalFrozenState(const bool isFrozen) {
+    currentState.frozen = isFrozen;
+    syncFreezeButtonState(currentState);
 }

@@ -12,6 +12,7 @@ public:
     virtual void setFreezeEnabled(bool isFrozen) = 0;
     virtual void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) = 0;
     virtual void setSignalSlotVisible(size_t slotIndex, bool isVisible) = 0;
+    virtual void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) = 0;
     virtual void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) = 0;
     virtual void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) = 0;
     virtual void setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) = 0;
@@ -31,6 +32,7 @@ public:
         setSignalSlotColour(slotIndex, state.colourIndex);
         setSignalSlotOpacity(slotIndex, state.opacity);
         setSignalSlotVisible(slotIndex, state.visible);
+        setSignalSlotFrozen(slotIndex, state.frozen);
         setSignalSlotEnabled(slotIndex, state.configuration.enabled);
     }
 

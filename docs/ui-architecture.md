@@ -27,7 +27,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Panel[AnalyzerPanelComponent]
-    Panel --> Freeze[Freeze button]
+    Panel --> Freeze[Freeze icon button]
     Panel --> Plot[AnalyzerComponent]
     Panel --> Rack[SignalRackComponent]
     Panel --> MeterRail[AnalyzerMeterControlsComponent]
@@ -36,7 +36,7 @@ flowchart TD
 Current layout in `AnalyzerPanelComponent`:
 
 - top header:
-  - `Freeze` button on the right
+  - snowflake freeze button on the right
 - main body:
   - analyzer plot
 - bottom strip:
@@ -48,13 +48,13 @@ Current layout in `AnalyzerPanelComponent`:
 ```mermaid
 flowchart LR
     DataSource[AnalyzerDataSource] --> Plot[AnalyzerComponent]
-    UiState[AnalyzerUiStateSource] --> Freeze[Freeze button]
+    UiState[AnalyzerUiStateSource] --> Freeze[Freeze icon button]
     UiState --> Rack[SignalRackComponent]
     UiState --> MeterRail[AnalyzerMeterControlsComponent]
 
     Settings[AnalyzerSettingsActions] --> Rack
     Settings --> MeterRail
-    Settings --> Freeze[Freeze button]
+    Settings --> Freeze[Freeze icon button]
 ```
 
 - `AnalyzerDataSource`
@@ -92,7 +92,7 @@ It owns:
 Responsibilities:
 
 - lay out the analyzer panel
-- route freeze button clicks into `AnalyzerSettingsActions`
+- route global freeze button clicks into `AnalyzerSettingsActions`
 - subscribe to `AnalyzerUiStateSource` and keep the freeze button appearance in sync
 
 It does not do analyzer rendering itself.
@@ -108,8 +108,10 @@ flowchart TD
     Frozen -->|yes| Keep[keep previous renderData]
     Activity -->|no| Idle[slow idle polling]
     Activity -->|yes| Meter
-    Meter --> RenderData[RenderData]
+    Meter --> LiveRender[live RenderData]
+    LiveRender --> Compose[compose slot-frozen display traces]
     Keep --> RenderData
+    Compose --> RenderData[display RenderData]
     RenderData --> Static[update static layout if bounds/scale changed]
     RenderData --> Dynamic[update dynamic trace bars]
     Hover[mouse move/drag/exit] --> HoverModel[update hover only]
@@ -135,6 +137,7 @@ Responsibilities:
 - poll processor-backed analyzer data
 - use `AnalyzerRefreshModel` for UI snapshot refresh, freeze-edge handling, and idle-polling decisions
 - convert raw traces into display-rate metered values
+- compose per-slot frozen traces from cached last-painted `RenderTrace` data
 - rebuild cached static layout only when geometry or scale inputs change
 - rebuild dynamic bar geometry from the latest render data
 - update hover state independently from the static and dynamic analyzer layers
@@ -145,6 +148,9 @@ Important behavior:
 - if frozen:
   - `renderData` is not advanced
   - UI presentation still updates from current slot/meter settings
+- if an individual slot is frozen while global freeze is off:
+  - the analyzer keeps metering live traces
+  - that slot reuses its cached rendered trace until it is unfrozen
 - visible traces are rebuilt from current signal slot UI state on every refresh
 - the analyzer background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
 - hover movement repaints only the old/new tooltip and hovered band region instead of forcing a full analyzer redraw
@@ -237,6 +243,7 @@ Responsibilities:
   - used signal configurations
   - sidechain availability
 - wire slot actions into `AnalyzerSettingsActions`
+- expose per-slot visibility and freeze actions directly on each slot cell
 - add a new signal into the first free slot
 - keep direct slot interactions visually immediate with local optimistic updates, then reconcile back to processor state
 - delegate slot default-selection policy to `src/ui/analyzer/model/SignalRackModel.h`
