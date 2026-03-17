@@ -17,9 +17,10 @@ namespace Analyzer {
     };
 
     /**
-     * SIMD biquad that advances one packed band-pass group in parallel.
-     * The caller broadcasts one scalar input sample into all lanes, and each lane keeps
-     * its own transposed-direct-form-II state between calls.
+     * SIMD cascaded band-pass filter that advances one packed band group in parallel.
+     * The caller broadcasts one scalar input sample into all lanes. Internally, two
+     * identical transposed-direct-form-II biquad stages are run in series so each lane
+     * behaves like a 4th-order band-pass with steeper skirts than a single stage.
      */
     class SIMDBPFilter {
     public:
@@ -33,7 +34,7 @@ namespace Analyzer {
         void prepare(const BandPassFilterParams& params);
 
         /**
-         * Clears both state registers for all SIMD lanes.
+         * Clears both stage states for all SIMD lanes.
          */
         void reset();
 
@@ -41,16 +42,23 @@ namespace Analyzer {
          * Processes one broadcast input sample through all packed bands.
          */
         inline SimdFloat process(SimdFloat input) noexcept {
+            const auto stage1Output = processStage(input, stage1s1, stage1s2);
+            return processStage(stage1Output, stage2s1, stage2s2);
+        }
+
+    private:
+        inline SimdFloat processStage(const SimdFloat input, SimdFloat &s1, SimdFloat &s2) noexcept {
             const auto y = params.b0 * input + s1;
             s1 = s2 + params.b1 * input - params.a1 * y;
             s2 = params.b2 * input - params.a2 * y;
             return y;
         }
 
-    private:
         // Coefficients shared by the lifetime of this SIMD group.
         BandPassFilterParams params;
-        // Per-lane filter state persisted across blocks.
-        SimdFloat s1, s2;
+        // Per-lane state for the first cascaded biquad stage.
+        SimdFloat stage1s1, stage1s2;
+        // Per-lane state for the second cascaded biquad stage.
+        SimdFloat stage2s1, stage2s2;
     };
 }

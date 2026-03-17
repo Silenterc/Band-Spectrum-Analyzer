@@ -96,11 +96,10 @@ namespace Analyzer {
                 const auto w0 = 2.0f * juce::MathConstants<float>::pi * band.centerHz / static_cast<float>(sampleRate);
                 const auto bandwidth = std::log2f(band.highHz / band.lowHz);
                 // We want a narrower band for the analyzer
-                const auto scaledBandwidth = 0.6f * bandwidth;
                 const auto sinW0 = juce::dsp::FastMathApproximations::sin(w0);
                 const auto cosW0 = juce::dsp::FastMathApproximations::cos(w0);
                 const auto alpha = sinW0 * juce::dsp::FastMathApproximations::sinh((std::logf(2.0f) * 0.5f)
-                                                                                   * scaledBandwidth * (w0 / sinW0));
+                                                                                   * bandwidth * (w0 / sinW0));
 
                 auto bb0 = alpha;
                 auto bb1 = 0.0f;
@@ -152,7 +151,7 @@ namespace Analyzer {
         const auto filterCount = primaryFilters.size();
 
         for (size_t sampleIndex = 0; sampleIndex < signalView.numSamples; ++sampleIndex) {
-            // Broadcast the scalar input sample into all lanes so one pass updates four bands.
+            // Broadcast the scalar input sample into all lanes so one pass updates a whole SIMD group.
             const SimdFloat input(signalView.data[sampleIndex]);
 
             for (size_t filterIndex = 0; filterIndex < filterCount; ++filterIndex) {

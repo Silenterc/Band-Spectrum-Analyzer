@@ -12,7 +12,7 @@
 
 namespace Analyzer {
     /**
-     * Owns the packed SIMD biquads for one analysis trace.
+     * Owns the packed SIMD cascaded band-pass filters for one analysis trace.
      * Adjacent logical bands are grouped according to the current target's SIMD width so the
      * same broadcast input sample can advance multiple bands in parallel.
      */

@@ -11,8 +11,10 @@ namespace Analyzer {
     }
 
     void SIMDBPFilter::reset() {
-        // Each SIMD lane represents an independent biquad, so both state registers reset together.
-        s1 = SimdFloat::expand(0.0f);
-        s2 = SimdFloat::expand(0.0f);
+        // Each SIMD lane represents an independent cascaded filter, so both stages reset together.
+        stage1s1 = SimdFloat::expand(0.0f);
+        stage1s2 = SimdFloat::expand(0.0f);
+        stage2s1 = SimdFloat::expand(0.0f);
+        stage2s2 = SimdFloat::expand(0.0f);
     }
 }
