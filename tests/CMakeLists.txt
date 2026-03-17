@@ -12,6 +12,8 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
+    ../src/dsp/filterbank/FilterBank.cpp
+    ../src/dsp/filterbank/SIMDBPFilter.cpp
     ../src/dsp/planning/AnalysisPlanBuilder.cpp
     ../src/dsp/processing/AnalysisGroupProcessor.cpp
     ../src/dsp/sources/AnalysisSourceBuilder.cpp

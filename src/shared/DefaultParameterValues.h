@@ -4,7 +4,7 @@
 #include "SignalSlotConfiguration.h"
 
 namespace Defaults {
-    inline constexpr Analyzer::BandMode bandMode = Analyzer::BandMode::bands30;
+    inline constexpr Analyzer::BandMode bandMode = Analyzer::BandMode::bands45;
 
     inline constexpr bool showRms = false;
     inline constexpr bool showPeak = true;

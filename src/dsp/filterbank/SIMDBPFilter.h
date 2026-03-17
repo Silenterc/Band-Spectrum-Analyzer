@@ -26,14 +26,16 @@ namespace Analyzer {
         SIMDBPFilter() = default;
 
         void prepare(const BandPassFilterParams& params);
+        void reset();
 
         /**
          * Processes one SIMD sample frame through the transposed direct form II state update.
          */
-        SimdFloat process(const SimdFloat& input);
-
-        SimdFloat process(float inputSample) {
-            return process(SimdFloat(inputSample));
+        inline SimdFloat process(SimdFloat input) noexcept {
+            const auto y = params.b0 * input + s1;
+            s1 = s2 + params.b1 * input - params.a1 * y;
+            s2 = params.b2 * input - params.a2 * y;
+            return y;
         }
 
     private:
