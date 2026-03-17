@@ -4,6 +4,28 @@
 #include <cmath>
 
 namespace Analyzer {
+    SignalView Engine::sliceSignalView(const SignalView &view, const size_t offset, const size_t numSamples) {
+        if (view.data == nullptr || offset >= view.numSamples || numSamples == 0)
+            return {};
+
+        const auto availableSamples = view.numSamples - offset;
+        const auto sliceLength = std::min(numSamples, availableSamples);
+        return {view.data + offset, sliceLength};
+    }
+
+    SourceSet Engine::sliceSourceSet(const SourceSet &sourceSet, const size_t offset, const size_t numSamples) {
+        SourceSet sliced;
+        sliced.mainLeft = sliceSignalView(sourceSet.mainLeft, offset, numSamples);
+        sliced.mainRight = sliceSignalView(sourceSet.mainRight, offset, numSamples);
+        sliced.mainMid = sliceSignalView(sourceSet.mainMid, offset, numSamples);
+        sliced.mainSide = sliceSignalView(sourceSet.mainSide, offset, numSamples);
+        sliced.sidechainLeft = sliceSignalView(sourceSet.sidechainLeft, offset, numSamples);
+        sliced.sidechainRight = sliceSignalView(sourceSet.sidechainRight, offset, numSamples);
+        sliced.sidechainMid = sliceSignalView(sourceSet.sidechainMid, offset, numSamples);
+        sliced.sidechainSide = sliceSignalView(sourceSet.sidechainSide, offset, numSamples);
+        return sliced;
+    }
+
     void Engine::prepare(double sampleRate, int maximumBlockSize) {
         currentSampleRate = sampleRate;
         currentMaximumBlockSize = maximumBlockSize;
@@ -18,6 +40,7 @@ namespace Analyzer {
 
     void Engine::reset() {
         inputActivityDetector.reset();
+        currentFrameFillSamples = 0;
         recentSignalActive.store(false, std::memory_order_relaxed);
         hasPublishedSilenceWhileInactive = false;
         publishProcessorState(true);
@@ -55,6 +78,7 @@ namespace Analyzer {
 
         if (!inputActivityDetector.shouldProcess()) {
             if (!hasPublishedSilenceWhileInactive) {
+                currentFrameFillSamples = 0;
                 publishProcessorState(true);
                 hasPublishedSilenceWhileInactive = true;
             }
@@ -63,19 +87,28 @@ namespace Analyzer {
 
         hasPublishedSilenceWhileInactive = false;
         const auto sourceSet = sourceBuilder.build(mainBuffer, sidechainBuffer);
-        auto *publishedTraces = traces.get_for_writer();
-        if (publishedTraces->size() != publishedTraceCount)
-            publishedTraces->resize(publishedTraceCount);
+        size_t processedSamples = 0;
+        while (processedSamples < static_cast<size_t>(numSamples)) {
+            const auto remainingFrameSamples = Constants::analysisFrameSamples - currentFrameFillSamples;
+            const auto sliceSamples = std::min(static_cast<size_t>(numSamples) - processedSamples, remainingFrameSamples);
+            const auto slicedSources = sliceSourceSet(sourceSet, processedSamples, sliceSamples);
 
-        size_t traceOffset = 0;
-        for (auto &processor: processors) {
-            const auto outputCount = processor.getOutputCount();
-            processor.process(sourceSet);
-            processor.writeRawTraces(*publishedTraces, traceOffset);
-            traceOffset += outputCount;
+            for (auto &processor: processors) {
+                processor.process(slicedSources);
+                processor.accumulateCurrentSlice();
+            }
+
+            processedSamples += sliceSamples;
+            currentFrameFillSamples += sliceSamples;
+
+            if (currentFrameFillSamples == Constants::analysisFrameSamples) {
+                publishProcessorState(false);
+                for (auto &processor: processors)
+                    processor.clearAccumulatedFrame();
+
+                currentFrameFillSamples = 0;
+            }
         }
-
-        traces.publish();
     }
 
     std::shared_ptr<const std::vector<BandInfo>> Engine::getBandInfo() const {

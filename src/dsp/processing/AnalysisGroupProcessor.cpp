@@ -13,6 +13,7 @@ namespace Analyzer {
 
         const auto bandCount = bandInfo != nullptr ? bandInfo->size() : 0;
         outputMeasurements.assign(bandCount, {});
+        accumulatedMeasurements.assign(bandCount, {});
 
         filterBank.prepare(sampleRate,
                            std::move(bandInfo),
@@ -22,6 +23,7 @@ namespace Analyzer {
     void AnalysisGroupProcessor::reset() {
         filterBank.reset();
         clearOutputMeasurements();
+        clearAccumulatedMeasurements();
     }
 
     void AnalysisGroupProcessor::process(const SourceSet& sources) {
@@ -45,14 +47,31 @@ namespace Analyzer {
         filterBank.processBlock(primarySignalView, &secondarySignalView, outputMeasurements);
     }
 
+    void AnalysisGroupProcessor::accumulateCurrentSlice() {
+        if (accumulatedMeasurements.size() != outputMeasurements.size())
+            accumulatedMeasurements.assign(outputMeasurements.size(), {});
+
+        for (size_t bandIndex = 0; bandIndex < outputMeasurements.size(); ++bandIndex) {
+            const auto &sliceMeasurements = outputMeasurements[bandIndex];
+            auto &accumulated = accumulatedMeasurements[bandIndex];
+            accumulated.peakPower = std::max(accumulated.peakPower, sliceMeasurements.peakPower);
+            accumulated.sumPower += sliceMeasurements.sumPower;
+            accumulated.numSamples += sliceMeasurements.numSamples;
+        }
+    }
+
+    void AnalysisGroupProcessor::clearAccumulatedFrame() {
+        clearAccumulatedMeasurements();
+    }
+
     void AnalysisGroupProcessor::writeRawTraces(std::vector<RawTrace>& destination, const size_t startIndex) const {
         auto& trace = destination[startIndex];
         trace.kind = spec.kind;
 
-        if (trace.measurements.size() != outputMeasurements.size())
-            trace.measurements.resize(outputMeasurements.size());
+        if (trace.measurements.size() != accumulatedMeasurements.size())
+            trace.measurements.resize(accumulatedMeasurements.size());
 
-        std::copy(outputMeasurements.begin(), outputMeasurements.end(), trace.measurements.begin());
+        std::copy(accumulatedMeasurements.begin(), accumulatedMeasurements.end(), trace.measurements.begin());
     }
 
     size_t AnalysisGroupProcessor::getOutputCount() const {
@@ -90,5 +109,9 @@ namespace Analyzer {
 
     void AnalysisGroupProcessor::clearOutputMeasurements() {
         std::fill(outputMeasurements.begin(), outputMeasurements.end(), BandMeasurements{});
+    }
+
+    void AnalysisGroupProcessor::clearAccumulatedMeasurements() {
+        std::fill(accumulatedMeasurements.begin(), accumulatedMeasurements.end(), BandMeasurements{});
     }
 }

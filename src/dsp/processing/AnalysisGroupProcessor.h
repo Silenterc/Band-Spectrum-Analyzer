@@ -23,6 +23,8 @@ namespace Analyzer {
         void reset();
 
         void process(const SourceSet& sources);
+        void accumulateCurrentSlice();
+        void clearAccumulatedFrame();
 
         void writeRawTraces(std::vector<RawTrace>& destination, size_t startIndex) const;
 
@@ -32,9 +34,13 @@ namespace Analyzer {
         SignalView selectSignalView(const SourceSet& sources, SourceFamily sourceFamily,
                                     DerivedSignal signal) const;
         void clearOutputMeasurements();
+        void clearAccumulatedMeasurements();
 
         AnalysisGroupSpec spec;
         FilterBank filterBank;
+        // Scratch measurements for the current sliced input segment.
         std::vector<BandMeasurements> outputMeasurements;
+        // Measurements accumulated across the current fixed-size analysis frame.
+        std::vector<BandMeasurements> accumulatedMeasurements;
     };
 }

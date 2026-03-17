@@ -63,6 +63,9 @@ namespace Analyzer {
         bool hasRecentSignal() const;
 
     private:
+        static SignalView sliceSignalView(const SignalView &view, size_t offset, size_t numSamples);
+        static SourceSet sliceSourceSet(const SourceSet &sourceSet, size_t offset, size_t numSamples);
+
         /**
          * Rebuilds the log-spaced band layout
          */
@@ -107,6 +110,8 @@ namespace Analyzer {
         size_t publishedTraceCount = 0;
         // Published raw traces for the UI, 1 W x 1 R threads
         mutable TripleBuffer<std::vector<RawTrace> > traces;
+        // Number of samples already accumulated into the in-progress fixed analyzer frame.
+        size_t currentFrameFillSamples = 0;
         // Runtime flag exposed to the UI so it can idle once the display has decayed to floor
         std::atomic<bool> recentSignalActive { false };
         // Ensures silence is published only once per inactive period
