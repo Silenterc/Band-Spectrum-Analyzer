@@ -48,7 +48,8 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
             if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex]) {
                 traceState.holdDb[bandIndex] = traceState.peakDb[bandIndex];
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
-            } else if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex] - holdResetToleranceDb) {
+            } else if (traceState.peakDb[bandIndex] > floorDb
+                       && traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex] - holdResetToleranceDb) {
                 // Peaks within the tolerance keep the hold alive without lowering the held value.
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
             } else if (traceState.holdTimeRemainingMs[bandIndex] > 0.0f) {
