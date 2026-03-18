@@ -253,6 +253,27 @@ Responsibilities:
 - keep direct slot interactions visually immediate with local optimistic updates, then reconcile back to processor state
 - delegate slot default-selection policy to `src/ui/analyzer/model/SignalRackModel.h`
 
+Current slot-cell layout:
+
+- top row:
+  - left: vertical source toggle with `Main` on top and `Sidechain` on bottom
+  - right: mode picker for the currently selected source
+- bottom row:
+  - colour picker
+  - drag handle
+  - on/off visibility button
+  - freeze button
+  - remove button
+
+Interaction split:
+
+- `SignalSlotComponent`
+  - owns cell painting, hit-testing, source-toggle interaction, and mode/colour popup launch points
+- `SignalSelectionPopupContent`
+  - now presents only mode choices for the slot's current source
+- `SignalRackComponent`
+  - still owns optimistic state updates and routes semantic source/mode/visibility/freeze/remove actions to `AnalyzerSettingsActions`
+
 Reordering responsibilities are split out:
 
 - `SignalRackLayoutEngine`

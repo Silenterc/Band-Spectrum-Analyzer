@@ -19,7 +19,7 @@ namespace Ui {
         int headerButtonSize = 34;
         int headerBottomGap = 6;
         int analyzerToRackGap = 10;
-        int rackHeight = 76;
+        int rackHeight = 88;
         int rackToMeterGap = 10;
         int meterControlsWidth = 90;
     };
@@ -36,9 +36,13 @@ namespace Ui {
 
     struct SlotMetrics {
         float cellPaddingX = 6.0f;
-        float cellPaddingY = 4.0f;
+        float cellPaddingY = 5.0f;
         float sectionGap = 6.0f;
+        float rowGap = 6.0f;
         float textStackGap = 2.0f;
+        float sourceToggleWidth = 54.0f;
+        float topRowHeight = 34.0f;
+        float modePickerPaddingX = 12.0f;
         float swatchSize = 28.0f;
         float actionSize = 24.0f;
         float actionGap = 5.0f;

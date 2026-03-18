@@ -10,8 +10,10 @@
 #include "../model/SignalSlotOptions.h"
 
 enum class SignalSlotHitArea {
+    sourceToggleMain,
+    sourceToggleSidechain,
+    modePicker,
     swatch,
-    label,
     dragHandle,
     visibility,
     freeze,
@@ -53,12 +55,18 @@ public:
 private:
     enum class OpenPopupMenu {
         none,
-        signal,
+        mode,
         colour
     };
 
+    juce::Rectangle<float> getContentBounds() const;
+    juce::Rectangle<float> getTopRowBounds() const;
+    juce::Rectangle<float> getBottomRowBounds() const;
+    juce::Rectangle<float> getSourceToggleBounds() const;
+    juce::Rectangle<float> getSourceMainBounds() const;
+    juce::Rectangle<float> getSourceSidechainBounds() const;
+    juce::Rectangle<float> getModePickerBounds() const;
     juce::Rectangle<float> getSwatchBounds() const;
-    juce::Rectangle<float> getLabelBounds() const;
     juce::Rectangle<float> getDragHandleBounds() const;
     juce::Rectangle<float> getVisibilityBounds() const;
     juce::Rectangle<float> getFreezeBounds() const;
