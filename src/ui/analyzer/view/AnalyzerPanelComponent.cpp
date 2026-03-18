@@ -8,9 +8,10 @@ AnalyzerPanelComponent::AnalyzerPanelComponent(AnalyzerDataSource &dataSourceToU
       analyzerComponent(dataSourceToUse, themeToUse),
       signalRackComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
       meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse) {
-    setOpaque(true);
-    addAndMakeVisible(analyzerComponent);
-    addAndMakeVisible(signalRackComponent);
+    // TODO: Re-enable the digital analyzer once the rasterized screen layout is ready.
+    addChildComponent(analyzerComponent);
+    // TODO: Re-enable the digital signal rack once the rasterized bottom-panel layout is ready.
+    addChildComponent(signalRackComponent);
     addAndMakeVisible(meterControlsComponent);
 }
 
@@ -18,7 +19,7 @@ AnalyzerPanelComponent::~AnalyzerPanelComponent() {
 }
 
 void AnalyzerPanelComponent::paint(juce::Graphics &g) {
-    g.fillAll(theme.editorBackground);
+    juce::ignoreUnused(g);
 }
 
 void AnalyzerPanelComponent::resized() {

@@ -10,10 +10,12 @@
 SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &audioProcessor)
     : AudioProcessorEditor(&audioProcessor),
       theme(Ui::makeTheme(Ui::AccentPalette::blue)),
+      backgroundComponent(theme),
       analyzerPanel(audioProcessor, audioProcessor, audioProcessor, theme) {
     setOpaque(true);
+    addAndMakeVisible(backgroundComponent);
     addAndMakeVisible(analyzerPanel);
-    setSize(1080, 600);
+    setSize(1000, 600);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {
@@ -32,5 +34,6 @@ void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
 }
 
 void SpectrumAnalyzerAudioProcessorEditor::resized() {
+    backgroundComponent.setBounds(getLocalBounds());
     analyzerPanel.setBounds(getLocalBounds().reduced(theme.metrics.panel.outerPadding));
 }

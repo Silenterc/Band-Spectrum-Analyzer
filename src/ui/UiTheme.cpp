@@ -55,6 +55,8 @@ namespace Ui {
         theme.tooltipBackground = juce::Colour::fromRGBA(10, 10, 12, 220);
         theme.tooltipBorder = juce::Colour::fromRGBA(255, 255, 255, 36);
         theme.tooltipText = juce::Colours::white;
+        theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
+        theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
         return theme;
     }
 

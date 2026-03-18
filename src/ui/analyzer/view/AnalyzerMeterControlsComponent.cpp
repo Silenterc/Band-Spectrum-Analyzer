@@ -1,37 +1,45 @@
 #include "AnalyzerMeterControlsComponent.h"
 
-#include "../../UiButtonDrawing.h"
-
 AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSource &uiStateSourceToUse,
                                                                AnalyzerSettingsActions &settingsActionsToUse,
                                                                const Ui::Theme &themeToUse)
     : uiStateSource(uiStateSourceToUse),
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
-      freezeButton(themeToUse) {
+      peakButton(themeToUse, "Peak"),
+      rmsButton(themeToUse, "RMS"),
+      holdButton(themeToUse, "Hold"),
+      freezeButton(themeToUse, {}) {
     addAndMakeVisible(peakButton);
     addAndMakeVisible(rmsButton);
     addAndMakeVisible(holdButton);
     addAndMakeVisible(freezeButton);
 
-    for (auto *button : { &peakButton, &rmsButton, &holdButton })
+    for (auto *button : { &peakButton, &rmsButton, &holdButton, &freezeButton })
         button->setWantsKeyboardFocus(false);
 
-    freezeButton.setWantsKeyboardFocus(false);
-
     peakButton.onClick = [this] {
-        settingsActions.setShowPeakEnabled(!currentState.meterSettings.showPeak);
+        const auto nextEnabled = !currentState.meterSettings.showPeak;
+        currentState.meterSettings.showPeak = nextEnabled;
+        peakButton.setActive(nextEnabled);
+        settingsActions.setShowPeakEnabled(nextEnabled);
     };
     rmsButton.onClick = [this] {
-        settingsActions.setShowRmsEnabled(!currentState.meterSettings.showRms);
+        const auto nextEnabled = !currentState.meterSettings.showRms;
+        currentState.meterSettings.showRms = nextEnabled;
+        rmsButton.setActive(nextEnabled);
+        settingsActions.setShowRmsEnabled(nextEnabled);
     };
     holdButton.onClick = [this] {
-        settingsActions.setShowHoldEnabled(!currentState.meterSettings.showHold);
+        const auto nextEnabled = !currentState.meterSettings.showHold;
+        currentState.meterSettings.showHold = nextEnabled;
+        holdButton.setActive(nextEnabled);
+        settingsActions.setShowHoldEnabled(nextEnabled);
     };
     freezeButton.onClick = [this] {
         const auto nextFrozen = !currentState.frozen;
         currentState.frozen = nextFrozen;
-        syncFreezeButtonState(currentState);
+        freezeButton.setActive(nextFrozen);
         settingsActions.setFreezeEnabled(nextFrozen);
     };
 
@@ -39,6 +47,7 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSo
     rmsButton.setTooltip("Show RMS");
     holdButton.setTooltip("Show Peak Hold");
     freezeButton.setTooltip("Freeze analyzer");
+    freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
 
     uiStateSource.addAnalyzerUiStateListener(*this);
     analyzerUiStateChanged(uiStateSource.getAnalyzerUiState());
@@ -56,15 +65,21 @@ void AnalyzerMeterControlsComponent::resized() {
     const auto &metrics = theme.metrics.meterControls;
     auto bounds = getLocalBounds().reduced(0, metrics.verticalPadding);
     const auto gap = metrics.buttonGap;
-    const auto buttonHeight = (bounds.getHeight() - gap * 3) / 4;
+    const auto peakHeight = peakButton.getPreferredHeight(bounds.getWidth());
+    const auto rmsHeight = rmsButton.getPreferredHeight(bounds.getWidth());
+    const auto holdHeight = holdButton.getPreferredHeight(bounds.getWidth());
+    const auto freezeHeight = freezeButton.getPreferredHeight(bounds.getWidth());
+    const auto totalButtonsHeight = peakHeight + rmsHeight + holdHeight + freezeHeight + gap * 3;
+    const auto topInset = juce::jmax(0, (bounds.getHeight() - totalButtonsHeight) / 2);
+    bounds.removeFromTop(topInset);
 
-    peakButton.setBounds(bounds.removeFromTop(buttonHeight));
+    peakButton.setBounds(bounds.removeFromTop(peakHeight));
     bounds.removeFromTop(gap);
-    rmsButton.setBounds(bounds.removeFromTop(buttonHeight));
+    rmsButton.setBounds(bounds.removeFromTop(rmsHeight));
     bounds.removeFromTop(gap);
-    holdButton.setBounds(bounds.removeFromTop(buttonHeight));
+    holdButton.setBounds(bounds.removeFromTop(holdHeight));
     bounds.removeFromTop(gap);
-    freezeButton.setBounds(bounds);
+    freezeButton.setBounds(bounds.removeFromTop(freezeHeight));
 }
 
 void AnalyzerMeterControlsComponent::analyzerUiStateChanged(const Ui::AnalyzerUiState &state) {
@@ -73,30 +88,8 @@ void AnalyzerMeterControlsComponent::analyzerUiStateChanged(const Ui::AnalyzerUi
 }
 
 void AnalyzerMeterControlsComponent::syncButtonStates(const Ui::AnalyzerUiState &state) {
-    styleButton(peakButton, state.meterSettings.showPeak);
-    styleButton(rmsButton, state.meterSettings.showRms);
-    styleButton(holdButton, state.meterSettings.showHold);
-    syncFreezeButtonState(state);
-}
-
-void AnalyzerMeterControlsComponent::styleButton(juce::TextButton &button, const bool isEnabled) const {
-    const auto fillColour = isEnabled ? theme.controlSurfaceHover.brighter(0.18f)
-                                      : theme.controlSurface;
-    const auto textColour = isEnabled ? theme.controlText
-                                      : theme.controlText.withAlpha(0.94f);
-    button.setColour(juce::TextButton::buttonColourId, fillColour);
-    button.setColour(juce::TextButton::buttonOnColourId, fillColour);
-    button.setColour(juce::TextButton::textColourOffId, textColour);
-    button.setColour(juce::TextButton::textColourOnId, textColour);
-    button.setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
-}
-
-void AnalyzerMeterControlsComponent::syncFreezeButtonState(const Ui::AnalyzerUiState &state) {
-    const auto freezeIconStyle = Ui::getIconActionButtonStyle(theme, state.frozen, false);
-    SignalSlotActionButton::Style freezeStyle;
-    freezeStyle.content = SignalSlotActionButton::Content::snowflake;
-    freezeStyle.fill = freezeIconStyle.fill;
-    freezeStyle.hoverFill = Ui::getIconActionButtonStyle(theme, state.frozen, true).fill;
-    freezeStyle.foreground = freezeIconStyle.icon;
-    freezeButton.setStyle(freezeStyle);
+    peakButton.setActive(state.meterSettings.showPeak);
+    rmsButton.setActive(state.meterSettings.showRms);
+    holdButton.setActive(state.meterSettings.showHold);
+    freezeButton.setActive(state.frozen);
 }

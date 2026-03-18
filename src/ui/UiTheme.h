@@ -23,7 +23,10 @@ namespace Ui {
 
     struct MeterControlsMetrics {
         int verticalPadding = 6;
-        int buttonGap = 6;
+        int horizontalPadding = 4;
+        int buttonGap = 0;
+        float padScale = 0.75f;
+        float padTextFontHeight = 16.0f;
     };
 
     struct RackMetrics {
@@ -67,12 +70,22 @@ namespace Ui {
         float colourGap = 4.0f;
     };
 
+    struct BackgroundMetrics {
+        int screwPadding = 2;
+    };
+
+    struct AssetMetrics {
+        float rasterScale = 2.0f;
+    };
+
     struct Metrics {
         PanelMetrics panel;
         MeterControlsMetrics meterControls;
         RackMetrics rack;
         SlotMetrics slot;
         PopupMetrics popup;
+        BackgroundMetrics background;
+        AssetMetrics assets;
     };
 
     struct Theme {
@@ -92,6 +105,8 @@ namespace Ui {
         juce::Colour tooltipBackground;
         juce::Colour tooltipBorder;
         juce::Colour tooltipText;
+        juce::Colour hardwareMarkingLight;
+        juce::Colour hardwareMarkingDark;
         Metrics metrics;
     };
 
