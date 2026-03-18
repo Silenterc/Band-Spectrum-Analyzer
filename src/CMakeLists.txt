@@ -35,7 +35,12 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/view/AnalyzerComponent.cpp
         ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/view/SignalRackComponent.cpp
+        ui/analyzer/view/SignalSlotActionButton.cpp
         ui/analyzer/view/SignalSlotComponent.cpp
+        ui/analyzer/view/SignalSlotDragHandle.cpp
+        ui/analyzer/view/SignalSlotModeButton.cpp
+        ui/analyzer/view/SignalSlotSourceToggle.cpp
+        ui/analyzer/view/SignalSlotSwatchButton.cpp
         ui/analyzer/popups/SignalColourPopupContent.cpp
         ui/analyzer/popups/SignalSelectionPopupContent.cpp
         ui/analyzer/model/AnalyzerRefreshModel.cpp

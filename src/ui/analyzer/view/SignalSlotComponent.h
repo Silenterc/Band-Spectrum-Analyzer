@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -8,18 +9,11 @@
 #include "../../SignalSlotUiState.h"
 #include "../../UiTheme.h"
 #include "../model/SignalSlotOptions.h"
-
-enum class SignalSlotHitArea {
-    sourceToggleMain,
-    sourceToggleSidechain,
-    modePicker,
-    swatch,
-    dragHandle,
-    visibility,
-    freeze,
-    remove,
-    body
-};
+#include "SignalSlotActionButton.h"
+#include "SignalSlotDragHandle.h"
+#include "SignalSlotModeButton.h"
+#include "SignalSlotSourceToggle.h"
+#include "SignalSlotSwatchButton.h"
 
 class SignalSlotComponent final : public juce::Component {
 public:
@@ -45,12 +39,7 @@ public:
     std::function<void(size_t, float)> onReorderDragEnded;
 
     void paint(juce::Graphics &g) override;
-    void mouseDown(const juce::MouseEvent &event) override;
-    void mouseMove(const juce::MouseEvent &event) override;
-    void mouseDrag(const juce::MouseEvent &event) override;
-    void mouseUp(const juce::MouseEvent &event) override;
-    void mouseDoubleClick(const juce::MouseEvent &event) override;
-    void mouseExit(const juce::MouseEvent &event) override;
+    void resized() override;
 
 private:
     enum class OpenPopupMenu {
@@ -59,30 +48,30 @@ private:
         colour
     };
 
+    void refreshChildState();
     juce::Rectangle<float> getContentBounds() const;
     juce::Rectangle<float> getTopRowBounds() const;
     juce::Rectangle<float> getBottomRowBounds() const;
-    juce::Rectangle<float> getSourceToggleBounds() const;
-    juce::Rectangle<float> getSourceMainBounds() const;
-    juce::Rectangle<float> getSourceSidechainBounds() const;
-    juce::Rectangle<float> getModePickerBounds() const;
-    juce::Rectangle<float> getSwatchBounds() const;
-    juce::Rectangle<float> getDragHandleBounds() const;
-    juce::Rectangle<float> getVisibilityBounds() const;
-    juce::Rectangle<float> getFreezeBounds() const;
-    juce::Rectangle<float> getRemoveBounds() const;
     float getActionClusterWidth() const;
-    SignalSlotHitArea getHitAreaAt(const juce::Point<float> &position) const;
     bool isColourAvailable(int colourIndex) const;
     bool isSignalAvailable(Analyzer::SignalSource source, Analyzer::SignalMode mode) const;
-    static OpenPopupMenu popupMenuForHitArea(SignalSlotHitArea hitArea);
     void dismissOpenMenu();
     void launchCallout(std::unique_ptr<juce::Component> content, OpenPopupMenu kind,
                        const juce::Rectangle<int> &anchorBounds);
     void showSignalMenu();
     void showColourMenu();
-    void setHoveredHitArea(std::optional<SignalSlotHitArea> hitArea);
-    void updateCursor(const juce::Point<float> &position);
+    void handleSourceSelected(Analyzer::SignalSource source);
+    void handleModePressed();
+    void handleModeClicked();
+    void handleVisibilityClicked();
+    void handleFreezeClicked();
+    void handleRemoveClicked();
+    void handleSwatchClicked();
+    void handleOpacityChanged(float opacity);
+    void handleOpacityReset();
+    void handleReorderDragStarted(float parentX);
+    void handleReorderDragged(float parentX);
+    void handleReorderDragEnded(float parentX);
 
     const Ui::Theme &theme;
     size_t slotIndex = 0;
@@ -90,16 +79,15 @@ private:
     std::vector<int> usedColours;
     std::vector<Ui::SignalSlotKey> usedSignalConfigs;
     bool isSidechainRouted = false;
-    SignalSlotHitArea mouseDownHitArea = SignalSlotHitArea::body;
-    juce::Point<float> mouseDownPosition;
-    bool isTrackingOpacityDrag = false;
-    bool didOpacityDrag = false;
-    bool isTrackingReorderDrag = false;
-    bool isReorderDragging = false;
     bool isDragged = false;
-    bool suppressMouseUpAction = false;
-    std::optional<SignalSlotHitArea> hoveredHitArea;
+    bool suppressNextModeButtonClick = false;
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
     juce::Component::SafePointer<juce::CallOutBox> activeCallout;
-    float dragStartOpacity = Ui::defaultSignalOpacity;
+    SignalSlotSourceToggle sourceToggle;
+    SignalSlotModeButton modeButton;
+    SignalSlotSwatchButton swatchButton;
+    SignalSlotDragHandle dragHandle;
+    SignalSlotActionButton visibilityButton;
+    SignalSlotActionButton freezeButton;
+    SignalSlotActionButton removeButton;
 };

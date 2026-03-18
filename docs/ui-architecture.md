@@ -268,7 +268,17 @@ Current slot-cell layout:
 Interaction split:
 
 - `SignalSlotComponent`
-  - owns cell painting, hit-testing, source-toggle interaction, and mode/colour popup launch points
+  - owns slot background, child layout, popup launch points, and routes child interactions into the existing slot callbacks
+- `SignalSlotSourceToggle`
+  - owns the inline `Main / Sidechain` source control
+- `SignalSlotModeButton`
+  - owns the mode-picker button surface
+- `SignalSlotSwatchButton`
+  - owns colour display plus opacity drag/reset interaction
+- `SignalSlotDragHandle`
+  - owns drag-handle painting and reorder gesture tracking
+- `SignalSlotActionButton`
+  - shared small action-button primitive used for visibility, freeze, and remove
 - `SignalSelectionPopupContent`
   - now presents only mode choices for the slot's current source
 - `SignalRackComponent`
