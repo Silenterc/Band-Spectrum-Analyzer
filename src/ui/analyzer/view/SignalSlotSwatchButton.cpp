@@ -1,5 +1,7 @@
 #include "SignalSlotSwatchButton.h"
 
+#include "../../../shared/DefaultParameterValues.h"
+
 SignalSlotSwatchButton::SignalSlotSwatchButton(const Ui::Theme &themeToUse)
     : theme(themeToUse) {
     setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
@@ -33,7 +35,9 @@ void SignalSlotSwatchButton::mouseDrag(const juce::MouseEvent &event) {
     if (!didOpacityDrag || !onOpacityChanged)
         return;
 
-    const auto newOpacity = juce::jlimit(0.15f, 1.0f, dragStartOpacity + (mouseDownPosition.y - event.position.y) * 0.005f);
+    const auto newOpacity = juce::jlimit(Defaults::signalOpacityMin,
+                                         Defaults::signalOpacityMax,
+                                         dragStartOpacity + (mouseDownPosition.y - event.position.y) * 0.005f);
     opacity = newOpacity;
     onOpacityChanged(newOpacity);
 }

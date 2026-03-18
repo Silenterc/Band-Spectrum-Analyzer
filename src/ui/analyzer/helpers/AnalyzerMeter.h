@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../../../dsp/core/AnalyzerData.h"
+#include "../../../shared/DefaultParameterValues.h"
 #include "../AnalyzerRenderData.h"
 
 /**
@@ -72,10 +73,10 @@ private:
     static float getMeanPower(const Analyzer::BandMeasurements &measurements);
     static float pushMeanPower(RmsWindowState &windowState, float meanPower, float dtSeconds);
 
-    static constexpr float rmsWindowMs = 180.0f;
-    static constexpr float rmsDecayDbPerSecond = 15.0f;
-    static constexpr float peakDecayDbPerSecond = 15.0f;
-    static constexpr float holdDecayDbPerSecond = 12.0f;
+    static constexpr float rmsWindowMs = Defaults::rmsWindowMs;
+    static constexpr float rmsDecayDbPerSecond = Defaults::rmsDecayDbPerSecond;
+    static constexpr float peakDecayDbPerSecond = Defaults::peakDecayDbPerSecond;
+    static constexpr float holdDecayDbPerSecond = Defaults::holdDecayDbPerSecond;
 
     std::vector<TraceState> traceStates;
     Analyzer::RenderData renderData;
