@@ -7,6 +7,11 @@
 class PadButton final : public juce::Component,
                         public juce::SettableTooltipClient {
 public:
+    enum class AssetStyle {
+        standard,
+        freeze
+    };
+
     enum class OverlayIcon {
         none,
         snowflake
@@ -20,6 +25,7 @@ public:
     void resized() override;
 
     void setActive(bool shouldBeActive);
+    void setAssetStyle(AssetStyle newAssetStyle);
     void setLabel(juce::String newLabel);
     void setOverlayIcon(OverlayIcon newOverlayIcon);
 
@@ -28,6 +34,8 @@ public:
 private:
     static const juce::Image& getOffImage();
     static const juce::Image& getOnImage();
+    static const juce::Image& getFreezeOnImage();
+    const juce::Image& getResolvedOnImage() const;
     void rebuildCachedPadImages();
 
     void mouseUp(const juce::MouseEvent& event) override;
@@ -35,6 +43,7 @@ private:
     const Ui::Theme& theme;
     juce::String label;
     bool active = false;
+    AssetStyle assetStyle = AssetStyle::standard;
     OverlayIcon overlayIcon = OverlayIcon::none;
     juce::Rectangle<int> padBounds;
     juce::Image cachedOffImage;

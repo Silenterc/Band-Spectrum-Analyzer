@@ -62,6 +62,7 @@ void PadButton::resized() {
     const auto targetWidth = juce::jmax(1, juce::roundToInt(logicalWidth * scale));
     const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * scale));
     padBounds = juce::Rectangle<int>(targetWidth, targetHeight).withCentre(bounds.getCentre());
+    padBounds.translate(metrics.padOpticalOffsetX, 0);
 
     rebuildCachedPadImages();
 }
@@ -71,6 +72,15 @@ void PadButton::setActive(const bool shouldBeActive) {
         return;
 
     active = shouldBeActive;
+    repaint();
+}
+
+void PadButton::setAssetStyle(const AssetStyle newAssetStyle) {
+    if (assetStyle == newAssetStyle)
+        return;
+
+    assetStyle = newAssetStyle;
+    rebuildCachedPadImages();
     repaint();
 }
 
@@ -107,6 +117,24 @@ const juce::Image& PadButton::getOnImage() {
     return image;
 }
 
+const juce::Image& PadButton::getFreezeOnImage() {
+    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_freeze_on_png,
+                                                              static_cast<size_t>(BinaryData::pad_freeze_on_pngSize));
+    return image;
+}
+
+const juce::Image& PadButton::getResolvedOnImage() const {
+    switch (assetStyle) {
+        case AssetStyle::standard:
+            return getOnImage();
+        case AssetStyle::freeze:
+            return getFreezeOnImage();
+    }
+
+    jassertfalse;
+    return getOnImage();
+}
+
 void PadButton::rebuildCachedPadImages() {
     if (padBounds.isEmpty()) {
         cachedOffImage = {};
@@ -115,5 +143,5 @@ void PadButton::rebuildCachedPadImages() {
     }
 
     cachedOffImage = getOffImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
-    cachedOnImage = getOnImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
+    cachedOnImage = getResolvedOnImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
 }

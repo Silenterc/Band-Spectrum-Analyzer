@@ -47,6 +47,7 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSo
     rmsButton.setTooltip("Show RMS");
     holdButton.setTooltip("Show Peak Hold");
     freezeButton.setTooltip("Freeze analyzer");
+    freezeButton.setAssetStyle(PadButton::AssetStyle::freeze);
     freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
 
     uiStateSource.addAnalyzerUiStateListener(*this);

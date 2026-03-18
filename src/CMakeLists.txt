@@ -5,6 +5,7 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/icons/snowflake.svg
         ui/assets/uikit/background.png
         ui/assets/uikit/pad/pad_off.png
+        ui/assets/uikit/pad/pad_freeze_on.png
         ui/assets/uikit/pad/pad_on.png
         ui/assets/uikit/screw.png)
 
@@ -37,9 +38,10 @@ target_sources(${PROJECT_NAME}
         dsp/sources/AnalysisSourceBuilder.cpp
         ui/UiIcons.cpp
         ui/PadButton.cpp
+        ui/SectionDividerComponent.cpp
         ui/UiTheme.cpp
         ui/EditorBackgroundComponent.cpp
-        ui/analyzer/view/AnalyzerPanelComponent.cpp
+        ui/analyzer/view/MainLayoutComponent.cpp
         ui/analyzer/view/AnalyzerComponent.cpp
         ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/view/SignalRackComponent.cpp

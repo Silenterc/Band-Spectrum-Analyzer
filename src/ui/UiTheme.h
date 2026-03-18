@@ -14,17 +14,17 @@ namespace Ui {
     };
 
     struct PanelMetrics {
-        int outerPadding = 18;
         int analyzerToRackGap = 10;
         int rackHeight = 88;
         int analyzerToSideStripGap = 10;
-        int sideStripWidth = 96;
+        int sideStripWidth = 84;
     };
 
     struct MeterControlsMetrics {
-        int verticalPadding = 6;
-        int horizontalPadding = 4;
+        int verticalPadding = 0;
+        int horizontalPadding = 0;
         int buttonGap = 0;
+        int padOpticalOffsetX = -1;
         float padScale = 0.75f;
         float padTextFontHeight = 16.0f;
     };
@@ -71,7 +71,12 @@ namespace Ui {
     };
 
     struct BackgroundMetrics {
+        int woodSideInset = 32;
         int screwPadding = 2;
+    };
+
+    struct SectionDividerMetrics {
+        int thickness = 6;
     };
 
     struct AssetMetrics {
@@ -85,6 +90,7 @@ namespace Ui {
         SlotMetrics slot;
         PopupMetrics popup;
         BackgroundMetrics background;
+        SectionDividerMetrics sectionDivider;
         AssetMetrics assets;
     };
 
@@ -107,6 +113,8 @@ namespace Ui {
         juce::Colour tooltipText;
         juce::Colour hardwareMarkingLight;
         juce::Colour hardwareMarkingDark;
+        juce::Colour sectionDividerShadow;
+        juce::Colour sectionDividerHighlight;
         Metrics metrics;
     };
 

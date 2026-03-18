@@ -4,7 +4,7 @@
 
 #include "EditorBackgroundComponent.h"
 #include "UiTheme.h"
-#include "analyzer/view/AnalyzerPanelComponent.h"
+#include "analyzer/view/MainLayoutComponent.h"
 
 class SpectrumAnalyzerAudioProcessor;
 
@@ -23,7 +23,7 @@ public:
 private:
     Ui::Theme theme;
     EditorBackgroundComponent backgroundComponent;
-    AnalyzerPanelComponent analyzerPanel;
+    MainLayoutComponent mainLayout;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerAudioProcessorEditor)
 };
