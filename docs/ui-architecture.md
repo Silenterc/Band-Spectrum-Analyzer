@@ -27,34 +27,29 @@ flowchart TD
 ```mermaid
 flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Panel[AnalyzerPanelComponent]
-    Panel --> Freeze[Freeze icon button]
     Panel --> Plot[AnalyzerComponent]
+    Panel --> SideStrip[AnalyzerMeterControlsComponent]
     Panel --> Rack[SignalRackComponent]
-    Panel --> MeterRail[AnalyzerMeterControlsComponent]
 ```
 
 Current layout in `AnalyzerPanelComponent`:
 
-- top header:
-  - snowflake freeze button on the right
 - main body:
-  - analyzer plot
+  - left: analyzer plot
+  - right: vertical analyzer control strip
 - bottom strip:
-  - left: signal rack
-  - right: vertical meter toggle rail
+  - signal rack
 
 ## 3. UI Responsibilities By Layer
 
 ```mermaid
 flowchart LR
     DataSource[AnalyzerDataSource] --> Plot[AnalyzerComponent]
-    UiState[AnalyzerUiStateSource] --> Freeze[Freeze icon button]
     UiState --> Rack[SignalRackComponent]
-    UiState --> MeterRail[AnalyzerMeterControlsComponent]
+    UiState --> SideStrip[AnalyzerMeterControlsComponent]
 
     Settings[AnalyzerSettingsActions] --> Rack
-    Settings --> MeterRail
-    Settings --> Freeze[Freeze icon button]
+    Settings --> SideStrip[AnalyzerMeterControlsComponent]
 ```
 
 - `AnalyzerDataSource`
@@ -87,15 +82,30 @@ It owns:
 - `AnalyzerComponent`
 - `SignalRackComponent`
 - `AnalyzerMeterControlsComponent`
-- `freezeButton`
 
 Responsibilities:
 
 - lay out the analyzer panel
-- route global freeze button clicks into `AnalyzerSettingsActions`
-- subscribe to `AnalyzerUiStateSource` and keep the freeze button appearance in sync
+- place the analyzer plot, right-side control strip, and bottom signal rack
 
 It does not do analyzer rendering itself.
+
+## 4a. AnalyzerMeterControlsComponent
+
+`AnalyzerMeterControlsComponent` is the dedicated right-side analyzer control strip.
+
+It owns:
+
+- `Peak` toggle button
+- `RMS` toggle button
+- `Hold` toggle button
+- global freeze button
+
+Responsibilities:
+
+- subscribe to `AnalyzerUiStateSource`
+- keep the strip controls visually in sync with analyzer UI state
+- route analyzer-global meter/freeze actions into `AnalyzerSettingsActions`
 
 ## 5. AnalyzerComponent Rendering Flow
 
@@ -360,10 +370,8 @@ Picker rules:
 - duplicate source/mode combinations are disabled
 - duplicate preset colors are disabled
 - slot picker options are driven from `src/ui/analyzer/model/SignalSlotOptions.h`
-- when sidechain is unavailable:
-  - signal picker shows one section with `Mid / Side / Stereo`
-- when sidechain is available:
-  - signal picker shows `Main` and `Sidechain` sections inside one callout
+- source selection lives inline in the slot cell via the `Main / Sidechain` toggle
+- the signal picker callout now shows only `Mid / Side / Stereo` for the slot's currently selected source
 - both signal and color pickers are custom `CallOutBox` content, not `PopupMenu`
 - clicking the same opener again dismisses the currently open callout
 
@@ -374,13 +382,14 @@ flowchart TD
     MeterRail[AnalyzerMeterControlsComponent] --> Peak[Peak button]
     MeterRail --> RMS[RMS button]
     MeterRail --> Hold[Hold button]
+    MeterRail --> Freeze[Freeze button]
 ```
 
 Responsibilities:
 
 - subscribe to `AnalyzerUiStateSource`
-- keep the three buttons visually synced
-- send toggles through `AnalyzerSettingsActions`
+- keep the strip controls visually synced
+- send meter/freeze toggles through `AnalyzerSettingsActions`
 
 Current styling:
 

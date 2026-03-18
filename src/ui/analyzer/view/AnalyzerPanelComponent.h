@@ -6,13 +6,11 @@
 #include "../../AnalyzerSettingsActions.h"
 #include "../../AnalyzerUiStateSource.h"
 #include "../../UiTheme.h"
-#include "AnalyzerFreezeButton.h"
 #include "AnalyzerComponent.h"
 #include "AnalyzerMeterControlsComponent.h"
 #include "SignalRackComponent.h"
 
-class AnalyzerPanelComponent final : public juce::Component,
-                                     private AnalyzerUiStateSource::Listener {
+class AnalyzerPanelComponent final : public juce::Component {
 public:
     AnalyzerPanelComponent(AnalyzerDataSource &dataSource,
                            AnalyzerUiStateSource &uiStateSource,
@@ -24,16 +22,8 @@ public:
     void resized() override;
 
 private:
-    void analyzerUiStateChanged(const Ui::AnalyzerUiState &state) override;
-    void syncFreezeButtonState(const Ui::AnalyzerUiState &state);
-    void setLocalFrozenState(bool isFrozen);
-
-    AnalyzerUiStateSource &uiStateSource;
-    AnalyzerSettingsActions &settingsActions;
     const Ui::Theme &theme;
     AnalyzerComponent analyzerComponent;
     SignalRackComponent signalRackComponent;
     AnalyzerMeterControlsComponent meterControlsComponent;
-    AnalyzerFreezeButton freezeButton;
-    Ui::AnalyzerUiState currentState;
 };

@@ -13,7 +13,7 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(Spect
       analyzerPanel(audioProcessor, audioProcessor, audioProcessor, theme) {
     setOpaque(true);
     addAndMakeVisible(analyzerPanel);
-    setSize(1000, 600);
+    setSize(1080, 600);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {

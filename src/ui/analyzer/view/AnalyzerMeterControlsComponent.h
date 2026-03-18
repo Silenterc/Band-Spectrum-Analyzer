@@ -7,6 +7,7 @@
 #include "../../AnalyzerSettingsActions.h"
 #include "../../AnalyzerUiStateSource.h"
 #include "../../UiTheme.h"
+#include "SignalSlotActionButton.h"
 
 class AnalyzerMeterControlsComponent final : public juce::Component,
                                              private AnalyzerUiStateSource::Listener {
@@ -23,6 +24,7 @@ private:
     void analyzerUiStateChanged(const Ui::AnalyzerUiState &state) override;
     void syncButtonStates(const Ui::AnalyzerUiState &state);
     void styleButton(juce::TextButton &button, bool isEnabled) const;
+    void syncFreezeButtonState(const Ui::AnalyzerUiState &state);
 
     AnalyzerUiStateSource &uiStateSource;
     AnalyzerSettingsActions &settingsActions;
@@ -30,5 +32,6 @@ private:
     juce::TextButton peakButton { "Peak" };
     juce::TextButton rmsButton { "RMS" };
     juce::TextButton holdButton { "Hold" };
+    SignalSlotActionButton freezeButton;
     Ui::AnalyzerUiState currentState;
 };

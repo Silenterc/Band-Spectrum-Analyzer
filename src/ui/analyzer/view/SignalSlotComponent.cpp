@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "../../UiButtonDrawing.h"
 #include "../popups/SignalColourPopupContent.h"
 #include "../popups/SignalSelectionPopupContent.h"
 
@@ -130,25 +131,23 @@ void SignalSlotComponent::refreshChildState() {
     dragHandle.setDragged(isDragged);
 
     SignalSlotActionButton::Style visibilityStyle;
-    visibilityStyle.content = SignalSlotActionButton::Content::text;
-    visibilityStyle.text = settings.visible ? "On" : "Off";
-    visibilityStyle.fontHeight = 11.0f;
-    visibilityStyle.fill = settings.visible ? theme.accentButton : theme.controlSurface;
-    visibilityStyle.hoverFill = settings.visible ? theme.accentButton.brighter(0.14f) : theme.controlSurfaceHover;
-    visibilityStyle.foreground = theme.controlText;
+    const auto visibilityIconStyle = Ui::getIconActionButtonStyle(theme, settings.visible, false);
+    visibilityStyle.content = SignalSlotActionButton::Content::power;
+    visibilityStyle.fill = visibilityIconStyle.fill;
+    visibilityStyle.hoverFill = Ui::getIconActionButtonStyle(theme, settings.visible, true).fill;
+    visibilityStyle.foreground = visibilityIconStyle.icon;
     visibilityButton.setStyle(visibilityStyle);
 
     SignalSlotActionButton::Style freezeStyle;
+    const auto freezeIconStyle = Ui::getIconActionButtonStyle(theme, settings.frozen, false);
     freezeStyle.content = SignalSlotActionButton::Content::snowflake;
-    freezeStyle.fill = settings.frozen ? theme.accentButton : theme.controlSurface;
-    freezeStyle.hoverFill = settings.frozen ? theme.accentButton.brighter(0.14f) : theme.controlSurfaceHover;
-    freezeStyle.foreground = settings.frozen ? theme.controlText : theme.subtleText;
+    freezeStyle.fill = freezeIconStyle.fill;
+    freezeStyle.hoverFill = Ui::getIconActionButtonStyle(theme, settings.frozen, true).fill;
+    freezeStyle.foreground = freezeIconStyle.icon;
     freezeButton.setStyle(freezeStyle);
 
     SignalSlotActionButton::Style removeStyle;
-    removeStyle.content = SignalSlotActionButton::Content::text;
-    removeStyle.text = "x";
-    removeStyle.fontHeight = 15.0f;
+    removeStyle.content = SignalSlotActionButton::Content::cancel;
     removeStyle.fill = theme.controlSurface;
     removeStyle.hoverFill = theme.controlSurfaceHover;
     removeStyle.foreground = theme.subtleText;

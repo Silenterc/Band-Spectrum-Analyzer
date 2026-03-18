@@ -15,13 +15,10 @@ namespace Ui {
 
     struct PanelMetrics {
         int outerPadding = 18;
-        int headerHeight = 40;
-        int headerButtonSize = 34;
-        int headerBottomGap = 6;
         int analyzerToRackGap = 10;
         int rackHeight = 88;
-        int rackToMeterGap = 10;
-        int meterControlsWidth = 90;
+        int analyzerToSideStripGap = 10;
+        int sideStripWidth = 96;
     };
 
     struct MeterControlsMetrics {

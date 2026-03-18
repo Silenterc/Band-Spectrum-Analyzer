@@ -6,10 +6,13 @@
 
 #include "../../UiTheme.h"
 
-class SignalSlotActionButton final : public juce::Component {
+class SignalSlotActionButton final : public juce::Component,
+                                     public juce::SettableTooltipClient {
 public:
     enum class Content {
         text,
+        cancel,
+        power,
         snowflake
     };
 

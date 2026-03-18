@@ -16,8 +16,22 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
     const auto bounds = getLocalBounds().toFloat();
     const auto fill = hovered ? style.hoverFill : style.fill;
 
+    if (style.content == Content::cancel) {
+        g.setColour(fill);
+        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        Ui::drawCancelIcon(g, bounds.reduced(4.0f), style.foreground);
+        return;
+    }
+
+    if (style.content == Content::power) {
+        g.setColour(fill);
+        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        Ui::drawPowerIcon(g, bounds.reduced(4.0f), style.foreground);
+        return;
+    }
+
     if (style.content == Content::snowflake) {
-        Ui::SnowflakeButtonStyle snowflakeStyle;
+        Ui::IconActionButtonStyle snowflakeStyle;
         snowflakeStyle.fill = fill;
         snowflakeStyle.icon = style.foreground;
         Ui::drawSnowflakeActionButton(g, bounds, theme, snowflakeStyle, 4.0f);

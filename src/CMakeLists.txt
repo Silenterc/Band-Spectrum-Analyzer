@@ -1,5 +1,7 @@
 juce_add_binary_data(BsaUiAssets
     SOURCES
+        ui/assets/icons/cancel.svg
+        ui/assets/icons/power.svg
         ui/assets/icons/snowflake.svg)
 
 juce_add_plugin(${PROJECT_NAME}
