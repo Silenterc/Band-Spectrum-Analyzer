@@ -6,7 +6,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
 namespace {
-    constexpr float holdResetToleranceDb = 0.5f;
+    constexpr float holdResetToleranceDb = 1.5f;
 }
 
 void AnalyzerMeter::reset() {
