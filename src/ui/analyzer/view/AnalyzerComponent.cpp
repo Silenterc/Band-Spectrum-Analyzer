@@ -24,7 +24,7 @@ bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey 
 
 AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
     : dataSource(source), theme(themeToUse) {
-    setOpaque(true);
+    setOpaque(false);
 
     refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
     bandInfo = dataSource.getBandInfo();
@@ -393,11 +393,6 @@ void AnalyzerComponent::ensureStaticLayer() {
 
     staticLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics layerGraphics(staticLayer);
-    layerGraphics.fillAll(theme.analyzerBackground);
-
-    const auto plotBounds = viewModel.getPlotBounds();
-    layerGraphics.setColour(theme.plotBackground);
-    layerGraphics.fillRoundedRectangle(plotBounds.expanded(6.0f, 6.0f), 10.0f);
     drawGrid(layerGraphics);
     staticLayerDirty = false;
 }

@@ -7,17 +7,17 @@ This document describes the current editor and analyzer UI architecture from `Sp
 ```mermaid
 flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Theme[Ui::Theme]
-    Editor --> Panel[AnalyzerPanelComponent]
+    Editor --> Layout[MainLayoutComponent]
     Processor[SpectrumAnalyzerAudioProcessor] --> DataSource[AnalyzerDataSource]
     Processor --> UiState[AnalyzerUiStateSource]
     Processor --> Settings[AnalyzerSettingsActions]
-    DataSource --> Panel
-    UiState --> Panel
-    Settings --> Panel
+    DataSource --> Layout
+    UiState --> Layout
+    Settings --> Layout
 ```
 
-- The editor owns the theme and one `AnalyzerPanelComponent`.
-- The processor is passed into the panel three times:
+- The editor owns the theme and one `MainLayoutComponent`.
+- The processor is passed into the layout three times:
   - as `AnalyzerDataSource` for read-only UI state
   - as `AnalyzerUiStateSource` for discrete UI snapshots and change notifications
   - as `AnalyzerSettingsActions` for UI-triggered parameter changes
@@ -26,16 +26,17 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Editor[SpectrumAnalyzerAudioProcessorEditor] --> Panel[AnalyzerPanelComponent]
-    Panel --> Plot[AnalyzerComponent]
-    Panel --> SideStrip[AnalyzerMeterControlsComponent]
-    Panel --> Rack[SignalRackComponent]
+    Editor[SpectrumAnalyzerAudioProcessorEditor] --> Layout[MainLayoutComponent]
+    Layout --> AnalyzerSection[AnalyzerSectionComponent]
+    AnalyzerSection --> Plot[AnalyzerComponent]
+    Layout --> SideStrip[AnalyzerMeterControlsComponent]
+    Layout --> Rack[SignalRackComponent]
 ```
 
-Current layout in `AnalyzerPanelComponent`:
+Current layout in `MainLayoutComponent`:
 
 - main body:
-  - left: analyzer plot
+  - left: analyzer section
   - right: vertical analyzer control strip
 - bottom strip:
   - signal rack
@@ -73,24 +74,41 @@ Current analyzer folder split:
 - `src/ui/analyzer/helpers/`
   - low-level geometry, smoothing, hover, and formatting helpers
 
-## 4. AnalyzerPanelComponent
+## 4. MainLayoutComponent
 
-`AnalyzerPanelComponent` is the UI coordinator.
+`MainLayoutComponent` is the top-level UI coordinator.
 
 It owns:
 
-- `AnalyzerComponent`
+- `AnalyzerSectionComponent`
 - `SignalRackComponent`
 - `AnalyzerMeterControlsComponent`
 
 Responsibilities:
 
-- lay out the analyzer panel
-- place the analyzer plot, right-side control strip, and bottom signal rack
+- compute the three main section bounds
+- place the analyzer section, right-side control strip, and bottom signal rack
+- place the major section dividers between those bounds
 
 It does not do analyzer rendering itself.
 
-## 4a. AnalyzerMeterControlsComponent
+## 4a. AnalyzerSectionComponent
+
+`AnalyzerSectionComponent` is the dedicated analyzer-area container.
+
+It owns:
+
+- `AnalyzerComponent`
+
+Responsibilities:
+
+- own analyzer-section-local layout
+- define where the live analyzer display lives inside the analyzer section
+- provide a stable place for future digital analyzer styling without mixing it into the renderer
+
+It does not own analyzer data polling or trace rendering logic.
+
+## 4b. AnalyzerMeterControlsComponent
 
 `AnalyzerMeterControlsComponent` is the dedicated right-side analyzer control strip.
 

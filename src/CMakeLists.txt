@@ -44,6 +44,7 @@ target_sources(${PROJECT_NAME}
         ui/UiTheme.cpp
         ui/EditorBackgroundComponent.cpp
         ui/analyzer/view/MainLayoutComponent.cpp
+        ui/analyzer/view/AnalyzerSectionComponent.cpp
         ui/analyzer/view/AnalyzerComponent.cpp
         ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/view/SignalRackComponent.cpp

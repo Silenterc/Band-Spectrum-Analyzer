@@ -41,6 +41,10 @@ namespace Ui {
         float padTextFontHeight = 16.0f;
     };
 
+    struct AnalyzerSectionMetrics {
+        int plotInset = 36;
+    };
+
     struct RackMetrics {
         float verticalInset = 4.0f;
         float itemGap = 8.0f;
@@ -98,6 +102,7 @@ namespace Ui {
     struct Metrics {
         PanelMetrics panel;
         MeterControlsMetrics meterControls;
+        AnalyzerSectionMetrics analyzerSection;
         RackMetrics rack;
         SlotMetrics slot;
         PopupMetrics popup;

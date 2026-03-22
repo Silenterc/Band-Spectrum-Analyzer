@@ -7,7 +7,7 @@
 #include "../../AnalyzerUiStateSource.h"
 #include "../../SectionDividerComponent.h"
 #include "../../UiTheme.h"
-#include "AnalyzerComponent.h"
+#include "AnalyzerSectionComponent.h"
 #include "AnalyzerMeterControlsComponent.h"
 #include "SignalRackComponent.h"
 
@@ -36,7 +36,7 @@ private:
     Layout computeLayout() const;
 
     const Ui::Theme& theme;
-    AnalyzerComponent analyzerComponent;
+    AnalyzerSectionComponent analyzerSectionComponent;
     SignalRackComponent signalRackComponent;
     AnalyzerMeterControlsComponent meterControlsComponent;
     SectionDividerComponent verticalSectionDivider;

@@ -5,13 +5,12 @@ MainLayoutComponent::MainLayoutComponent(AnalyzerDataSource& dataSourceToUse,
                                          AnalyzerSettingsActions& settingsActionsToUse,
                                          const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      analyzerComponent(dataSourceToUse, themeToUse),
+      analyzerSectionComponent(dataSourceToUse, themeToUse),
       signalRackComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
       meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
       verticalSectionDivider(themeToUse, SectionDividerComponent::Orientation::vertical),
       horizontalSectionDivider(themeToUse, SectionDividerComponent::Orientation::horizontal) {
-    // TODO: Re-enable the digital analyzer once the rasterized screen layout is ready.
-    addChildComponent(analyzerComponent);
+    addAndMakeVisible(analyzerSectionComponent);
     // TODO: Re-enable the digital signal rack once the rasterized bottom-panel layout is ready.
     addChildComponent(signalRackComponent);
     addAndMakeVisible(verticalSectionDivider);
@@ -29,7 +28,7 @@ void MainLayoutComponent::paint(juce::Graphics& g) {
 void MainLayoutComponent::resized() {
     const auto layout = computeLayout();
 
-    analyzerComponent.setBounds(layout.analyzerBounds);
+    analyzerSectionComponent.setBounds(layout.analyzerBounds);
     signalRackComponent.setBounds(layout.rackBounds);
     meterControlsComponent.setBounds(layout.actionsBounds);
     verticalSectionDivider.setBounds(layout.verticalDividerBounds);

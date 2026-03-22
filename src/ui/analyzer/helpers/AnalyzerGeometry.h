@@ -7,6 +7,17 @@
 
 #include "../../../dsp/core/AnalyzerData.h"
 
+namespace AnalyzerLayout {
+    struct PlotMargins {
+        float left = 56.0f;
+        float right = 16.0f;
+        float top = 16.0f;
+        float bottom = 34.0f;
+    };
+
+    inline constexpr PlotMargins plotMargins{};
+}
+
 /**
  * Converts analyzer data between domain space and screen space
  */

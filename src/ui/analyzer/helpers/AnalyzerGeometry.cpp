@@ -4,20 +4,16 @@
 #include <cmath>
 
 namespace {
-    constexpr float leftMargin = 56.0f;
-    constexpr float rightMargin = 16.0f;
-    constexpr float topMargin = 16.0f;
-    constexpr float bottomMargin = 34.0f;
     constexpr float tooltipWidth = 132.0f;
     constexpr float tooltipHeight = 88.0f;
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<float> &localBounds) const {
     auto bounds = localBounds;
-    bounds.removeFromTop(topMargin);
-    bounds.removeFromLeft(leftMargin);
-    bounds.removeFromRight(rightMargin);
-    bounds.removeFromBottom(bottomMargin);
+    bounds.removeFromTop(AnalyzerLayout::plotMargins.top);
+    bounds.removeFromLeft(AnalyzerLayout::plotMargins.left);
+    bounds.removeFromRight(AnalyzerLayout::plotMargins.right);
+    bounds.removeFromBottom(AnalyzerLayout::plotMargins.bottom);
     return bounds;
 }
 
