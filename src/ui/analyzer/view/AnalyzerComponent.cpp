@@ -7,6 +7,9 @@ namespace {
     bool nearlyEqual(const float lhs, const float rhs) {
         return std::abs(lhs - rhs) <= 0.0001f;
     }
+
+    constexpr float plotFrameExpansion = 1.0f;
+    constexpr float plotFrameCornerRadius = 8.0f;
 }
 
 bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey &other) const {
@@ -75,12 +78,13 @@ void AnalyzerComponent::mouseExit(const juce::MouseEvent &event) {
 
 void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
     const auto plotBounds = viewModel.getPlotBounds();
+    const auto plotFrameBounds = plotBounds.expanded(plotFrameExpansion);
 
     g.setColour(theme.gridBorder);
-    g.drawRoundedRectangle(plotBounds.expanded(1.0f), 8.0f, 1.0f);
+    g.drawRoundedRectangle(plotFrameBounds, plotFrameCornerRadius, 1.0f);
 
     for (const auto &gridLine: viewModel.getGridLines()) {
-        g.setColour(theme.gridLine);
+        g.setColour(theme.gridLine.withMultipliedAlpha(0.9f));
         g.drawHorizontalLine(static_cast<int>(std::round(gridLine.y)), plotBounds.getX(), plotBounds.getRight());
 
         g.setColour(theme.axisText);
@@ -89,7 +93,7 @@ void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
     }
 
     for (const auto &frequencyMarker: viewModel.getFrequencyMarkers()) {
-        g.setColour(theme.gridLine);
+        g.setColour(theme.gridLine.withMultipliedAlpha(0.62f));
         g.drawVerticalLine(static_cast<int>(std::round(frequencyMarker.x)), plotBounds.getY(), plotBounds.getBottom());
 
         g.setColour(theme.axisText);
@@ -393,6 +397,20 @@ void AnalyzerComponent::ensureStaticLayer() {
 
     staticLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics layerGraphics(staticLayer);
+    const auto plotBounds = viewModel.getPlotBounds();
+    const auto plotFrameBounds = plotBounds.expanded(plotFrameExpansion);
+    juce::ColourGradient plotGradient(
+        theme.plotBackground.brighter(0.08f),
+        plotBounds.getCentreX(),
+        plotBounds.getY(),
+        theme.plotBackground.darker(0.18f),
+        plotBounds.getCentreX(),
+        plotBounds.getBottom(),
+        false);
+    plotGradient.addColour(0.52, theme.plotBackground);
+    layerGraphics.setGradientFill(plotGradient);
+    layerGraphics.fillRoundedRectangle(plotFrameBounds, plotFrameCornerRadius);
+
     drawGrid(layerGraphics);
     staticLayerDirty = false;
 }

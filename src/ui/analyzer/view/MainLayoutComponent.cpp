@@ -46,11 +46,11 @@ MainLayoutComponent::Layout MainLayoutComponent::computeLayout() const {
     layout.rackBounds = bounds.removeFromBottom(metrics.rackHeight);
     const auto horizontalGapBounds = bounds.removeFromBottom(metrics.analyzerToRackGap);
     layout.topSectionBounds = bounds;
-    const auto rawActionsBounds = layout.topSectionBounds.removeFromRight(metrics.sideStripWidth);
-    const auto verticalGapBounds = layout.topSectionBounds.removeFromRight(metrics.analyzerToSideStripGap);
-
     layout.horizontalDividerBounds = juce::Rectangle<int>(layout.contentBounds.getWidth(), dividerThickness)
                                          .withCentre({layout.contentBounds.getCentreX(), horizontalGapBounds.getCentreY()});
+    layout.topSectionBounds = layout.topSectionBounds.withBottom(layout.horizontalDividerBounds.getY());
+    const auto rawActionsBounds = layout.topSectionBounds.removeFromRight(metrics.sideStripWidth);
+    const auto verticalGapBounds = layout.topSectionBounds.removeFromRight(metrics.analyzerToSideStripGap);
     const auto verticalDividerTop = layout.topSectionBounds.getY();
     const auto verticalDividerBottom = layout.horizontalDividerBounds.getY();
     const auto verticalDividerHeight = juce::jmax(0, verticalDividerBottom - verticalDividerTop);

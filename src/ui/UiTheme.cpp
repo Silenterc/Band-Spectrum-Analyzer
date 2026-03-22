@@ -40,8 +40,8 @@ namespace Ui {
 
         Theme theme;
         theme.editorBackground = juce::Colour::fromRGB(8, 9, 11);
-        theme.analyzerBackground = juce::Colour::fromRGB(17, 18, 20);
-        theme.plotBackground = juce::Colour::fromRGB(28, 31, 35);
+        theme.analyzerBackground = juce::Colour::fromRGB(24, 20, 17);
+        theme.plotBackground = juce::Colour::fromRGB(31, 26, 22);
         theme.controlSurface = juce::Colour::fromRGB(26, 28, 31);
         theme.controlSurfaceHover = juce::Colour::fromRGB(34, 37, 42);
         theme.controlBorder = juce::Colour::fromRGBA(255, 255, 255, 28);
@@ -49,9 +49,9 @@ namespace Ui {
         theme.subtleText = juce::Colour::fromRGBA(255, 255, 255, 120);
         theme.accentButton = accentColours.accentButton;
         theme.accentButtonActive = accentColours.accentButtonActive;
-        theme.gridBorder = juce::Colour::fromRGBA(255, 255, 255, 28);
-        theme.gridLine = juce::Colour::fromRGBA(255, 255, 255, 20);
-        theme.axisText = juce::Colour::fromRGBA(255, 255, 255, 110);
+        theme.gridBorder = juce::Colour::fromRGBA(176, 146, 112, 42);
+        theme.gridLine = juce::Colour::fromRGBA(146, 118, 88, 24);
+        theme.axisText = juce::Colour::fromRGBA(222, 200, 170, 104);
         theme.tooltipBackground = juce::Colour::fromRGBA(10, 10, 12, 220);
         theme.tooltipBorder = juce::Colour::fromRGBA(255, 255, 255, 36);
         theme.tooltipText = juce::Colours::white;
