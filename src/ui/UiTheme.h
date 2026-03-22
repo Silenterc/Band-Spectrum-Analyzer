@@ -15,7 +15,7 @@ namespace Ui {
 
     struct PanelMetrics {
         int analyzerToRackGap = 10;
-        int rackHeight = 88;
+        int rackHeight = 112;
         int analyzerToSideStripGap = 10;
         int sideStripWidth = 84;
     };
@@ -23,9 +23,21 @@ namespace Ui {
     struct MeterControlsMetrics {
         int verticalPadding = 0;
         int horizontalPadding = 0;
-        int buttonGap = 0;
+        int bottomInset = 2;
+        int settingsTopInset = 0;
+        int settingsRightInset = 0;
+        int settingsGap = 26;
+        int settingsSeparatorInset = 10;
+        int settingsSeparatorThickness = 4;
+        int buttonGap = 6;
         int padOpticalOffsetX = -1;
-        float padScale = 0.75f;
+        int groupGap = 6;
+        float padScale = 0.5f;
+        float settingsPadScaleMultiplier = 1.0f;
+        float settingsIconScaleMultiplier = 2.3f;
+        float freezePadScaleMultiplier = 1.5f;
+        float freezeIconScaleMultiplier = 1.2f;
+        float decorScale = 0.9f;
         float padTextFontHeight = 16.0f;
     };
 
@@ -113,6 +125,7 @@ namespace Ui {
         juce::Colour tooltipText;
         juce::Colour hardwareMarkingLight;
         juce::Colour hardwareMarkingDark;
+        juce::Colour hardwareMarkingCoolDark;
         juce::Colour sectionDividerShadow;
         juce::Colour sectionDividerHighlight;
         Metrics metrics;

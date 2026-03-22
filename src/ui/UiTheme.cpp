@@ -57,6 +57,7 @@ namespace Ui {
         theme.tooltipText = juce::Colours::white;
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
+        theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(46, 63, 78);
         theme.sectionDividerShadow = juce::Colour::fromRGBA(14, 14, 14, 205);
         theme.sectionDividerHighlight = juce::Colour::fromFloatRGBA(0.335f, 0.345f, 0.352f, 0.78f);
         return theme;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "UiTheme.h"
@@ -14,6 +16,7 @@ public:
 
     enum class OverlayIcon {
         none,
+        settings,
         snowflake
     };
 
@@ -25,7 +28,11 @@ public:
     void resized() override;
 
     void setActive(bool shouldBeActive);
+    void setActiveMarkingColour(juce::Colour newActiveMarkingColour);
     void setAssetStyle(AssetStyle newAssetStyle);
+    void setDrawsPad(bool shouldDrawPad);
+    void setOverlayIconScaleMultiplier(float newOverlayIconScaleMultiplier);
+    void setScaleMultiplier(float newScaleMultiplier);
     void setLabel(juce::String newLabel);
     void setOverlayIcon(OverlayIcon newOverlayIcon);
 
@@ -36,6 +43,7 @@ private:
     static const juce::Image& getOnImage();
     static const juce::Image& getFreezeOnImage();
     const juce::Image& getResolvedOnImage() const;
+    juce::Rectangle<int> getTargetPadBounds(juce::Rectangle<int> availableBounds) const;
     void rebuildCachedPadImages();
 
     void mouseUp(const juce::MouseEvent& event) override;
@@ -44,8 +52,13 @@ private:
     juce::String label;
     bool active = false;
     AssetStyle assetStyle = AssetStyle::standard;
+    float scaleMultiplier = 1.0f;
+    std::optional<juce::Colour> activeMarkingColourOverride;
+    bool drawsPad = true;
     OverlayIcon overlayIcon = OverlayIcon::none;
+    float overlayIconScaleMultiplier = 1.0f;
     juce::Rectangle<int> padBounds;
+    juce::Rectangle<int> overlayIconBounds;
     juce::Image cachedOffImage;
     juce::Image cachedOnImage;
 

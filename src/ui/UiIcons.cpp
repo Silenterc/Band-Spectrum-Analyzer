@@ -16,10 +16,31 @@ namespace {
         return drawable.get();
     }
 
+    juce::Drawable *getSettingsTemplate() {
+        static auto drawable = juce::Drawable::createFromImageData(BinaryData::settings_svg,
+                                                                   BinaryData::settings_svgSize);
+        return drawable.get();
+    }
+
     juce::Drawable *getSnowflakeTemplate() {
         static auto drawable = juce::Drawable::createFromImageData(BinaryData::snowflake_svg,
                                                                    BinaryData::snowflake_svgSize);
         return drawable.get();
+    }
+
+    void drawTemplateIcon(juce::Graphics& g,
+                          juce::Drawable* drawableTemplate,
+                          const juce::Rectangle<float>& bounds,
+                          const juce::Colour colour) {
+        if (drawableTemplate == nullptr)
+            return;
+
+        auto drawable = drawableTemplate->createCopy();
+        if (drawable == nullptr)
+            return;
+
+        drawable->replaceColour(juce::Colours::black, colour);
+        drawable->drawWithin(g, bounds, juce::RectanglePlacement::centred, 1.0f);
     }
 }
 
@@ -27,46 +48,24 @@ namespace Ui {
     void drawCancelIcon(juce::Graphics &g,
                         const juce::Rectangle<float> &bounds,
                         const juce::Colour colour) {
-        auto *drawableTemplate = getCancelTemplate();
-        if (drawableTemplate == nullptr)
-            return;
-
-        auto drawable = drawableTemplate->createCopy();
-        if (drawable == nullptr)
-            return;
-
-        drawable->replaceColour(juce::Colours::black, colour);
-        drawable->drawWithin(g, bounds, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
+        drawTemplateIcon(g, getCancelTemplate(), bounds, colour);
     }
 
     void drawPowerIcon(juce::Graphics &g,
                        const juce::Rectangle<float> &bounds,
                        const juce::Colour colour) {
-        auto *drawableTemplate = getPowerTemplate();
-        if (drawableTemplate == nullptr)
-            return;
+        drawTemplateIcon(g, getPowerTemplate(), bounds, colour);
+    }
 
-        auto drawable = drawableTemplate->createCopy();
-        if (drawable == nullptr)
-            return;
-
-        drawable->replaceColour(juce::Colours::black, colour);
-        drawable->drawWithin(g, bounds, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
+    void drawSettingsIcon(juce::Graphics &g,
+                          const juce::Rectangle<float> &bounds,
+                          const juce::Colour colour) {
+        drawTemplateIcon(g, getSettingsTemplate(), bounds, colour);
     }
 
     void drawSnowflakeIcon(juce::Graphics &g,
                            const juce::Rectangle<float> &bounds,
                            const juce::Colour colour) {
-        auto *drawableTemplate = getSnowflakeTemplate();
-        if (drawableTemplate == nullptr)
-            return;
-
-        auto drawable = drawableTemplate->createCopy();
-        if (drawable == nullptr)
-            return;
-
-        // The SVG uses currentColor, which JUCE resolves to black by default.
-        drawable->replaceColour(juce::Colours::black, colour);
-        drawable->drawWithin(g, bounds, juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
+        drawTemplateIcon(g, getSnowflakeTemplate(), bounds, colour);
     }
 }

@@ -12,30 +12,33 @@ PadButton::PadButton(const Ui::Theme& themeToUse, juce::String labelText)
 int PadButton::getPreferredHeight(const int availableWidth) const {
     const auto& metrics = theme.metrics.meterControls;
     const auto contentWidth = juce::jmax(1, availableWidth - metrics.horizontalPadding * 2);
-    const auto& offImage = getOffImage();
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto logicalWidth = static_cast<float>(offImage.getWidth()) / rasterScale;
-    const auto logicalHeight = static_cast<float>(offImage.getHeight()) / rasterScale;
-    const auto widthScale = static_cast<float>(contentWidth) / logicalWidth;
-    const auto scale = juce::jlimit(0.0f, 1.0f, widthScale) * metrics.padScale;
-    const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * scale));
-    return targetHeight;
+    return getTargetPadBounds({0, 0, contentWidth, 0}).getHeight();
 }
 
 bool PadButton::hitTest(const int x, const int y) {
-    return padBounds.contains(x, y);
+    return (drawsPad ? padBounds : overlayIconBounds).contains(x, y);
 }
 
 void PadButton::paint(juce::Graphics& g) {
     const auto& padImage = active ? cachedOnImage : cachedOffImage;
-    if (padImage.isValid())
+    if (drawsPad && padImage.isValid())
         g.drawImageAt(padImage, padBounds.getX(), padBounds.getY());
 
-    const auto markingColour = active ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
+    const auto markingColour = active
+                                   ? activeMarkingColourOverride.value_or(theme.hardwareMarkingDark)
+                                   : theme.hardwareMarkingLight;
 
-    if (overlayIcon == OverlayIcon::snowflake) {
-        const auto iconInset = static_cast<float>(padBounds.getWidth()) * 0.28f;
-        Ui::drawSnowflakeIcon(g, padBounds.toFloat().reduced(iconInset), markingColour);
+    if (overlayIcon != OverlayIcon::none) {
+        switch (overlayIcon) {
+            case OverlayIcon::none:
+                break;
+            case OverlayIcon::settings:
+                Ui::drawSettingsIcon(g, overlayIconBounds.toFloat(), markingColour);
+                break;
+            case OverlayIcon::snowflake:
+                Ui::drawSnowflakeIcon(g, overlayIconBounds.toFloat(), markingColour);
+                break;
+        }
     }
 
     if (label.isEmpty())
@@ -49,20 +52,12 @@ void PadButton::paint(juce::Graphics& g) {
 void PadButton::resized() {
     const auto& metrics = theme.metrics.meterControls;
     auto bounds = getLocalBounds().reduced(metrics.horizontalPadding, 0);
-
-    const auto& offImage = getOffImage();
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto logicalWidth = static_cast<float>(offImage.getWidth()) / rasterScale;
-    const auto logicalHeight = static_cast<float>(offImage.getHeight()) / rasterScale;
-
-    const auto widthScale = static_cast<float>(bounds.getWidth()) / logicalWidth;
-    const auto heightScale = static_cast<float>(bounds.getHeight()) / logicalHeight;
-    const auto scale = juce::jlimit(0.0f, 1.0f, std::min(widthScale, heightScale)) * metrics.padScale;
-
-    const auto targetWidth = juce::jmax(1, juce::roundToInt(logicalWidth * scale));
-    const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * scale));
-    padBounds = juce::Rectangle<int>(targetWidth, targetHeight).withCentre(bounds.getCentre());
-    padBounds.translate(metrics.padOpticalOffsetX, 0);
+    padBounds = getTargetPadBounds(bounds);
+    const auto iconInset = static_cast<float>(padBounds.getWidth()) * 0.28f;
+    auto iconBounds = padBounds.toFloat().reduced(iconInset);
+    iconBounds = iconBounds.withSizeKeepingCentre(iconBounds.getWidth() * overlayIconScaleMultiplier,
+                                                  iconBounds.getHeight() * overlayIconScaleMultiplier);
+    overlayIconBounds = iconBounds.getSmallestIntegerContainer();
 
     rebuildCachedPadImages();
 }
@@ -75,12 +70,48 @@ void PadButton::setActive(const bool shouldBeActive) {
     repaint();
 }
 
+void PadButton::setActiveMarkingColour(const juce::Colour newActiveMarkingColour) {
+    if (activeMarkingColourOverride.has_value() && activeMarkingColourOverride.value() == newActiveMarkingColour)
+        return;
+
+    activeMarkingColourOverride = newActiveMarkingColour;
+    repaint(padBounds);
+}
+
 void PadButton::setAssetStyle(const AssetStyle newAssetStyle) {
     if (assetStyle == newAssetStyle)
         return;
 
     assetStyle = newAssetStyle;
     rebuildCachedPadImages();
+    repaint();
+}
+
+void PadButton::setDrawsPad(const bool shouldDrawPad) {
+    if (drawsPad == shouldDrawPad)
+        return;
+
+    drawsPad = shouldDrawPad;
+    repaint();
+}
+
+void PadButton::setScaleMultiplier(const float newScaleMultiplier) {
+    const auto clampedScaleMultiplier = juce::jmax(0.0f, newScaleMultiplier);
+    if (juce::approximatelyEqual(scaleMultiplier, clampedScaleMultiplier))
+        return;
+
+    scaleMultiplier = clampedScaleMultiplier;
+    resized();
+    repaint();
+}
+
+void PadButton::setOverlayIconScaleMultiplier(const float newOverlayIconScaleMultiplier) {
+    const auto clampedOverlayScaleMultiplier = juce::jmax(0.0f, newOverlayIconScaleMultiplier);
+    if (juce::approximatelyEqual(overlayIconScaleMultiplier, clampedOverlayScaleMultiplier))
+        return;
+
+    overlayIconScaleMultiplier = clampedOverlayScaleMultiplier;
+    resized();
     repaint();
 }
 
@@ -133,6 +164,19 @@ const juce::Image& PadButton::getResolvedOnImage() const {
 
     jassertfalse;
     return getOnImage();
+}
+
+juce::Rectangle<int> PadButton::getTargetPadBounds(const juce::Rectangle<int> availableBounds) const {
+    const auto& metrics = theme.metrics.meterControls;
+    const auto& offImage = getOffImage();
+    const auto rasterScale = theme.metrics.assets.rasterScale;
+    const auto logicalWidth = static_cast<float>(offImage.getWidth()) / rasterScale;
+    const auto logicalHeight = static_cast<float>(offImage.getHeight()) / rasterScale;
+    const auto widthScale = static_cast<float>(juce::jmax(1, availableBounds.getWidth())) / logicalWidth;
+    const auto fitScale = juce::jlimit(0.0f, 1.0f, widthScale) * metrics.padScale * scaleMultiplier;
+    const auto targetWidth = juce::jmax(1, juce::roundToInt(logicalWidth * fitScale));
+    const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * fitScale));
+    return juce::Rectangle<int>(targetWidth, targetHeight).withCentre(availableBounds.getCentre());
 }
 
 void PadButton::rebuildCachedPadImages() {
