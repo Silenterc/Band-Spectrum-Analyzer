@@ -370,8 +370,7 @@ void AnalyzerComponent::rebuildDynamicViewModel() {
 }
 
 void AnalyzerComponent::updateHoverState() {
-    viewModel.updateHover(renderData, viewState, uiSnapshot.signalSlotOrder, uiSnapshot.meterSettings, uiSnapshot.gridMinDb,
-                          getLocalBounds().toFloat(), hoverPosition);
+    viewModel.updateHover(renderData, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, getLocalBounds().toFloat(), hoverPosition);
 }
 
 void AnalyzerComponent::processPendingHoverUpdate() {

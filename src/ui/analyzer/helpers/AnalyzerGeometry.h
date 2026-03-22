@@ -46,6 +46,11 @@ public:
     float yForDb(float decibels, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
 
     /**
+     * Maps a cursor y position back into a dB value on the same vertical scale
+     */
+    float dbForY(float y, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
+
+    /**
      * Returns the hovered bar index for equal-width bar drawing
      */
     std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,

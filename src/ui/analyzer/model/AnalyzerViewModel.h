@@ -95,10 +95,9 @@ public:
     /**
      * Updates hover-only state without rebuilding static or dynamic bar geometry
      */
-    void updateHover(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                     const Shared::SignalSlotOrder &signalSlotOrder,
-                     const Analyzer::MeterSettings &meterSettings,
+    void updateHover(const Analyzer::RenderData &renderData,
                      float gridMinDb,
+                     float gridMaxDb,
                      const juce::Rectangle<float> &localBounds,
                      const std::optional<juce::Point<float>> &hoverPosition);
 
@@ -140,9 +139,6 @@ public:
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
     void updateBandBounds(size_t bandCount);
-    const Analyzer::RenderTrace *getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
-                                                        const AnalyzerViewState &viewState,
-                                                        const Shared::SignalSlotOrder &signalSlotOrder) const;
     bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);

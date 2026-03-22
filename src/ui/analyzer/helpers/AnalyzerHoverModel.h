@@ -7,7 +7,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../dsp/core/AnalyzerData.h"
-#include "../AnalyzerRenderData.h"
 #include "AnalyzerGeometry.h"
 #include "FrequencyFormatter.h"
 #include "MusicTheory.h"
@@ -40,14 +39,10 @@ public:
     [[nodiscard]] std::optional<AnalyzerHoverInfo> build(const juce::Rectangle<float> &localBounds,
                                                          const juce::Rectangle<float> &plotBounds,
                                                          const std::vector<Analyzer::BandInfo> &bandInfo,
-                                                         const Analyzer::RenderFrame &renderFrame,
-                                                         const Analyzer::MeterSettings &meterSettings, float gridMinDb,
+                                                         float gridMinDb,
+                                                         float gridMaxDb,
                                                          float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                          juce::Point<float> hoverPosition) const;
-
-private:
-    static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
-    static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
 
     const AnalyzerGeometry &geometry;
     const FrequencyFormatter &formatter;

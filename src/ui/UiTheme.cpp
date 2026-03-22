@@ -11,23 +11,23 @@ namespace Ui {
             switch (accentPalette) {
                 case AccentPalette::blue:
                     return {
-                        juce::Colour::fromRGB(101, 179, 255),
-                        juce::Colour::fromRGB(39, 110, 241)
+                        juce::Colour::fromRGB(124, 166, 201),
+                        juce::Colour::fromRGB(75, 117, 154)
                     };
                 case AccentPalette::green:
                     return {
-                        juce::Colour::fromRGB(118, 212, 136),
-                        juce::Colour::fromRGB(47, 156, 87)
+                        juce::Colour::fromRGB(136, 176, 118),
+                        juce::Colour::fromRGB(83, 121, 69)
                     };
                 case AccentPalette::orange:
                     return {
-                        juce::Colour::fromRGB(255, 157, 64),
-                        juce::Colour::fromRGB(255, 90, 95)
+                        juce::Colour::fromRGB(205, 145, 92),
+                        juce::Colour::fromRGB(152, 96, 58)
                     };
                 case AccentPalette::purple:
                     return {
-                        juce::Colour::fromRGB(180, 131, 255),
-                        juce::Colour::fromRGB(108, 82, 224)
+                        juce::Colour::fromRGB(157, 128, 174),
+                        juce::Colour::fromRGB(102, 78, 118)
                     };
             }
 
@@ -39,27 +39,27 @@ namespace Ui {
         const auto accentColours = getAccentColours(accentPalette);
 
         Theme theme;
-        theme.editorBackground = juce::Colour::fromRGB(8, 9, 11);
+        theme.editorBackground = juce::Colour::fromRGB(12, 10, 9);
         theme.analyzerBackground = juce::Colour::fromRGB(24, 20, 17);
         theme.plotBackground = juce::Colour::fromRGB(31, 26, 22);
-        theme.controlSurface = juce::Colour::fromRGB(26, 28, 31);
-        theme.controlSurfaceHover = juce::Colour::fromRGB(34, 37, 42);
-        theme.controlBorder = juce::Colour::fromRGBA(255, 255, 255, 28);
-        theme.controlText = juce::Colours::white;
-        theme.subtleText = juce::Colour::fromRGBA(255, 255, 255, 120);
+        theme.controlSurface = juce::Colour::fromRGB(38, 32, 28);
+        theme.controlSurfaceHover = juce::Colour::fromRGB(49, 41, 35);
+        theme.controlBorder = juce::Colour::fromRGBA(221, 197, 167, 34);
+        theme.controlText = juce::Colour::fromRGB(233, 222, 205);
+        theme.subtleText = juce::Colour::fromRGBA(198, 181, 157, 138);
         theme.accentButton = accentColours.accentButton;
         theme.accentButtonActive = accentColours.accentButtonActive;
         theme.gridBorder = juce::Colour::fromRGBA(176, 146, 112, 42);
         theme.gridLine = juce::Colour::fromRGBA(146, 118, 88, 24);
         theme.axisText = juce::Colour::fromRGBA(222, 200, 170, 104);
-        theme.tooltipBackground = juce::Colour::fromRGBA(10, 10, 12, 220);
-        theme.tooltipBorder = juce::Colour::fromRGBA(255, 255, 255, 36);
-        theme.tooltipText = juce::Colours::white;
+        theme.tooltipBackground = juce::Colour::fromRGBA(19, 15, 13, 230);
+        theme.tooltipBorder = juce::Colour::fromRGBA(210, 186, 156, 42);
+        theme.tooltipText = juce::Colour::fromRGB(235, 225, 209);
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
-        theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(46, 63, 78);
-        theme.sectionDividerShadow = juce::Colour::fromRGBA(14, 14, 14, 205);
-        theme.sectionDividerHighlight = juce::Colour::fromFloatRGBA(0.335f, 0.345f, 0.352f, 0.78f);
+        theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(58, 72, 82);
+        theme.sectionDividerShadow = juce::Colour::fromRGBA(18, 15, 13, 205);
+        theme.sectionDividerHighlight = juce::Colour::fromFloatRGBA(0.39f, 0.35f, 0.31f, 0.76f);
         return theme;
     }
 

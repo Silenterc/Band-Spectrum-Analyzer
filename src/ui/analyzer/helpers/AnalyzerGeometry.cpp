@@ -51,6 +51,16 @@ float AnalyzerGeometry::yForDb(float decibels, float minDb, float maxDb,
     return plotBounds.getBottom() - normalised * plotBounds.getHeight();
 }
 
+float AnalyzerGeometry::dbForY(float y, float minDb, float maxDb,
+                               const juce::Rectangle<float> &plotBounds) const {
+    if (maxDb <= minDb || plotBounds.getHeight() <= 0.0f)
+        return minDb;
+
+    const auto clampedY = juce::jlimit(plotBounds.getY(), plotBounds.getBottom(), y);
+    const auto normalised = juce::jlimit(0.0f, 1.0f, (plotBounds.getBottom() - clampedY) / plotBounds.getHeight());
+    return juce::jmap(normalised, 0.0f, 1.0f, minDb, maxDb);
+}
+
 std::optional<size_t> AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
                                                     const juce::Rectangle<float> &plotBounds) const {
     if (bandCount == 0 || !plotBounds.contains(position))
