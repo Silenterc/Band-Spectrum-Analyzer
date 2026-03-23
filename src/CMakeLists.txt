@@ -4,8 +4,9 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/icons/power.svg
         ui/assets/icons/settings.svg
         ui/assets/icons/snowflake.svg
-        ui/assets/uikit/background.png
-        ui/assets/uikit/background_2.png
+        ui/assets/uikit/background/background.png
+        ui/assets/uikit/background/background_2.png
+        ui/assets/uikit/background/background_2_version.png
         ui/assets/uikit/decor_grid.png
         ui/assets/uikit/pad/pad_off.png
         ui/assets/uikit/pad/pad_freeze_on.png

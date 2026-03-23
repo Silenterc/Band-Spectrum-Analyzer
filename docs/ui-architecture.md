@@ -39,8 +39,8 @@ Current layout in `MainLayoutComponent`:
   - left: analyzer section
   - right: vertical analyzer control strip
 - bottom strip:
-  - signal rack section geometry
-  - the `SignalRackComponent` instance is currently kept hidden while the rasterized bottom-panel redesign is in progress
+  - visible signal rack section
+  - fixed four-lane rack geometry with three permanent vertical dividers
 
 ## 3. UI Responsibilities By Layer
 
@@ -276,6 +276,7 @@ flowchart TD
 `SignalRackComponent` owns:
 
 - up to `4` `SignalSlotComponent`s
+- `3` permanent `SectionDividerComponent`s
 - one trailing `+` add button
 - `SignalRackLayoutEngine`
 - `SignalRackDragSession`
@@ -294,6 +295,7 @@ Responsibilities:
 - add a new signal into the first free slot
 - keep direct slot interactions visually immediate with local optimistic updates, then reconcile back to processor state
 - delegate slot default-selection policy to `src/ui/analyzer/model/SignalRackModel.h`
+- own the fixed rack-lane geometry used by slots, dividers, drag preview, and the add button
 
 Current slot-cell layout:
 
@@ -329,7 +331,9 @@ Interaction split:
 Reordering responsibilities are split out:
 
 - `SignalRackLayoutEngine`
-  - deterministic bounds for visible slot cells
+  - deterministic four-lane rack partitioning
+  - permanent divider bounds between lanes
+  - visible slot bounds mapped onto the first active lanes
   - active rack span used by drag/reorder
 - `SignalRackDragSession`
   - drag session state
@@ -345,9 +349,11 @@ Current behavior:
 - disabled slots are not shown
 - hidden slots stay in the rack but render as `Off`
 - add button is visible only while active slot count is below `Shared::maxSignalSlots`
+- add button occupies the next free fixed lane
+- the three rack dividers stay visible even when not all lanes are occupied
 - drag-reordering changes only UI order, not DSP slot identity
 - the dragged slot is painted as a floating overlay while the real child component stays anchored
-- the `+` add cell is square and lives outside the reorderable active-slot span
+- the `+` add cell uses the same lane system as normal slots
 
 ## 9. Signal Slot Component
 
@@ -361,26 +367,14 @@ flowchart LR
 
 Each `SignalSlotComponent` shows:
 
-- a color swatch
-- main label: `Mid`, `Side`, or `Stereo`
-- secondary hint: `Main` or `Sidechain`
-- visibility button: `On` / `Off`
-- remove button: `x`
+- a textured module face using `background_2_version.png`
+- a rounded module border and drag shadow
+- slot controls are currently hidden while the rack shell/material design is being rebuilt
 
 Supported interactions:
 
-- click label:
-  - toggle signal picker callout
-- click swatch:
-  - toggle preset color picker callout
-- drag vertically on swatch:
-  - adjust opacity
-- double click swatch:
-  - reset opacity to default
-- click visibility:
-  - toggle visible/hidden
-- click remove:
-  - disable slot
+- the interaction plumbing for source, mode, colour, opacity, reorder, visibility, freeze, and remove is still present in `SignalSlotComponent`
+- the child controls are currently hidden from the live UI while the rack shell/material design is being rebuilt
 
 Responsibility split:
 

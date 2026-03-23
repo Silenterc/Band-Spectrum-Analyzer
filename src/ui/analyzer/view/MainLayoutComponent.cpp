@@ -11,8 +11,7 @@ MainLayoutComponent::MainLayoutComponent(AnalyzerDataSource& dataSourceToUse,
       verticalSectionDivider(themeToUse, SectionDividerComponent::Orientation::vertical),
       horizontalSectionDivider(themeToUse, SectionDividerComponent::Orientation::horizontal) {
     addAndMakeVisible(analyzerSectionComponent);
-    // TODO: Re-enable the digital signal rack once the rasterized bottom-panel layout is ready.
-    addChildComponent(signalRackComponent);
+    addAndMakeVisible(signalRackComponent);
     addAndMakeVisible(verticalSectionDivider);
     addAndMakeVisible(horizontalSectionDivider);
     addAndMakeVisible(meterControlsComponent);
@@ -41,14 +40,19 @@ MainLayoutComponent::Layout MainLayoutComponent::computeLayout() const {
     const auto woodSideInset = theme.metrics.background.woodSideInset;
 
     Layout layout;
-    auto bounds = getLocalBounds().reduced(woodSideInset, 0);
+    const auto bounds = getLocalBounds().reduced(woodSideInset, 0);
     layout.contentBounds = bounds;
-    layout.rackBounds = bounds.removeFromBottom(metrics.rackHeight);
-    const auto horizontalGapBounds = bounds.removeFromBottom(metrics.analyzerToRackGap);
-    layout.topSectionBounds = bounds;
-    layout.horizontalDividerBounds = juce::Rectangle<int>(layout.contentBounds.getWidth(), dividerThickness)
-                                         .withCentre({layout.contentBounds.getCentreX(), horizontalGapBounds.getCentreY()});
-    layout.topSectionBounds = layout.topSectionBounds.withBottom(layout.horizontalDividerBounds.getY());
+
+    auto topAndGapBounds = bounds;
+    layout.rackBounds = topAndGapBounds.removeFromBottom(metrics.rackHeight);
+    topAndGapBounds.removeFromBottom(metrics.analyzerToRackGap);
+    layout.horizontalDividerBounds = juce::Rectangle<int>(
+        layout.contentBounds.getX(),
+        layout.rackBounds.getY() - dividerThickness,
+        layout.contentBounds.getWidth(),
+        dividerThickness);
+    layout.topSectionBounds = topAndGapBounds.withBottom(layout.horizontalDividerBounds.getY());
+
     const auto rawActionsBounds = layout.topSectionBounds.removeFromRight(metrics.sideStripWidth);
     const auto verticalGapBounds = layout.topSectionBounds.removeFromRight(metrics.analyzerToSideStripGap);
     const auto verticalDividerTop = layout.topSectionBounds.getY();

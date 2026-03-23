@@ -46,8 +46,8 @@ namespace Ui {
     };
 
     struct RackMetrics {
-        float verticalInset = 4.0f;
-        float itemGap = 8.0f;
+        float topInset = 0.0f;
+        float bottomInset = 2.0f;
     };
 
     struct SlotMetrics {
@@ -70,7 +70,7 @@ namespace Ui {
         float gripHeight = 15.0f;
         float gripDotDiameter = 2.25f;
         float shadowOffsetY = 3.0f;
-        float cellCornerRadius = 10.0f;
+        float cellCornerRadius = 0.0f;
         float swatchCornerRadius = 7.0f;
         float buttonCornerRadius = 6.0f;
     };

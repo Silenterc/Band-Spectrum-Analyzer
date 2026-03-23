@@ -1,5 +1,7 @@
 #include "SignalSlotComponent.h"
 
+#include <BinaryData.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -24,13 +26,14 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
       visibilityButton(themeToUse),
       freezeButton(themeToUse),
       removeButton(themeToUse) {
-    addAndMakeVisible(sourceToggle);
-    addAndMakeVisible(modeButton);
-    addAndMakeVisible(swatchButton);
-    addAndMakeVisible(dragHandle);
-    addAndMakeVisible(visibilityButton);
-    addAndMakeVisible(freezeButton);
-    addAndMakeVisible(removeButton);
+    // TODO: Re-enable slot controls as the rack skin is rebuilt around the final module design.
+    addChildComponent(sourceToggle);
+    addChildComponent(modeButton);
+    addChildComponent(swatchButton);
+    addChildComponent(dragHandle);
+    addChildComponent(visibilityButton);
+    addChildComponent(freezeButton);
+    addChildComponent(removeButton);
 
     sourceToggle.onSourceSelected = [this](const Analyzer::SignalSource source) { handleSourceSelected(source); };
     modeButton.onPress = [this] { handleModePressed(); };
@@ -90,21 +93,30 @@ int SignalSlotComponent::getPreferredWidth() const {
 }
 
 void SignalSlotComponent::paint(juce::Graphics &g) {
-    const auto bounds = getLocalBounds().toFloat();
+    const auto bounds = getModuleBounds();
+    const auto radius = theme.metrics.slot.cellCornerRadius;
+    const auto outerBounds = bounds.reduced(0.5f);
+    juce::Path modulePath;
+    modulePath.addRoundedRectangle(bounds, radius);
 
     if (isDragged) {
         g.setColour(juce::Colours::black.withAlpha(0.22f));
-        g.fillRoundedRectangle(bounds.translated(0.0f, theme.metrics.slot.shadowOffsetY), theme.metrics.slot.cellCornerRadius);
+        g.fillRoundedRectangle(bounds.translated(0.0f, theme.metrics.slot.shadowOffsetY), radius);
     }
 
-    g.setColour(theme.controlSurface);
-    g.fillRoundedRectangle(bounds, theme.metrics.slot.cellCornerRadius);
+    if (cachedBackground.isValid()) {
+        juce::Graphics::ScopedSaveState saveState(g);
+        g.reduceClipRegion(modulePath);
+        g.drawImage(cachedBackground, bounds);
+    }
 
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.cellCornerRadius, 1.0f);
+    g.setColour(theme.controlBorder.withMultipliedAlpha(1.35f));
+    g.drawRoundedRectangle(outerBounds, radius, 1.0f);
 }
 
 void SignalSlotComponent::resized() {
+    rebuildCachedBackground();
+
     const auto &slotMetrics = theme.metrics.slot;
     auto topRowBounds = getTopRowBounds();
     auto bottomRowBounds = getBottomRowBounds();
@@ -122,6 +134,40 @@ void SignalSlotComponent::resized() {
     freezeButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
     bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
     removeButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+}
+
+juce::Rectangle<float> SignalSlotComponent::getModuleBounds() const {
+    auto bounds = getLocalBounds().toFloat();
+    bounds.removeFromBottom(theme.metrics.rack.bottomInset);
+    return bounds;
+}
+
+void SignalSlotComponent::rebuildCachedBackground() {
+    const auto moduleBounds = getModuleBounds();
+    if (moduleBounds.isEmpty()) {
+        cachedBackground = {};
+        return;
+    }
+
+    const auto targetBounds = moduleBounds.getSmallestIntegerContainer();
+    cachedBackground = juce::Image(juce::Image::ARGB, targetBounds.getWidth(), targetBounds.getHeight(), true);
+    juce::Graphics graphics(cachedBackground);
+    const auto &backgroundImage = getBackgroundImage();
+    graphics.drawImage(backgroundImage,
+                       0,
+                       0,
+                       targetBounds.getWidth(),
+                       targetBounds.getHeight(),
+                       0,
+                       0,
+                       backgroundImage.getWidth(),
+                       backgroundImage.getHeight());
+}
+
+const juce::Image &SignalSlotComponent::getBackgroundImage() {
+    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::background_2_version_png,
+                                                              static_cast<size_t>(BinaryData::background_2_version_pngSize));
+    return image;
 }
 
 void SignalSlotComponent::refreshChildState() {
@@ -157,7 +203,7 @@ void SignalSlotComponent::refreshChildState() {
 }
 
 juce::Rectangle<float> SignalSlotComponent::getContentBounds() const {
-    return getLocalBounds().toFloat().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
+    return getModuleBounds().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
 }
 
 juce::Rectangle<float> SignalSlotComponent::getTopRowBounds() const {

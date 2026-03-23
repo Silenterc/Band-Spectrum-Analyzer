@@ -48,6 +48,9 @@ private:
         colour
     };
 
+    juce::Rectangle<float> getModuleBounds() const;
+    void rebuildCachedBackground();
+    static const juce::Image &getBackgroundImage();
     void refreshChildState();
     juce::Rectangle<float> getContentBounds() const;
     juce::Rectangle<float> getTopRowBounds() const;
@@ -83,6 +86,7 @@ private:
     bool suppressNextModeButtonClick = false;
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
     juce::Component::SafePointer<juce::CallOutBox> activeCallout;
+    juce::Image cachedBackground;
     SignalSlotSourceToggle sourceToggle;
     SignalSlotModeButton modeButton;
     SignalSlotSwatchButton swatchButton;

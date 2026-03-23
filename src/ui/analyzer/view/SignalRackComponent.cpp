@@ -4,6 +4,20 @@
 
 #include "../model/SignalRackModel.h"
 
+namespace {
+    juce::Rectangle<int> getRackContentBounds(const juce::Rectangle<int> bounds, const Ui::Theme &theme) {
+        auto rackBounds = bounds;
+        rackBounds.removeFromTop(static_cast<int>(theme.metrics.rack.topInset));
+        return rackBounds;
+    }
+
+    juce::Rectangle<int> getLaneModuleBounds(const juce::Rectangle<int> laneBounds, const Ui::Theme &theme) {
+        auto moduleBounds = laneBounds;
+        moduleBounds.removeFromBottom(static_cast<int>(theme.metrics.rack.bottomInset));
+        return moduleBounds;
+    }
+}
+
 SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToUse,
                                          AnalyzerSettingsActions &settingsActionsToUse,
                                          const Ui::Theme &themeToUse)
@@ -11,6 +25,11 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
       flatButtonLookAndFeel(themeToUse) {
+    for (auto &slotDivider: slotDividers) {
+        slotDivider = std::make_unique<SectionDividerComponent>(theme, SectionDividerComponent::Orientation::vertical);
+        addAndMakeVisible(*slotDivider);
+    }
+
     for (auto &slotComponent: slotComponents) {
         slotComponent = std::make_unique<SignalSlotComponent>(theme);
         addAndMakeVisible(*slotComponent);
@@ -56,8 +75,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
         slotComponent->onReorderDragStarted = [this](const size_t slotIndex, const float startMouseX) {
             const auto persistedOrder = currentState.slotOrder;
             const auto visibleOrderedSlots = getVisibleOrderedSlots(persistedOrder);
-            const auto layout = layoutEngine.build(getLocalBounds().reduced(0, static_cast<int>(theme.metrics.rack.verticalInset)).toFloat(),
-                                                   makeItemSpecs(visibleOrderedSlots), theme.metrics.rack.itemGap);
+            const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.begin(slotIndex, persistedOrder, visibleOrderedSlots, layout, startMouseX);
             if (auto *draggedComponent = findComponentForSlot(slotIndex))
                 draggedSnapshot = draggedComponent->createComponentSnapshot(draggedComponent->getLocalBounds());
@@ -67,8 +85,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
             juce::ignoreUnused(slotIndex);
             const auto previewOrder = dragSession.getDisplayOrder(currentState.slotOrder);
             const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
-            const auto layout = layoutEngine.build(getLocalBounds().reduced(0, static_cast<int>(theme.metrics.rack.verticalInset)).toFloat(),
-                                                   makeItemSpecs(visibleOrderedSlots), theme.metrics.rack.itemGap);
+            const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.update(xPosition, layout);
             refreshFromState(true);
         };
@@ -76,8 +93,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
             juce::ignoreUnused(slotIndex);
             const auto previewOrder = dragSession.getDisplayOrder(currentState.slotOrder);
             const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
-            const auto layout = layoutEngine.build(getLocalBounds().reduced(0, static_cast<int>(theme.metrics.rack.verticalInset)).toFloat(),
-                                                   makeItemSpecs(visibleOrderedSlots), theme.metrics.rack.itemGap);
+            const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.update(xPosition, layout);
             const auto reorderedSlots = dragSession.finish();
             if (reorderedSlots.has_value()) {
@@ -103,11 +119,13 @@ SignalRackComponent::~SignalRackComponent() {
 }
 
 void SignalRackComponent::resized() {
-    const auto rackBounds = getLocalBounds().reduced(0, static_cast<int>(theme.metrics.rack.verticalInset));
     const auto displayOrder = dragSession.getDisplayOrder(currentState.slotOrder);
     const auto visibleOrderedSlots = getVisibleOrderedSlots(displayOrder);
-    const auto layout = layoutEngine.build(rackBounds.toFloat(), makeItemSpecs(visibleOrderedSlots), theme.metrics.rack.itemGap);
+    const auto layout = buildLayout(visibleOrderedSlots);
     const auto draggedSlotIndex = dragSession.getDraggedSlotIndex();
+
+    for (size_t dividerIndex = 0; dividerIndex < slotDividers.size(); ++dividerIndex)
+        slotDividers[dividerIndex]->setBounds(layout.dividerBounds[dividerIndex].toNearestInt());
 
     for (size_t slotIndex = 0; slotIndex < slotComponents.size(); ++slotIndex) {
         auto &slotComponent = slotComponents[slotIndex];
@@ -133,11 +151,9 @@ void SignalRackComponent::resized() {
     }
 
     if (addButton.isVisible()) {
-        const auto addX = layout.entries.empty()
-                              ? rackBounds.getX()
-                              : static_cast<int>(layout.activeSpan.getRight()) + static_cast<int>(theme.metrics.rack.itemGap);
-        const auto addSize = rackBounds.getHeight();
-        addButton.setBounds(addX, rackBounds.getY(), addSize, addSize);
+        const auto nextLaneIndex = juce::jlimit<size_t>(0, layout.laneBounds.size() - 1, visibleOrderedSlots.size());
+        const auto addBounds = getLaneModuleBounds(layout.laneBounds[nextLaneIndex].toNearestInt(), theme);
+        addButton.setBounds(addBounds);
     }
 }
 
@@ -146,7 +162,7 @@ void SignalRackComponent::paintOverChildren(juce::Graphics &g) {
         return;
 
     auto draggedBounds = dragSession.getDraggedBounds();
-    const auto rackBounds = getLocalBounds().reduced(0, static_cast<int>(theme.metrics.rack.verticalInset));
+    const auto rackBounds = getRackContentBounds(getLocalBounds(), theme);
     draggedBounds.setY(static_cast<float>(rackBounds.getY()));
     draggedBounds.setHeight(static_cast<float>(rackBounds.getHeight()));
 
@@ -285,6 +301,12 @@ std::vector<size_t> SignalRackComponent::getVisibleOrderedSlots(const Shared::Si
     return slotOrderModel.getVisibleOrderedSlots(currentState.signalSlots, slotOrder);
 }
 
+SignalRackLayout SignalRackComponent::buildLayout(const std::vector<size_t> &visibleOrderedSlots) const {
+    return layoutEngine.build(getRackContentBounds(getLocalBounds(), theme).toFloat(),
+                              makeItemSpecs(visibleOrderedSlots),
+                              static_cast<float>(theme.metrics.sectionDivider.thickness));
+}
+
 std::vector<SignalRackItemSpec> SignalRackComponent::makeItemSpecs(
     const std::vector<size_t> &visibleOrderedSlots) const {
     std::vector<SignalRackItemSpec> itemSpecs;
@@ -296,7 +318,6 @@ std::vector<SignalRackItemSpec> SignalRackComponent::makeItemSpecs(
 
         SignalRackItemSpec itemSpec;
         itemSpec.slotIndex = slotIndex;
-        itemSpec.width = static_cast<float>(slotComponents[slotIndex]->getPreferredWidth());
         itemSpecs.push_back(itemSpec);
     }
 
