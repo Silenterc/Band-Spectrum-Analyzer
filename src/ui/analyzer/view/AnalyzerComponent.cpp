@@ -140,12 +140,10 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (!bar.bandBounds.intersects(clipBounds))
                 continue;
 
-            const auto lineDb = bar.holdDb > viewModel.getGridMinDb() ? bar.holdDb : bar.peakDb;
-            const auto lineY = bar.holdDb > viewModel.getGridMinDb() ? bar.holdY : bar.peakY;
-            if (lineDb <= viewModel.getGridMinDb())
+            if (bar.holdDb <= viewModel.getGridMinDb())
                 continue;
 
-            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), lineY - 1.0f,
+            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), bar.holdY - 1.0f,
                                                            bar.bandBounds.getWidth(), 2.0f).getSmallestIntegerContainer();
             if (!lineBounds.isEmpty())
                 g.fillRect(lineBounds);

@@ -156,7 +156,7 @@ void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
         return;
 
     for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex)
-        bandBounds.push_back(geometry.getBandColumnBounds(bandIndex, bandCount, plotBounds));
+        bandBounds.push_back(geometry.getBandDrawBounds(bandIndex, bandCount, plotBounds));
 }
 
 bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const {

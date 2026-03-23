@@ -39,7 +39,8 @@ Current layout in `MainLayoutComponent`:
   - left: analyzer section
   - right: vertical analyzer control strip
 - bottom strip:
-  - signal rack
+  - signal rack section geometry
+  - the `SignalRackComponent` instance is currently kept hidden while the rasterized bottom-panel redesign is in progress
 
 ## 3. UI Responsibilities By Layer
 
@@ -89,6 +90,7 @@ Responsibilities:
 - compute the three main section bounds
 - place the analyzer section, right-side control strip, and bottom signal rack
 - place the major section dividers between those bounds
+- keep section geometry stable even when individual sections are temporarily hidden during UI iteration
 
 It does not do analyzer rendering itself.
 
@@ -104,7 +106,8 @@ Responsibilities:
 
 - own analyzer-section-local layout
 - define where the live analyzer display lives inside the analyzer section
-- provide a stable place for future digital analyzer styling without mixing it into the renderer
+- cache and paint the analyzer section background/chrome
+- keep section-level skinning and bounds policy out of the live analyzer renderer
 
 It does not own analyzer data polling or trace rendering logic.
 
@@ -114,9 +117,11 @@ It does not own analyzer data polling or trace rendering logic.
 
 It owns:
 
+- settings icon button
 - `Peak` toggle button
 - `RMS` toggle button
 - `Hold` toggle button
+- decorative grid element
 - global freeze button
 
 Responsibilities:
@@ -124,6 +129,11 @@ Responsibilities:
 - subscribe to `AnalyzerUiStateSource`
 - keep the strip controls visually in sync with analyzer UI state
 - route analyzer-global meter/freeze actions into `AnalyzerSettingsActions`
+- own the right-strip-only layout hierarchy:
+  - utility/settings area at the top
+  - meter mode group
+  - decor break
+  - freeze action
 
 ## 5. AnalyzerComponent Rendering Flow
 
@@ -145,9 +155,10 @@ flowchart TD
     RenderData --> Static[update static layout if bounds/scale changed]
     RenderData --> Dynamic[update dynamic trace bars]
     Hover[mouse move/drag/exit] --> HoverModel[update hover only]
+    HoverModel --> Overlay[AnalyzerHoverOverlayComponent]
     Static --> Paint[paint]
     Dynamic --> Paint
-    HoverModel --> Paint
+    Overlay --> Paint
 ```
 
 `AnalyzerComponent` owns:
@@ -161,6 +172,7 @@ flowchart TD
 - `AnalyzerRefreshModel`
 - `Ui::AnalyzerConstants`
 - hover position
+- `AnalyzerHoverOverlayComponent`
 
 Responsibilities:
 
@@ -172,7 +184,8 @@ Responsibilities:
 - rebuild cached static layout only when geometry or scale inputs change
 - rebuild dynamic bar geometry from the latest render data
 - update hover state independently from the static and dynamic analyzer layers
-- paint the analyzer plot, bars, grid, and hover tooltip
+- paint the analyzer plot, bars, and grid
+- delegate hover-highlight and tooltip rendering to `AnalyzerHoverOverlayComponent`
 
 Important behavior:
 
@@ -184,10 +197,11 @@ Important behavior:
   - that slot reuses its cached rendered trace until it is unfrozen
 - the UI poll rate is only a display concern; DSP analysis frames are produced independently on the audio thread
 - visible traces are rebuilt from current signal slot UI state on every refresh
-- the analyzer background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
-- hover movement repaints only the old/new tooltip and hovered band region instead of forcing a full analyzer redraw
+- the analyzer plot background, frame, grid, and fixed labels are cached into a static image layer and only regenerated when needed
+- the analyzer section background is owned separately by `AnalyzerSectionComponent`
+- hover movement updates only the lightweight hover overlay child instead of rebuilding the analyzer static layer or bar geometry
 - when the engine reports no recent signal, the analyzer keeps polling only long enough for the UI meter to decay to floor, then switches to a slower idle cadence until signal returns
-- UI-facing analyzer constants such as visible frequency defaults, poll cadence, and frequency scale labels live in `src/ui/analyzer/AnalyzerUiConstants.h`, not in the DSP constants header
+- UI-facing analyzer constants such as visible frequency defaults, poll cadence, frequency scale labels, and the `20 kHz` UI-visible cap live in `src/ui/analyzer/AnalyzerUiConstants.h`, not in the DSP constants header
 
 ## 6. Analyzer Data Flow
 
@@ -240,7 +254,7 @@ Helper roles:
 - `AnalyzerViewModel`
   - split builder for static layout, dynamic trace visuals, and hover state
 - `AnalyzerGeometry`
-  - coordinate transforms and band hit-testing
+  - coordinate transforms, stable pixel-partitioned band columns, and band hit-testing
 - `AnalyzerHoverModel`
   - tooltip content and bounds
 - `FrequencyFormatter`
@@ -400,7 +414,9 @@ flowchart TD
     MeterRail[AnalyzerMeterControlsComponent] --> Peak[Peak button]
     MeterRail --> RMS[RMS button]
     MeterRail --> Hold[Hold button]
+    MeterRail --> Decor[decor grid]
     MeterRail --> Freeze[Freeze button]
+    MeterRail --> Settings[settings icon button]
 ```
 
 Responsibilities:
@@ -411,13 +427,11 @@ Responsibilities:
 
 Current styling:
 
-- disabled:
-  - neutral `controlSurface`
-  - standard control text
-- enabled:
-  - brighter neutral `controlSurfaceHover`
-  - same control-text family
-- the meter buttons intentionally use the same neutral selected-surface language as the signal picker rows
+- small raster pad buttons for `Peak`, `RMS`, and `Hold`
+- larger raster freeze pad with icon treatment
+- icon-only settings control with a small top utility divider
+- decorative raster grid element between the meter group and freeze action
+- warm analog marking colors come from the shared theme rather than per-trace colours
 
 ## 11. UI State Types
 

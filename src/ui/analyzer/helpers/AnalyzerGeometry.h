@@ -51,13 +51,20 @@ public:
     float dbForY(float y, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
 
     /**
-     * Returns the horizontal column bounds for one analyzer band using stable pixel partitioning
+     * Returns the visible draw bounds for one analyzer band using stable pixel partitioning
+     * plus the configured inter-band gap.
      */
-    juce::Rectangle<float> getBandColumnBounds(size_t bandIndex, size_t bandCount,
-                                               const juce::Rectangle<float> &plotBounds) const;
+    juce::Rectangle<float> getBandDrawBounds(size_t bandIndex, size_t bandCount,
+                                             const juce::Rectangle<float> &plotBounds) const;
 
     /**
-     * Returns the hovered bar index for equal-width bar drawing
+     * Returns the continuous hit bounds for one analyzer band with no dead gap between bands.
+     */
+    juce::Rectangle<float> getBandHitBounds(size_t bandIndex, size_t bandCount,
+                                            const juce::Rectangle<float> &plotBounds) const;
+
+    /**
+     * Returns the hovered band index using continuous hit regions across the full plot width.
      */
     std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,
                                       const juce::Rectangle<float> &plotBounds) const;

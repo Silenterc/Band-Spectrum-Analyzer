@@ -51,7 +51,7 @@ namespace Ui {
         theme.accentButtonActive = accentColours.accentButtonActive;
         theme.gridBorder = juce::Colour::fromRGBA(176, 146, 112, 42);
         theme.gridLine = juce::Colour::fromRGBA(146, 118, 88, 24);
-        theme.axisText = juce::Colour::fromRGBA(222, 200, 170, 104);
+        theme.axisText = juce::Colour::fromRGBA(232, 212, 185, 152);
         theme.tooltipBackground = juce::Colour::fromRGBA(20, 15, 12, 214);
         theme.tooltipBorder = juce::Colour::fromRGBA(154, 121, 86, 72);
         theme.tooltipText = juce::Colour::fromRGB(229, 212, 186);

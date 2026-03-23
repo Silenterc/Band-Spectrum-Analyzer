@@ -57,11 +57,9 @@ void AnalyzerHoverOverlayComponent::drawHoveredBars(juce::Graphics &g) const {
                 g.fillRect(rmsBounds);
         }
 
-        const auto lineDb = bar.holdDb > gridMinDb ? bar.holdDb : bar.peakDb;
-        const auto lineY = bar.holdDb > gridMinDb ? bar.holdY : bar.peakY;
-        if (lineDb > gridMinDb) {
+        if (bar.holdDb > gridMinDb) {
             g.setColour(traceBar.lineColour);
-            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), lineY - 1.0f,
+            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), bar.holdY - 1.0f,
                                                            bar.bandBounds.getWidth(), 2.0f)
                                         .getSmallestIntegerContainer();
             if (!lineBounds.isEmpty())
@@ -180,7 +178,7 @@ void AnalyzerHoverOverlayComponent::rebuildTooltipGlyphs() {
 
     const auto textBounds = tooltipBounds.withPosition(0, 0).reduced(10, 8);
     constexpr int lineHeight = 16;
-    const juce::Font tooltipFont(juce::FontOptions{}.withHeight(12.0f));
+    const juce::Font tooltipFont(juce::FontOptions{}.withHeight(13.5f));
 
     for (size_t lineIndex = 0; lineIndex < hoverInfo->lineCount; ++lineIndex) {
         const auto y = textBounds.getY() + static_cast<int>(lineIndex) * lineHeight;

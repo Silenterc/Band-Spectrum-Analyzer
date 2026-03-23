@@ -120,13 +120,15 @@ void AnalyzerMeterControlsComponent::resized() {
     const auto clusterTop = juce::jmax(bounds.getY(), settingsBounds.getBottom() + metrics.settingsGap);
     bounds = bounds.withTrimmedTop(clusterTop - bounds.getY());
 
-    bounds.removeFromBottom(metrics.bottomInset);
     const auto buttonGap = metrics.buttonGap;
     const auto groupGap = metrics.groupGap;
     const auto peakHeight = peakButton.getPreferredHeight(bounds.getWidth());
     const auto rmsHeight = rmsButton.getPreferredHeight(bounds.getWidth());
     const auto holdHeight = holdButton.getPreferredHeight(bounds.getWidth());
     const auto freezeHeight = freezeButton.getPreferredHeight(bounds.getWidth());
+    const auto freezeSideInset = juce::jmax(0, (bounds.getWidth() - freezeHeight) / 2);
+    const auto bottomInset = juce::jmax(metrics.bottomInset, freezeSideInset);
+    bounds.removeFromBottom(bottomInset);
     const auto decorHeight = getDecorPreferredHeight(bounds.getWidth());
     const auto topGroupHeight = peakHeight + rmsHeight + holdHeight + buttonGap * 2;
     const auto totalHeight = topGroupHeight + decorHeight + freezeHeight + groupGap * 2;
