@@ -17,6 +17,7 @@ public:
     std::function<void(float)> onDragEnded;
 
     void paint(juce::Graphics &g) override;
+    void resized() override;
     void mouseEnter(const juce::MouseEvent &event) override;
     void mouseExit(const juce::MouseEvent &event) override;
     void mouseDown(const juce::MouseEvent &event) override;
@@ -25,10 +26,13 @@ public:
 
 private:
     float getParentRelativeX(const juce::MouseEvent &event) const;
+    void rebuildCachedImages();
 
     const Ui::Theme &theme;
     juce::Point<float> mouseDownPosition;
     bool hovered = false;
     bool dragged = false;
     bool trackingDrag = false;
+    juce::Image cachedOffImage;
+    juce::Image cachedOnImage;
 };

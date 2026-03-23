@@ -17,15 +17,19 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
     const auto fill = hovered ? style.hoverFill : style.fill;
 
     if (style.content == Content::cancel) {
-        g.setColour(fill);
-        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        if (style.drawsBackground) {
+            g.setColour(fill);
+            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        }
         Ui::drawCancelIcon(g, bounds.reduced(4.0f), style.foreground);
         return;
     }
 
     if (style.content == Content::power) {
-        g.setColour(fill);
-        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        if (style.drawsBackground) {
+            g.setColour(fill);
+            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        }
         Ui::drawPowerIcon(g, bounds.reduced(4.0f), style.foreground);
         return;
     }
@@ -38,8 +42,10 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
         return;
     }
 
-    g.setColour(fill);
-    g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+    if (style.drawsBackground) {
+        g.setColour(fill);
+        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+    }
     g.setColour(style.foreground);
     g.setFont(style.fontHeight);
     g.drawText(style.text, getLocalBounds(), juce::Justification::centred);

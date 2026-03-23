@@ -11,6 +11,10 @@ namespace Ui {
                        const juce::Rectangle<float> &bounds,
                        juce::Colour colour);
 
+    void drawGripIcon(juce::Graphics &g,
+                      const juce::Rectangle<float> &bounds,
+                      juce::Colour colour);
+
     void drawSettingsIcon(juce::Graphics &g,
                           const juce::Rectangle<float> &bounds,
                           juce::Colour colour);

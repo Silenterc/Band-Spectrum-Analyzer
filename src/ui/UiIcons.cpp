@@ -57,6 +57,28 @@ namespace Ui {
         drawTemplateIcon(g, getPowerTemplate(), bounds, colour);
     }
 
+    void drawGripIcon(juce::Graphics &g,
+                      const juce::Rectangle<float> &bounds,
+                      const juce::Colour colour) {
+        g.setColour(colour);
+        const auto dotDiameter = bounds.getWidth() * 0.12f;
+        const auto totalWidth = dotDiameter * 2.0f + dotDiameter * 1.4f;
+        const auto totalHeight = dotDiameter * 3.0f + dotDiameter * 2.0f;
+        const auto startX = bounds.getCentreX() - totalWidth * 0.5f;
+        const auto startY = bounds.getCentreY() - totalHeight * 0.5f;
+        const auto columnStep = dotDiameter * 2.4f;
+        const auto rowStep = dotDiameter * 1.9f;
+
+        for (int column = 0; column < 2; ++column) {
+            for (int row = 0; row < 3; ++row) {
+                g.fillEllipse(startX + static_cast<float>(column) * columnStep,
+                              startY + static_cast<float>(row) * rowStep,
+                              dotDiameter,
+                              dotDiameter);
+            }
+        }
+    }
+
     void drawSettingsIcon(juce::Graphics &g,
                           const juce::Rectangle<float> &bounds,
                           const juce::Colour colour) {

@@ -56,13 +56,14 @@ namespace Ui {
         float sectionGap = 6.0f;
         float rowGap = 6.0f;
         float textStackGap = 2.0f;
-        float sourceToggleWidth = 54.0f;
-        float sourceToggleHeight = 72.0f;
-        float topRowHeight = 34.0f;
+        float sourceToggleWidth = 40.0f;
+        float modeDisplayHeight = 28.0f;
         float modePickerPaddingX = 12.0f;
         float swatchSize = 28.0f;
         float actionSize = 24.0f;
         float actionGap = 5.0f;
+        float actionPadScaleMultiplier = 2.4f;
+        float actionPadIconScaleMultiplier = 0.9f;
         float titleFontHeight = 15.0f;
         float hintFontHeight = 9.0f;
         float titleHeight = 17.0f;

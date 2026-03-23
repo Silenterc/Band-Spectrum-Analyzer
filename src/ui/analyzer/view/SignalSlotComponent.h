@@ -8,6 +8,7 @@
 
 #include "../../SignalSlotUiState.h"
 #include "../../PopupLookAndFeel.h"
+#include "../../PadButton.h"
 #include "../../UiTheme.h"
 #include "../model/SignalSlotOptions.h"
 #include "SignalSlotActionButton.h"
@@ -55,8 +56,9 @@ private:
     void refreshChildState();
     juce::Rectangle<float> getContentBounds() const;
     juce::Rectangle<float> getSourceToggleBounds() const;
-    juce::Rectangle<float> getTopRowBounds() const;
-    juce::Rectangle<float> getBottomRowBounds() const;
+    juce::Rectangle<float> getControlColumnBounds() const;
+    juce::Rectangle<float> getModeRowBounds() const;
+    juce::Rectangle<float> getActionRowBounds() const;
     float getActionClusterWidth() const;
     bool isColourAvailable(int colourIndex) const;
     bool isSignalAvailable(Analyzer::SignalSource source, Analyzer::SignalMode mode) const;
@@ -94,7 +96,7 @@ private:
     SignalSlotModeButton modeButton;
     SignalSlotSwatchButton swatchButton;
     SignalSlotDragHandle dragHandle;
-    SignalSlotActionButton visibilityButton;
-    SignalSlotActionButton freezeButton;
+    PadButton visibilityButton;
+    PadButton freezeButton;
     SignalSlotActionButton removeButton;
 };

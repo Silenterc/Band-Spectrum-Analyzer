@@ -23,8 +23,8 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
       modeButton(themeToUse),
       swatchButton(themeToUse),
       dragHandle(themeToUse),
-      visibilityButton(themeToUse),
-      freezeButton(themeToUse),
+      visibilityButton(themeToUse, {}),
+      freezeButton(themeToUse, {}),
       removeButton(themeToUse) {
     addAndMakeVisible(sourceToggle);
     addAndMakeVisible(modeButton);
@@ -46,6 +46,16 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     visibilityButton.onClick = [this] { handleVisibilityClicked(); };
     freezeButton.onClick = [this] { handleFreezeClicked(); };
     removeButton.onClick = [this] { handleRemoveClicked(); };
+
+    visibilityButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
+    visibilityButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
+    visibilityButton.setOverlayIcon(PadButton::OverlayIcon::power);
+
+    freezeButton.setAssetStyle(PadButton::AssetStyle::freeze);
+    freezeButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
+    freezeButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
+    freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
+    freezeButton.setActiveMarkingColour(theme.hardwareMarkingCoolDark);
 }
 
 SignalSlotComponent::~SignalSlotComponent() {
@@ -93,7 +103,8 @@ int SignalSlotComponent::getPreferredWidth() const {
         modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.label));
 
     const auto modePickerWidth = std::ceil(modeWidth + slotMetrics.modePickerPaddingX * 2.0f);
-    const auto topRowWidth = slotMetrics.sourceToggleWidth + slotMetrics.sectionGap + modePickerWidth;
+    const auto topRowWidth = slotMetrics.sourceToggleWidth + slotMetrics.sectionGap + modePickerWidth
+                             + slotMetrics.actionGap + slotMetrics.actionSize;
     const auto bottomRowWidth = getActionClusterWidth();
     const auto totalWidth = slotMetrics.cellPaddingX + std::max(topRowWidth, bottomRowWidth) + slotMetrics.cellPaddingX;
     return static_cast<int>(std::ceil(totalWidth));
@@ -126,23 +137,21 @@ void SignalSlotComponent::resized() {
 
     const auto &slotMetrics = theme.metrics.slot;
     auto sourceToggleBounds = getSourceToggleBounds();
-    auto topRowBounds = getTopRowBounds();
-    auto bottomRowBounds = getBottomRowBounds();
+    auto modeRowBounds = getModeRowBounds();
+    auto actionRowBounds = getActionRowBounds();
 
     sourceToggle.setBounds(sourceToggleBounds.toNearestInt());
-    topRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.sourceToggleWidth)));
-    topRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.sectionGap)));
-    modeButton.setBounds(topRowBounds.toNearestInt());
+    removeButton.setBounds(modeRowBounds.removeFromRight(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+    modeRowBounds.removeFromRight(static_cast<int>(std::round(slotMetrics.actionGap)));
+    modeButton.setBounds(modeRowBounds.toNearestInt());
 
-    swatchButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
-    bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    dragHandle.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
-    bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    visibilityButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
-    bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    freezeButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
-    bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    removeButton.setBounds(bottomRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+    swatchButton.setBounds(actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    dragHandle.setBounds(actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    visibilityButton.setBounds(actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
+    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    freezeButton.setBounds(actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionSize))).toNearestInt());
 }
 
 juce::Rectangle<float> SignalSlotComponent::getModuleBounds() const {
@@ -178,28 +187,15 @@ void SignalSlotComponent::refreshChildState() {
     modeButton.setLabel(Ui::getSignalModeLabel(settings.configuration.mode));
     swatchButton.setState(settings.colourIndex, settings.opacity);
     dragHandle.setDragged(isDragged);
-
-    SignalSlotActionButton::Style visibilityStyle;
-    const auto visibilityIconStyle = Ui::getIconActionButtonStyle(theme, settings.visible, false);
-    visibilityStyle.content = SignalSlotActionButton::Content::power;
-    visibilityStyle.fill = visibilityIconStyle.fill;
-    visibilityStyle.hoverFill = Ui::getIconActionButtonStyle(theme, settings.visible, true).fill;
-    visibilityStyle.foreground = visibilityIconStyle.icon;
-    visibilityButton.setStyle(visibilityStyle);
-
-    SignalSlotActionButton::Style freezeStyle;
-    const auto freezeIconStyle = Ui::getIconActionButtonStyle(theme, settings.frozen, false);
-    freezeStyle.content = SignalSlotActionButton::Content::snowflake;
-    freezeStyle.fill = freezeIconStyle.fill;
-    freezeStyle.hoverFill = Ui::getIconActionButtonStyle(theme, settings.frozen, true).fill;
-    freezeStyle.foreground = freezeIconStyle.icon;
-    freezeButton.setStyle(freezeStyle);
+    visibilityButton.setActive(settings.visible);
+    freezeButton.setActive(settings.frozen);
 
     SignalSlotActionButton::Style removeStyle;
     removeStyle.content = SignalSlotActionButton::Content::cancel;
-    removeStyle.fill = theme.controlSurface;
-    removeStyle.hoverFill = theme.controlSurfaceHover;
-    removeStyle.foreground = theme.subtleText;
+    removeStyle.fill = juce::Colours::transparentBlack;
+    removeStyle.hoverFill = juce::Colours::transparentBlack;
+    removeStyle.foreground = theme.hardwareMarkingLight;
+    removeStyle.drawsBackground = false;
     removeButton.setStyle(removeStyle);
 
     repaint();
@@ -212,24 +208,32 @@ juce::Rectangle<float> SignalSlotComponent::getContentBounds() const {
 juce::Rectangle<float> SignalSlotComponent::getSourceToggleBounds() const {
     auto contentBounds = getContentBounds();
     contentBounds.setWidth(theme.metrics.slot.sourceToggleWidth);
-    contentBounds.setHeight(juce::jmin(contentBounds.getHeight(), theme.metrics.slot.sourceToggleHeight));
     return contentBounds;
 }
 
-juce::Rectangle<float> SignalSlotComponent::getTopRowBounds() const {
+juce::Rectangle<float> SignalSlotComponent::getControlColumnBounds() const {
     auto contentBounds = getContentBounds();
-    contentBounds.setHeight(theme.metrics.slot.topRowHeight);
+    contentBounds.removeFromLeft(theme.metrics.slot.sourceToggleWidth);
+    contentBounds.removeFromLeft(theme.metrics.slot.sectionGap);
     return contentBounds;
 }
 
-juce::Rectangle<float> SignalSlotComponent::getBottomRowBounds() const {
-    auto contentBounds = getContentBounds();
-    const auto y = contentBounds.getBottom() - theme.metrics.slot.actionSize;
-    return {contentBounds.getX(), y, contentBounds.getWidth(), theme.metrics.slot.actionSize};
+juce::Rectangle<float> SignalSlotComponent::getModeRowBounds() const {
+    auto controlColumnBounds = getControlColumnBounds();
+    controlColumnBounds.setHeight(theme.metrics.slot.modeDisplayHeight);
+    return controlColumnBounds;
+}
+
+juce::Rectangle<float> SignalSlotComponent::getActionRowBounds() const {
+    auto controlColumnBounds = getControlColumnBounds();
+    controlColumnBounds.removeFromTop(theme.metrics.slot.modeDisplayHeight + theme.metrics.slot.rowGap);
+    controlColumnBounds.setHeight(theme.metrics.slot.actionSize);
+    return controlColumnBounds;
 }
 
 float SignalSlotComponent::getActionClusterWidth() const {
-    return theme.metrics.slot.actionSize * 5.0f + theme.metrics.slot.actionGap * 4.0f;
+    return theme.metrics.slot.sourceToggleWidth + theme.metrics.slot.sectionGap
+           + theme.metrics.slot.actionSize * 4.0f + theme.metrics.slot.actionGap * 3.0f;
 }
 
 bool SignalSlotComponent::isColourAvailable(const int colourIndex) const {

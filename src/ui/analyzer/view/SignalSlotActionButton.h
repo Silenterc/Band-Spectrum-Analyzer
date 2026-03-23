@@ -23,6 +23,7 @@ public:
         juce::Colour fill;
         juce::Colour hoverFill;
         juce::Colour foreground;
+        bool drawsBackground = true;
     };
 
     explicit SignalSlotActionButton(const Ui::Theme &themeToUse);

@@ -1,5 +1,8 @@
 #include "SignalSlotDragHandle.h"
 
+#include "../../UiIcons.h"
+#include "../../UiRasterAssets.h"
+
 SignalSlotDragHandle::SignalSlotDragHandle(const Ui::Theme &themeToUse)
     : theme(themeToUse) {
     setMouseCursor(juce::MouseCursor::DraggingHandCursor);
@@ -12,23 +15,16 @@ void SignalSlotDragHandle::setDragged(const bool isDraggedValue) {
 
 void SignalSlotDragHandle::paint(juce::Graphics &g) {
     const auto bounds = getLocalBounds().toFloat();
-    g.setColour((hovered || dragged) ? theme.controlSurfaceHover : theme.controlSurface);
-    g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.buttonCornerRadius, 1.0f);
+    const auto &padImage = (hovered || dragged) ? cachedOnImage : cachedOffImage;
+    if (padImage.isValid())
+        g.drawImageAt(padImage, 0, 0);
 
-    g.setColour(theme.subtleText);
-    const auto gripX = bounds.getCentreX() - theme.metrics.slot.gripWidth * 0.5f;
-    const auto gripY = bounds.getCentreY() - theme.metrics.slot.gripHeight * 0.5f;
-    const auto columnStep = theme.metrics.slot.gripWidth - theme.metrics.slot.gripDotDiameter;
-    const auto rowStep = (theme.metrics.slot.gripHeight - theme.metrics.slot.gripDotDiameter) * 0.5f;
-    for (int dotColumn = 0; dotColumn < 2; ++dotColumn) {
-        for (int dotRow = 0; dotRow < 3; ++dotRow) {
-            const auto x = gripX + static_cast<float>(dotColumn) * columnStep;
-            const auto y = gripY + static_cast<float>(dotRow) * rowStep;
-            g.fillEllipse(x, y, theme.metrics.slot.gripDotDiameter, theme.metrics.slot.gripDotDiameter);
-        }
-    }
+    const auto iconColour = (hovered || dragged) ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
+    Ui::drawGripIcon(g, bounds.reduced(bounds.getWidth() * 0.28f), iconColour);
+}
+
+void SignalSlotDragHandle::resized() {
+    rebuildCachedImages();
 }
 
 void SignalSlotDragHandle::mouseEnter(const juce::MouseEvent &event) {
@@ -72,4 +68,20 @@ float SignalSlotDragHandle::getParentRelativeX(const juce::MouseEvent &event) co
         return event.getEventRelativeTo(parent).position.x;
 
     return event.position.x;
+}
+
+void SignalSlotDragHandle::rebuildCachedImages() {
+    const auto bounds = getLocalBounds();
+    if (bounds.isEmpty()) {
+        cachedOffImage = {};
+        cachedOnImage = {};
+        return;
+    }
+
+    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(bounds.getWidth(),
+                                                                             bounds.getHeight(),
+                                                                             juce::Graphics::highResamplingQuality);
+    cachedOnImage = Ui::getRasterAsset(Ui::RasterAssetId::padOn).rescaled(bounds.getWidth(),
+                                                                           bounds.getHeight(),
+                                                                           juce::Graphics::highResamplingQuality);
 }

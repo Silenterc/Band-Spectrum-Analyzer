@@ -76,9 +76,15 @@ juce::Rectangle<float> SignalSlotSourceToggle::getSwitchBounds() const {
     const auto labelHeight = juce::jmin(11.0f, bounds.getHeight() * 0.32f);
     bounds.removeFromTop(labelHeight);
     bounds.removeFromBottom(labelHeight);
+    bounds = bounds.reduced(2.0f, 0.0f);
 
-    const auto switchHeight = juce::jmax(8.0f, bounds.getHeight());
-    const auto switchWidth = juce::jmax(4.0f, switchHeight * (44.0f / 102.0f));
+    const auto &sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::switchUp);
+    const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / theme.metrics.assets.rasterScale;
+    const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / theme.metrics.assets.rasterScale;
+    const auto fitScale = juce::jmin(bounds.getWidth() / logicalWidth, bounds.getHeight() / logicalHeight);
+    const auto clampedScale = juce::jlimit(0.0f, 1.0f, fitScale);
+    const auto switchWidth = juce::jmax(1.0f, logicalWidth * clampedScale);
+    const auto switchHeight = juce::jmax(1.0f, logicalHeight * clampedScale);
     return juce::Rectangle<float>(switchWidth, switchHeight).withCentre(bounds.getCentre());
 }
 

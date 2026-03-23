@@ -310,15 +310,17 @@ Responsibilities:
 
 Current slot-cell layout:
 
-- top row:
-  - left: vertical source toggle with `Main` on top and `Sidechain` on bottom
-  - right: mode picker for the currently selected source
-- bottom row:
-  - colour picker
-  - drag handle
-  - on/off visibility button
-  - freeze button
-  - remove button
+- left column:
+  - full-height vertical source toggle with `Main` above and `Sidechain` below
+- right column:
+  - top row:
+    - mode display/picker
+    - remove button at the top-right
+  - second row:
+    - colour picker
+    - drag handle
+    - on/off visibility button
+    - freeze button
 
 Interaction split:
 
@@ -332,8 +334,11 @@ Interaction split:
   - owns colour display plus opacity drag/reset interaction
 - `SignalSlotDragHandle`
   - owns drag-handle painting and reorder gesture tracking
+  - now uses the same raster pad language as the slot pad buttons
 - `SignalSlotActionButton`
-  - shared small action-button primitive used for visibility, freeze, and remove
+  - lightweight icon/text action-button primitive currently used by the remove button
+- `PadButton`
+  - shared raster pad primitive reused by slot visibility/freeze controls and the right-side analyzer strip
 - `SignalSelectionPopupContent`
   - now presents only mode choices for the slot's current source
 - `PopupLookAndFeel`
