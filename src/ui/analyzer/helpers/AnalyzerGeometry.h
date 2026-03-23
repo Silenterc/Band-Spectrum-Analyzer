@@ -51,6 +51,12 @@ public:
     float dbForY(float y, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
 
     /**
+     * Returns the horizontal column bounds for one analyzer band using stable pixel partitioning
+     */
+    juce::Rectangle<float> getBandColumnBounds(size_t bandIndex, size_t bandCount,
+                                               const juce::Rectangle<float> &plotBounds) const;
+
+    /**
      * Returns the hovered bar index for equal-width bar drawing
      */
     std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,

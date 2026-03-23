@@ -155,12 +155,8 @@ void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
     if (bandCount == 0)
         return;
 
-    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
-
-    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
-        const auto x = plotBounds.getX() + static_cast<float>(bandIndex) * bandWidth;
-        bandBounds.emplace_back(x + 1.0f, plotBounds.getY(), bandWidth - 2.0f, plotBounds.getHeight());
-    }
+    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex)
+        bandBounds.push_back(geometry.getBandColumnBounds(bandIndex, bandCount, plotBounds));
 }
 
 bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const {
