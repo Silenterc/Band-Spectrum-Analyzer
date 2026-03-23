@@ -26,8 +26,9 @@ bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey 
 }
 
 AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
-    : dataSource(source), theme(themeToUse) {
+    : dataSource(source), theme(themeToUse), hoverOverlay(themeToUse) {
     setOpaque(false);
+    addAndMakeVisible(hoverOverlay);
 
     refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
     bandInfo = dataSource.getBandInfo();
@@ -50,13 +51,13 @@ void AnalyzerComponent::paint(juce::Graphics &g) {
     ensureStaticLayer();
     g.drawImageAt(staticLayer, 0, 0);
     drawBars(g);
-    drawHoverInfo(g);
 
     lastPaintedRenderData = renderData;
 }
 
 void AnalyzerComponent::resized() {
     staticLayerDirty = true;
+    hoverOverlay.setBounds(getLocalBounds());
     rebuildViewModels();
 }
 
@@ -104,9 +105,6 @@ void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
 }
 
 void AnalyzerComponent::drawBars(juce::Graphics &g) const {
-    const auto hoveredBandIndex = viewModel.getHoverInfo().has_value()
-                                      ? std::optional<size_t>{viewModel.getHoverInfo()->bandIndex}
-                                      : std::nullopt;
     const auto clipBounds = g.getClipBounds().toFloat();
 
     for (const auto &traceVisual: viewModel.getTraceVisuals()) {
@@ -116,9 +114,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(peakColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds) || bar.peakDb <= viewModel.getGridMinDb())
                 continue;
@@ -130,9 +125,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(rmsColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds) || bar.rmsDb <= viewModel.getGridMinDb())
                 continue;
@@ -144,9 +136,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(lineColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds))
                 continue;
@@ -161,66 +150,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (!lineBounds.isEmpty())
                 g.fillRect(lineBounds);
         }
-
-        if (!hoveredBandIndex.has_value() || *hoveredBandIndex >= traceVisual.bars.size())
-            continue;
-
-        const auto &hoveredBar = traceVisual.bars[*hoveredBandIndex];
-        if (!hoveredBar.bandBounds.intersects(clipBounds))
-            continue;
-
-        const auto hoveredPeakColour = peakColour.brighter(0.18f);
-        const auto hoveredRmsColour = hoveredPeakColour.withMultipliedAlpha(0.45f);
-        const auto hoveredLineColour = hoveredPeakColour.brighter(0.1f);
-
-        if (hoveredBar.peakDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredPeakColour);
-            const auto peakBounds = hoveredBar.peakBounds.getSmallestIntegerContainer();
-            if (!peakBounds.isEmpty())
-                g.fillRect(peakBounds);
-        }
-
-        if (hoveredBar.rmsDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredRmsColour);
-            const auto rmsBounds = hoveredBar.rmsBounds.getSmallestIntegerContainer();
-            if (!rmsBounds.isEmpty())
-                g.fillRect(rmsBounds);
-        }
-
-        const auto lineDb = hoveredBar.holdDb > viewModel.getGridMinDb() ? hoveredBar.holdDb : hoveredBar.peakDb;
-        const auto lineY = hoveredBar.holdDb > viewModel.getGridMinDb() ? hoveredBar.holdY : hoveredBar.peakY;
-        if (lineDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredLineColour);
-            const auto lineBounds = juce::Rectangle<float>(hoveredBar.bandBounds.getX(), lineY - 1.0f,
-                                                           hoveredBar.bandBounds.getWidth(), 2.0f)
-                                        .getSmallestIntegerContainer();
-            if (!lineBounds.isEmpty())
-                g.fillRect(lineBounds);
-        }
-    }
-}
-
-void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
-    if (!viewModel.getHoverInfo().has_value())
-        return;
-
-    const auto &hoverInfo = *viewModel.getHoverInfo();
-
-    g.setColour(theme.tooltipBackground);
-    g.fillRoundedRectangle(hoverInfo.bounds, 8.0f);
-
-    g.setColour(theme.tooltipBorder);
-    g.drawRoundedRectangle(hoverInfo.bounds, 8.0f, 1.0f);
-
-    g.setColour(theme.tooltipText);
-    g.setFont(12.0f);
-    const auto textBounds = hoverInfo.bounds.toNearestInt().reduced(10, 8);
-    constexpr int lineHeight = 16;
-
-    for (size_t lineIndex = 0; lineIndex < hoverInfo.lineCount; ++lineIndex) {
-        const auto y = textBounds.getY() + static_cast<int>(lineIndex) * lineHeight;
-        g.drawText(hoverInfo.lines[lineIndex], textBounds.getX(), y, textBounds.getWidth(), lineHeight,
-                   juce::Justification::centredLeft, false);
     }
 }
 
@@ -371,16 +300,14 @@ void AnalyzerComponent::rebuildDynamicViewModel() {
 
 void AnalyzerComponent::updateHoverState() {
     viewModel.updateHover(renderData, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, getLocalBounds().toFloat(), hoverPosition);
-}
+    std::optional<juce::Rectangle<float>> hoveredBandBounds;
+    if (const auto &hoverInfo = viewModel.getHoverInfo(); hoverInfo.has_value())
+        hoveredBandBounds = viewModel.getBandBounds(hoverInfo->bandIndex);
 
-void AnalyzerComponent::processPendingHoverUpdate() {
-    if (!hoverUpdatePending)
-        return;
-
-    const auto previousHoverInfo = viewModel.getHoverInfo();
-    updateHoverState();
-    repaintHoverDelta(previousHoverInfo);
-    hoverUpdatePending = false;
+    hoverOverlay.updateState(viewModel.getHoverInfo(),
+                             viewModel.getTraceVisuals(),
+                             viewModel.getGridMinDb(),
+                             hoveredBandBounds);
 }
 
 void AnalyzerComponent::ensureStaticLayer() {
@@ -412,25 +339,6 @@ void AnalyzerComponent::ensureStaticLayer() {
 
     drawGrid(layerGraphics);
     staticLayerDirty = false;
-}
-
-void AnalyzerComponent::repaintHoverDelta(const std::optional<AnalyzerHoverInfo> &previousHoverInfo) {
-    auto dirtyBounds = getHoverDirtyBounds(previousHoverInfo);
-    dirtyBounds = dirtyBounds.getUnion(getHoverDirtyBounds(viewModel.getHoverInfo()));
-
-    if (!dirtyBounds.isEmpty())
-        repaint(dirtyBounds);
-}
-
-juce::Rectangle<int> AnalyzerComponent::getHoverDirtyBounds(const std::optional<AnalyzerHoverInfo> &hoverInfo) const {
-    if (!hoverInfo.has_value())
-        return {};
-
-    auto dirtyBounds = hoverInfo->bounds.getSmallestIntegerContainer().expanded(2);
-    if (const auto bandBounds = viewModel.getBandBounds(hoverInfo->bandIndex); bandBounds.has_value())
-        dirtyBounds = dirtyBounds.getUnion(bandBounds->getSmallestIntegerContainer().expanded(2));
-
-    return dirtyBounds;
 }
 
 void AnalyzerComponent::timerCallback() {
@@ -468,4 +376,12 @@ void AnalyzerComponent::timerCallback() {
 
     rebuildViewModels();
     repaint();
+}
+
+void AnalyzerComponent::processPendingHoverUpdate() {
+    if (!hoverUpdatePending)
+        return;
+
+    updateHoverState();
+    hoverUpdatePending = false;
 }

@@ -15,6 +15,7 @@
 #include "../helpers/AnalyzerMeter.h"
 #include "../model/AnalyzerRefreshModel.h"
 #include "../model/AnalyzerViewModel.h"
+#include "AnalyzerHoverOverlayComponent.h"
 
 /**
  * Draws the analyzer plot from a precomputed view model
@@ -59,11 +60,6 @@ private:
     void drawBars(juce::Graphics &g) const;
 
     /**
-     * Draws the hover tooltip with dB, frequency, and note
-     */
-    void drawHoverInfo(juce::Graphics &g) const;
-
-    /**
      * Rebuilds the enabled-trace view state from the stored slot snapshot
      */
     void rebuildEnabledTraces();
@@ -91,7 +87,6 @@ private:
      * Updates hover state without rebuilding static layout or bars
      */
     void updateHoverState();
-    void processPendingHoverUpdate();
 
     /**
      * Renders the static analyzer layer into its backing image when dirty
@@ -99,19 +94,10 @@ private:
     void ensureStaticLayer();
 
     /**
-     * Repaints only the old/new hover highlight and tooltip regions
-     */
-    void repaintHoverDelta(const std::optional<AnalyzerHoverInfo> &previousHoverInfo);
-
-    /**
-     * Returns the repaint bounds for one hover state
-     */
-    juce::Rectangle<int> getHoverDirtyBounds(const std::optional<AnalyzerHoverInfo> &hoverInfo) const;
-
-    /**
      * Pulls the latest published snapshot and repaints
      */
     void timerCallback() override;
+    void processPendingHoverUpdate();
 
     // Read-only analyzer data source
     AnalyzerDataSource &dataSource;
@@ -131,6 +117,8 @@ private:
     std::array<std::optional<Analyzer::RenderTrace>, Shared::maxSignalSlots> frozenSlotTraces;
     // Current analyzer draw model
     AnalyzerViewModel viewModel;
+    // Lightweight child that renders hover highlight and tooltip only
+    AnalyzerHoverOverlayComponent hoverOverlay;
     Ui::AnalyzerRefreshModel refreshModel;
     // UI-only presentation state such as visible trace set and zoom
     AnalyzerViewState viewState;
@@ -138,7 +126,7 @@ private:
     Ui::AnalyzerUiSnapshot uiSnapshot;
     // Raw mouse position used by the hover model
     std::optional<juce::Point<float>> hoverPosition;
-    // Mouse thread writes hover intent; timer thread coalesces it to the UI refresh cadence
+    // Mouse thread writes hover intent; timer thread coalesces it to the hover refresh cadence
     bool hoverUpdatePending = false;
     // Cached static plot background, border, and grid
     juce::Image staticLayer;

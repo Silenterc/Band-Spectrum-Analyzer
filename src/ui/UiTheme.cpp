@@ -52,9 +52,9 @@ namespace Ui {
         theme.gridBorder = juce::Colour::fromRGBA(176, 146, 112, 42);
         theme.gridLine = juce::Colour::fromRGBA(146, 118, 88, 24);
         theme.axisText = juce::Colour::fromRGBA(222, 200, 170, 104);
-        theme.tooltipBackground = juce::Colour::fromRGBA(19, 15, 13, 230);
-        theme.tooltipBorder = juce::Colour::fromRGBA(210, 186, 156, 42);
-        theme.tooltipText = juce::Colour::fromRGB(235, 225, 209);
+        theme.tooltipBackground = juce::Colour::fromRGBA(20, 15, 12, 214);
+        theme.tooltipBorder = juce::Colour::fromRGBA(154, 121, 86, 72);
+        theme.tooltipText = juce::Colour::fromRGB(229, 212, 186);
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
         theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(58, 72, 82);

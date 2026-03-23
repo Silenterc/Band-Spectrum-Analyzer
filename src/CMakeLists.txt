@@ -47,6 +47,7 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/view/MainLayoutComponent.cpp
         ui/analyzer/view/AnalyzerSectionComponent.cpp
         ui/analyzer/view/AnalyzerComponent.cpp
+        ui/analyzer/view/AnalyzerHoverOverlayComponent.cpp
         ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/view/SignalRackComponent.cpp
         ui/analyzer/view/SignalSlotActionButton.cpp
