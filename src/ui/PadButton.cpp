@@ -1,8 +1,7 @@
 #include "PadButton.h"
 
-#include <BinaryData.h>
-
 #include "UiIcons.h"
+#include "UiRasterAssets.h"
 
 PadButton::PadButton(const Ui::Theme& themeToUse, juce::String labelText)
     : theme(themeToUse), label(std::move(labelText)) {
@@ -136,39 +135,21 @@ void PadButton::mouseUp(const juce::MouseEvent& event) {
         onClick();
 }
 
-const juce::Image& PadButton::getOffImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_off_png,
-                                                              static_cast<size_t>(BinaryData::pad_off_pngSize));
-    return image;
-}
-
-const juce::Image& PadButton::getOnImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_on_png,
-                                                              static_cast<size_t>(BinaryData::pad_on_pngSize));
-    return image;
-}
-
-const juce::Image& PadButton::getFreezeOnImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_freeze_on_png,
-                                                              static_cast<size_t>(BinaryData::pad_freeze_on_pngSize));
-    return image;
-}
-
 const juce::Image& PadButton::getResolvedOnImage() const {
     switch (assetStyle) {
         case AssetStyle::standard:
-            return getOnImage();
+            return Ui::getRasterAsset(Ui::RasterAssetId::padOn);
         case AssetStyle::freeze:
-            return getFreezeOnImage();
+            return Ui::getRasterAsset(Ui::RasterAssetId::padFreezeOn);
     }
 
     jassertfalse;
-    return getOnImage();
+    return Ui::getRasterAsset(Ui::RasterAssetId::padOn);
 }
 
 juce::Rectangle<int> PadButton::getTargetPadBounds(const juce::Rectangle<int> availableBounds) const {
     const auto& metrics = theme.metrics.meterControls;
-    const auto& offImage = getOffImage();
+    const auto& offImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto logicalWidth = static_cast<float>(offImage.getWidth()) / rasterScale;
     const auto logicalHeight = static_cast<float>(offImage.getHeight()) / rasterScale;
@@ -186,6 +167,8 @@ void PadButton::rebuildCachedPadImages() {
         return;
     }
 
-    cachedOffImage = getOffImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
+    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(padBounds.getWidth(),
+                                                                             padBounds.getHeight(),
+                                                                             juce::Graphics::highResamplingQuality);
     cachedOnImage = getResolvedOnImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
 }

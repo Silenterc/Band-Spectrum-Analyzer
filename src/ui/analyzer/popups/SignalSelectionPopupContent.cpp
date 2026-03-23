@@ -1,5 +1,7 @@
 #include "SignalSelectionPopupContent.h"
 
+#include "../../UiRasterAssets.h"
+
 namespace {
     class SignalSelectionRowButton final : public juce::Button {
     public:
@@ -18,20 +20,27 @@ namespace {
 
         void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
             auto bounds = getLocalBounds().toFloat();
-            const auto fill = selected ? theme.controlSurfaceHover.brighter(0.18f)
-                                       : isMouseOverButton ? theme.controlSurfaceHover
-                                                           : theme.controlSurface;
-            g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(0.45f));
-            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
 
             if (selected) {
-                g.setColour(theme.controlBorder.brighter(0.6f));
-                g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.buttonCornerRadius, 1.5f);
+                Ui::drawAssetWithin(g,
+                                    Ui::getRasterAsset(Ui::RasterAssetId::screen),
+                                    getLocalBounds());
+            } else {
+                auto fill = theme.controlSurface;
+                if (isMouseOverButton)
+                    fill = theme.controlSurfaceHover;
+
+                g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(0.45f));
+                g.fillRoundedRectangle(bounds, 3.0f);
+                g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(0.35f));
+                g.drawRoundedRectangle(bounds.reduced(0.5f), 3.0f, 1.0f);
             }
 
-            g.setColour(isEnabled() ? theme.controlText : theme.subtleText.withMultipliedAlpha(0.75f));
-            g.setFont(14.0f);
-            g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft);
+            g.setColour(selected ? theme.hardwareMarkingDark
+                                 : (isEnabled() ? theme.axisText.brighter(0.18f)
+                                                : theme.axisText.withMultipliedAlpha(0.55f)));
+            g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+            g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centred);
         }
 
         Analyzer::SignalSource source;
@@ -77,6 +86,14 @@ SignalSelectionPopupContent::SignalSelectionPopupContent(
 SignalSelectionPopupContent::~SignalSelectionPopupContent() {
     if (onDismiss)
         onDismiss();
+}
+
+void SignalSelectionPopupContent::paint(juce::Graphics &g) {
+    const auto bounds = getLocalBounds().toFloat();
+    g.setColour(theme.controlSurface.withMultipliedBrightness(0.85f));
+    g.fillRoundedRectangle(bounds, 4.0f);
+    g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(0.45f));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, 1.0f);
 }
 
 void SignalSelectionPopupContent::setAvailability(

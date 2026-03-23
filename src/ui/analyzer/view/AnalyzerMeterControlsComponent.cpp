@@ -1,6 +1,6 @@
 #include "AnalyzerMeterControlsComponent.h"
 
-#include <BinaryData.h>
+#include "../../UiRasterAssets.h"
 
 AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSource &uiStateSourceToUse,
                                                                AnalyzerSettingsActions &settingsActionsToUse,
@@ -162,7 +162,7 @@ void AnalyzerMeterControlsComponent::syncButtonStates(const Ui::AnalyzerUiState 
 }
 
 int AnalyzerMeterControlsComponent::getDecorPreferredHeight(const int availableWidth) const {
-    const auto& sourceImage = getDecorGridImage();
+    const auto& sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::decorGrid);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / rasterScale;
     const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / rasterScale;
@@ -177,7 +177,7 @@ void AnalyzerMeterControlsComponent::rebuildCachedDecor() {
         return;
     }
 
-    const auto& sourceImage = getDecorGridImage();
+    const auto& sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::decorGrid);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / rasterScale;
     const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / rasterScale;
@@ -189,10 +189,4 @@ void AnalyzerMeterControlsComponent::rebuildCachedDecor() {
 
     decorBounds = juce::Rectangle<int>(targetWidth, targetHeight).withCentre(decorBounds.getCentre());
     cachedDecorImage = sourceImage.rescaled(targetWidth, targetHeight, juce::Graphics::highResamplingQuality);
-}
-
-const juce::Image& AnalyzerMeterControlsComponent::getDecorGridImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::decor_grid_png,
-                                                              static_cast<size_t>(BinaryData::decor_grid_pngSize));
-    return image;
 }

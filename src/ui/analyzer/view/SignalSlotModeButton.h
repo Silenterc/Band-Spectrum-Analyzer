@@ -16,13 +16,17 @@ public:
     std::function<void()> onClick;
 
     void paint(juce::Graphics &g) override;
+    void resized() override;
     void mouseDown(const juce::MouseEvent &event) override;
     void mouseEnter(const juce::MouseEvent &event) override;
     void mouseExit(const juce::MouseEvent &event) override;
     void mouseUp(const juce::MouseEvent &event) override;
 
 private:
+    void rebuildCachedBackground();
+
     const Ui::Theme &theme;
     juce::String label;
     bool hovered = false;
+    juce::Image cachedBackground;
 };

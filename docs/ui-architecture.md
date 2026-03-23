@@ -75,6 +75,17 @@ Current analyzer folder split:
 - `src/ui/analyzer/helpers/`
   - low-level geometry, smoothing, hover, and formatting helpers
 
+Shared UI infrastructure outside `analyzer/`:
+
+- `src/ui/UiTheme.*`
+  - shared colors and metrics
+- `src/ui/UiIcons.*`
+  - single source of truth for SVG icon rendering
+- `src/ui/UiRasterAssets.*`
+  - single source of truth for embedded raster UI assets such as pads, screens, switches, backgrounds, and decor
+- `src/ui/PopupLookAndFeel.h`
+  - shared analog popup shell styling for `CallOutBox`-based controls
+
 ## 4. MainLayoutComponent
 
 `MainLayoutComponent` is the top-level UI coordinator.
@@ -325,6 +336,8 @@ Interaction split:
   - shared small action-button primitive used for visibility, freeze, and remove
 - `SignalSelectionPopupContent`
   - now presents only mode choices for the slot's current source
+- `PopupLookAndFeel`
+  - owns the warm analog `CallOutBox` shell for slot popups
 - `SignalRackComponent`
   - still owns optimistic state updates and routes semantic source/mode/visibility/freeze/remove actions to `AnalyzerSettingsActions`
 

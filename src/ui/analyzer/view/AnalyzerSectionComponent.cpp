@@ -1,7 +1,6 @@
 #include "AnalyzerSectionComponent.h"
 
-#include <BinaryData.h>
-
+#include "../../UiRasterAssets.h"
 #include "../helpers/AnalyzerGeometry.h"
 
 AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerDataSource& dataSource, const Ui::Theme& themeToUse)
@@ -44,7 +43,7 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
 
     cachedBackground = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedBackground);
-    const auto& backgroundImage = getBackgroundImage();
+    const auto& backgroundImage = Ui::getRasterAsset(Ui::RasterAssetId::background2);
     graphics.drawImage(backgroundImage,
                        bounds.getX(),
                        bounds.getY(),
@@ -54,10 +53,4 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
                        0,
                        backgroundImage.getWidth(),
                        backgroundImage.getHeight());
-}
-
-const juce::Image& AnalyzerSectionComponent::getBackgroundImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::background_2_png,
-                                                              static_cast<size_t>(BinaryData::background_2_pngSize));
-    return image;
 }

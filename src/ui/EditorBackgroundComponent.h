@@ -13,8 +13,6 @@ public:
 
 private:
     void rebuildCachedLayer();
-    static const juce::Image& getBackgroundImage();
-    static const juce::Image& getScrewImage();
 
     const Ui::Theme& theme;
     juce::Image cachedLayer;

@@ -7,6 +7,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../SignalSlotUiState.h"
+#include "../../PopupLookAndFeel.h"
 #include "../../UiTheme.h"
 #include "../model/SignalSlotOptions.h"
 #include "SignalSlotActionButton.h"
@@ -18,6 +19,7 @@
 class SignalSlotComponent final : public juce::Component {
 public:
     explicit SignalSlotComponent(const Ui::Theme &themeToUse);
+    ~SignalSlotComponent() override;
 
     void setSlot(size_t slotIndexToUse, const Ui::SignalSlotState &settingsToUse,
                  const std::vector<int> &usedColoursToUse,
@@ -50,9 +52,9 @@ private:
 
     juce::Rectangle<float> getModuleBounds() const;
     void rebuildCachedBackground();
-    static const juce::Image &getBackgroundImage();
     void refreshChildState();
     juce::Rectangle<float> getContentBounds() const;
+    juce::Rectangle<float> getSourceToggleBounds() const;
     juce::Rectangle<float> getTopRowBounds() const;
     juce::Rectangle<float> getBottomRowBounds() const;
     float getActionClusterWidth() const;
@@ -87,6 +89,7 @@ private:
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
     juce::Component::SafePointer<juce::CallOutBox> activeCallout;
     juce::Image cachedBackground;
+    PopupLookAndFeel popupLookAndFeel;
     SignalSlotSourceToggle sourceToggle;
     SignalSlotModeButton modeButton;
     SignalSlotSwatchButton swatchButton;

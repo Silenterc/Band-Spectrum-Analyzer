@@ -20,7 +20,6 @@ private:
         juce::Rectangle<int> displayBounds;
     };
 
-    static const juce::Image& getBackgroundImage();
     Layout computeLayout() const;
     void rebuildCachedBackground();
 

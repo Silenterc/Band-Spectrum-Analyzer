@@ -1,6 +1,5 @@
 #include "EditorBackgroundComponent.h"
 
-#include <BinaryData.h>
 #include "UiRasterAssets.h"
 
 EditorBackgroundComponent::EditorBackgroundComponent(const Ui::Theme& themeToUse)
@@ -27,7 +26,7 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
     cachedLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedLayer);
 
-    const auto& background = getBackgroundImage();
+    const auto& background = Ui::getRasterAsset(Ui::RasterAssetId::background);
     graphics.drawImage(background,
                        bounds.getX(),
                        bounds.getY(),
@@ -38,7 +37,7 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
                        background.getWidth(),
                        background.getHeight());
 
-    const auto& screw = getScrewImage();
+    const auto& screw = Ui::getRasterAsset(Ui::RasterAssetId::screw);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto screwPadding = theme.metrics.background.screwPadding;
     const auto topLeftBounds = Ui::getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
@@ -49,16 +48,4 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
 
     Ui::drawAssetWithin(graphics, screw, topLeftBounds);
     Ui::drawAssetWithin(graphics, screw, topRightBounds);
-}
-
-const juce::Image& EditorBackgroundComponent::getBackgroundImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::background_png,
-                                                              static_cast<size_t>(BinaryData::background_pngSize));
-    return image;
-}
-
-const juce::Image& EditorBackgroundComponent::getScrewImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::screw_png,
-                                                              static_cast<size_t>(BinaryData::screw_pngSize));
-    return image;
 }

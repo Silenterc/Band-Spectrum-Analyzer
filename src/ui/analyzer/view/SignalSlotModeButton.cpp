@@ -1,5 +1,7 @@
 #include "SignalSlotModeButton.h"
 
+#include "../../UiRasterAssets.h"
+
 SignalSlotModeButton::SignalSlotModeButton(const Ui::Theme &themeToUse)
     : theme(themeToUse) {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
@@ -12,13 +14,22 @@ void SignalSlotModeButton::setLabel(const juce::String &text) {
 
 void SignalSlotModeButton::paint(juce::Graphics &g) {
     const auto bounds = getLocalBounds().toFloat();
-    g.setColour(hovered ? theme.controlSurfaceHover : theme.controlSurface);
-    g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.buttonCornerRadius, 1.0f);
-    g.setColour(theme.controlText);
-    g.setFont(theme.metrics.slot.titleFontHeight);
+
+    if (cachedBackground.isValid())
+        g.drawImageAt(cachedBackground, 0, 0);
+
+    if (hovered) {
+        g.setColour(juce::Colours::white.withAlpha(0.05f));
+        g.fillRoundedRectangle(bounds.reduced(1.5f, 1.5f), 5.0f);
+    }
+
+    g.setColour(theme.hardwareMarkingDark);
+    g.setFont(juce::FontOptions(theme.metrics.slot.titleFontHeight + 1.0f, juce::Font::bold));
     g.drawText(label, getLocalBounds(), juce::Justification::centred);
+}
+
+void SignalSlotModeButton::resized() {
+    rebuildCachedBackground();
 }
 
 void SignalSlotModeButton::mouseDown(const juce::MouseEvent &event) {
@@ -42,4 +53,18 @@ void SignalSlotModeButton::mouseExit(const juce::MouseEvent &event) {
 void SignalSlotModeButton::mouseUp(const juce::MouseEvent &event) {
     if (!event.mouseWasDraggedSinceMouseDown() && onClick)
         onClick();
+}
+
+void SignalSlotModeButton::rebuildCachedBackground() {
+    const auto bounds = getLocalBounds();
+    if (bounds.isEmpty()) {
+        cachedBackground = {};
+        return;
+    }
+
+    cachedBackground = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
+    juce::Graphics graphics(cachedBackground);
+    Ui::drawAssetWithin(graphics,
+                        Ui::getRasterAsset(Ui::RasterAssetId::screen),
+                        bounds);
 }

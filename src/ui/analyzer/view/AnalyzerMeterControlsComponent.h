@@ -25,7 +25,6 @@ private:
     void syncButtonStates(const Ui::AnalyzerUiState &state);
     int getDecorPreferredHeight(int availableWidth) const;
     void rebuildCachedDecor();
-    static const juce::Image& getDecorGridImage();
 
     AnalyzerUiStateSource &uiStateSource;
     AnalyzerSettingsActions &settingsActions;

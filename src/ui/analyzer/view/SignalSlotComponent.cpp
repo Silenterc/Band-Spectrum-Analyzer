@@ -1,10 +1,9 @@
 #include "SignalSlotComponent.h"
 
-#include <BinaryData.h>
-
 #include <algorithm>
 #include <cmath>
 
+#include "../../UiRasterAssets.h"
 #include "../../UiButtonDrawing.h"
 #include "../popups/SignalColourPopupContent.h"
 #include "../popups/SignalSelectionPopupContent.h"
@@ -19,6 +18,7 @@ namespace {
 
 SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     : theme(themeToUse),
+      popupLookAndFeel(themeToUse),
       sourceToggle(themeToUse),
       modeButton(themeToUse),
       swatchButton(themeToUse),
@@ -26,14 +26,13 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
       visibilityButton(themeToUse),
       freezeButton(themeToUse),
       removeButton(themeToUse) {
-    // TODO: Re-enable slot controls as the rack skin is rebuilt around the final module design.
-    addChildComponent(sourceToggle);
-    addChildComponent(modeButton);
-    addChildComponent(swatchButton);
-    addChildComponent(dragHandle);
-    addChildComponent(visibilityButton);
-    addChildComponent(freezeButton);
-    addChildComponent(removeButton);
+    addAndMakeVisible(sourceToggle);
+    addAndMakeVisible(modeButton);
+    addAndMakeVisible(swatchButton);
+    addAndMakeVisible(dragHandle);
+    addAndMakeVisible(visibilityButton);
+    addAndMakeVisible(freezeButton);
+    addAndMakeVisible(removeButton);
 
     sourceToggle.onSourceSelected = [this](const Analyzer::SignalSource source) { handleSourceSelected(source); };
     modeButton.onPress = [this] { handleModePressed(); };
@@ -47,6 +46,14 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     visibilityButton.onClick = [this] { handleVisibilityClicked(); };
     freezeButton.onClick = [this] { handleFreezeClicked(); };
     removeButton.onClick = [this] { handleRemoveClicked(); };
+}
+
+SignalSlotComponent::~SignalSlotComponent() {
+    if (activeCallout != nullptr) {
+        activeCallout->setLookAndFeel(nullptr);
+        activeCallout->dismiss();
+        activeCallout = nullptr;
+    }
 }
 
 void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
@@ -118,10 +125,12 @@ void SignalSlotComponent::resized() {
     rebuildCachedBackground();
 
     const auto &slotMetrics = theme.metrics.slot;
+    auto sourceToggleBounds = getSourceToggleBounds();
     auto topRowBounds = getTopRowBounds();
     auto bottomRowBounds = getBottomRowBounds();
 
-    sourceToggle.setBounds(topRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.sourceToggleWidth))).toNearestInt());
+    sourceToggle.setBounds(sourceToggleBounds.toNearestInt());
+    topRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.sourceToggleWidth)));
     topRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.sectionGap)));
     modeButton.setBounds(topRowBounds.toNearestInt());
 
@@ -152,7 +161,7 @@ void SignalSlotComponent::rebuildCachedBackground() {
     const auto targetBounds = moduleBounds.getSmallestIntegerContainer();
     cachedBackground = juce::Image(juce::Image::ARGB, targetBounds.getWidth(), targetBounds.getHeight(), true);
     juce::Graphics graphics(cachedBackground);
-    const auto &backgroundImage = getBackgroundImage();
+    const auto &backgroundImage = Ui::getRasterAsset(Ui::RasterAssetId::background2Version);
     graphics.drawImage(backgroundImage,
                        0,
                        0,
@@ -162,12 +171,6 @@ void SignalSlotComponent::rebuildCachedBackground() {
                        0,
                        backgroundImage.getWidth(),
                        backgroundImage.getHeight());
-}
-
-const juce::Image &SignalSlotComponent::getBackgroundImage() {
-    static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::background_2_version_png,
-                                                              static_cast<size_t>(BinaryData::background_2_version_pngSize));
-    return image;
 }
 
 void SignalSlotComponent::refreshChildState() {
@@ -206,6 +209,13 @@ juce::Rectangle<float> SignalSlotComponent::getContentBounds() const {
     return getModuleBounds().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
 }
 
+juce::Rectangle<float> SignalSlotComponent::getSourceToggleBounds() const {
+    auto contentBounds = getContentBounds();
+    contentBounds.setWidth(theme.metrics.slot.sourceToggleWidth);
+    contentBounds.setHeight(juce::jmin(contentBounds.getHeight(), theme.metrics.slot.sourceToggleHeight));
+    return contentBounds;
+}
+
 juce::Rectangle<float> SignalSlotComponent::getTopRowBounds() const {
     auto contentBounds = getContentBounds();
     contentBounds.setHeight(theme.metrics.slot.topRowHeight);
@@ -242,8 +252,10 @@ void SignalSlotComponent::dismissOpenMenu() {
         return;
 
     openPopupMenu = OpenPopupMenu::none;
-    if (activeCallout != nullptr)
+    if (activeCallout != nullptr) {
+        activeCallout->setLookAndFeel(nullptr);
         activeCallout->dismiss();
+    }
 
     activeCallout = nullptr;
 }
@@ -260,6 +272,8 @@ void SignalSlotComponent::launchCallout(std::unique_ptr<juce::Component> content
 
     openPopupMenu = kind;
     auto &callout = juce::CallOutBox::launchAsynchronously(std::move(content), anchorBounds, parentComponent);
+    callout.setLookAndFeel(&popupLookAndFeel);
+    callout.lookAndFeelChanged();
     callout.setDismissalMouseClicksAreAlwaysConsumed(false);
     activeCallout = &callout;
 }

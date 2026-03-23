@@ -39,9 +39,6 @@ public:
     std::function<void()> onClick;
 
 private:
-    static const juce::Image& getOffImage();
-    static const juce::Image& getOnImage();
-    static const juce::Image& getFreezeOnImage();
     const juce::Image& getResolvedOnImage() const;
     juce::Rectangle<int> getTargetPadBounds(juce::Rectangle<int> availableBounds) const;
     void rebuildCachedPadImages();

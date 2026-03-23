@@ -11,7 +11,10 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/uikit/pad/pad_off.png
         ui/assets/uikit/pad/pad_freeze_on.png
         ui/assets/uikit/pad/pad_on.png
-        ui/assets/uikit/screw.png)
+        ui/assets/uikit/screen.png
+        ui/assets/uikit/screw.png
+        ui/assets/uikit/switch/switch_down.png
+        ui/assets/uikit/switch/switch_up.png)
 
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -41,6 +44,7 @@ target_sources(${PROJECT_NAME}
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
         ui/UiIcons.cpp
+        ui/UiRasterAssets.cpp
         ui/PadButton.cpp
         ui/SectionDividerComponent.cpp
         ui/UiTheme.cpp

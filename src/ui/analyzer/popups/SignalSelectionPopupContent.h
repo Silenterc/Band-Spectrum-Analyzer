@@ -26,6 +26,8 @@ public:
     int getPreferredWidth() const;
 
 private:
+    void paint(juce::Graphics &g) override;
+
     const Ui::Theme &theme;
     Analyzer::SignalSource currentSource = Analyzer::SignalSource::main;
     std::array<std::unique_ptr<juce::Button>, Ui::signalSlotOptions.size()> buttons;
