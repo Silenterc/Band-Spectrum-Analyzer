@@ -14,13 +14,12 @@ void SignalSlotDragHandle::setDragged(const bool isDraggedValue) {
 }
 
 void SignalSlotDragHandle::paint(juce::Graphics &g) {
-    const auto bounds = getLocalBounds().toFloat();
     const auto &padImage = (hovered || dragged) ? cachedOnImage : cachedOffImage;
     if (padImage.isValid())
-        g.drawImageAt(padImage, 0, 0);
+        g.drawImageAt(padImage, padBounds.getX(), padBounds.getY());
 
     const auto iconColour = (hovered || dragged) ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
-    Ui::drawGripIcon(g, bounds.reduced(bounds.getWidth() * 0.28f), iconColour);
+    Ui::drawGripIcon(g, iconBounds.toFloat(), iconColour);
 }
 
 void SignalSlotDragHandle::resized() {
@@ -73,15 +72,23 @@ float SignalSlotDragHandle::getParentRelativeX(const juce::MouseEvent &event) co
 void SignalSlotDragHandle::rebuildCachedImages() {
     const auto bounds = getLocalBounds();
     if (bounds.isEmpty()) {
+        padBounds = {};
+        iconBounds = {};
         cachedOffImage = {};
         cachedOnImage = {};
         return;
     }
 
-    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(bounds.getWidth(),
-                                                                             bounds.getHeight(),
+    padBounds = Ui::getScaledAssetBoundsWithin(Ui::getRasterAsset(Ui::RasterAssetId::padOff),
+                                               theme.metrics.assets.rasterScale,
+                                               bounds,
+                                               theme.metrics.meterControls.padScale * theme.metrics.slot.actionPadScaleMultiplier);
+    iconBounds = Ui::getScaledInnerBounds(padBounds, 0.28f, theme.metrics.slot.actionPadIconScaleMultiplier);
+
+    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(padBounds.getWidth(),
+                                                                             padBounds.getHeight(),
                                                                              juce::Graphics::highResamplingQuality);
-    cachedOnImage = Ui::getRasterAsset(Ui::RasterAssetId::padOn).rescaled(bounds.getWidth(),
-                                                                           bounds.getHeight(),
+    cachedOnImage = Ui::getRasterAsset(Ui::RasterAssetId::padOn).rescaled(padBounds.getWidth(),
+                                                                           padBounds.getHeight(),
                                                                            juce::Graphics::highResamplingQuality);
 }

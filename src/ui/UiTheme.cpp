@@ -1,43 +1,7 @@
 #include "UiTheme.h"
 
 namespace Ui {
-    namespace {
-        struct AccentColours {
-            juce::Colour accentButton;
-            juce::Colour accentButtonActive;
-        };
-
-        AccentColours getAccentColours(const AccentPalette accentPalette) {
-            switch (accentPalette) {
-                case AccentPalette::blue:
-                    return {
-                        juce::Colour::fromRGB(124, 166, 201),
-                        juce::Colour::fromRGB(75, 117, 154)
-                    };
-                case AccentPalette::green:
-                    return {
-                        juce::Colour::fromRGB(136, 176, 118),
-                        juce::Colour::fromRGB(83, 121, 69)
-                    };
-                case AccentPalette::orange:
-                    return {
-                        juce::Colour::fromRGB(205, 145, 92),
-                        juce::Colour::fromRGB(152, 96, 58)
-                    };
-                case AccentPalette::purple:
-                    return {
-                        juce::Colour::fromRGB(157, 128, 174),
-                        juce::Colour::fromRGB(102, 78, 118)
-                    };
-            }
-
-            return getAccentColours(AccentPalette::blue);
-        }
-    }
-
-    Theme makeTheme(const AccentPalette accentPalette) {
-        const auto accentColours = getAccentColours(accentPalette);
-
+    Theme makeTheme() {
         Theme theme;
         theme.editorBackground = juce::Colour::fromRGB(12, 10, 9);
         theme.analyzerBackground = juce::Colour::fromRGB(24, 20, 17);
@@ -47,8 +11,6 @@ namespace Ui {
         theme.controlBorder = juce::Colour::fromRGBA(221, 197, 167, 34);
         theme.controlText = juce::Colour::fromRGB(233, 222, 205);
         theme.subtleText = juce::Colour::fromRGBA(198, 181, 157, 138);
-        theme.accentButton = accentColours.accentButton;
-        theme.accentButtonActive = accentColours.accentButtonActive;
         theme.gridBorder = juce::Colour::fromRGBA(176, 146, 112, 42);
         theme.gridLine = juce::Colour::fromRGBA(146, 118, 88, 24);
         theme.axisText = juce::Colour::fromRGBA(232, 212, 185, 152);

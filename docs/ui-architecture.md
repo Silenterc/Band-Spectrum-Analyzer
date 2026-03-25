@@ -78,7 +78,9 @@ Current analyzer folder split:
 Shared UI infrastructure outside `analyzer/`:
 
 - `src/ui/UiTheme.*`
-  - shared colors and metrics
+  - single source of truth for shared analog UI colors and metrics
+- `src/shared/SignalPresetCatalog.h`
+  - single source of truth for the default signal/trace colour palette used by the rack, analyzer traces, and colour popup
 - `src/ui/UiIcons.*`
   - single source of truth for SVG icon rendering
 - `src/ui/UiRasterAssets.*`

@@ -33,6 +33,8 @@ private:
     bool hovered = false;
     bool dragged = false;
     bool trackingDrag = false;
+    juce::Rectangle<int> padBounds;
+    juce::Rectangle<int> iconBounds;
     juce::Image cachedOffImage;
     juce::Image cachedOnImage;
 };

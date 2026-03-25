@@ -55,11 +55,7 @@ void PadButton::resized() {
     const auto& metrics = theme.metrics.meterControls;
     auto bounds = getLocalBounds().reduced(metrics.horizontalPadding, 0);
     padBounds = getTargetPadBounds(bounds);
-    const auto iconInset = static_cast<float>(padBounds.getWidth()) * 0.28f;
-    auto iconBounds = padBounds.toFloat().reduced(iconInset);
-    iconBounds = iconBounds.withSizeKeepingCentre(iconBounds.getWidth() * overlayIconScaleMultiplier,
-                                                  iconBounds.getHeight() * overlayIconScaleMultiplier);
-    overlayIconBounds = iconBounds.getSmallestIntegerContainer();
+    overlayIconBounds = Ui::getScaledInnerBounds(padBounds, 0.28f, overlayIconScaleMultiplier);
 
     rebuildCachedPadImages();
 }
@@ -151,16 +147,10 @@ const juce::Image& PadButton::getResolvedOnImage() const {
 }
 
 juce::Rectangle<int> PadButton::getTargetPadBounds(const juce::Rectangle<int> availableBounds) const {
-    const auto& metrics = theme.metrics.meterControls;
-    const auto& offImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff);
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto logicalWidth = static_cast<float>(offImage.getWidth()) / rasterScale;
-    const auto logicalHeight = static_cast<float>(offImage.getHeight()) / rasterScale;
-    const auto widthScale = static_cast<float>(juce::jmax(1, availableBounds.getWidth())) / logicalWidth;
-    const auto fitScale = juce::jlimit(0.0f, 1.0f, widthScale) * metrics.padScale * scaleMultiplier;
-    const auto targetWidth = juce::jmax(1, juce::roundToInt(logicalWidth * fitScale));
-    const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * fitScale));
-    return juce::Rectangle<int>(targetWidth, targetHeight).withCentre(availableBounds.getCentre());
+    return Ui::getScaledAssetBoundsWithin(Ui::getRasterAsset(Ui::RasterAssetId::padOff),
+                                          theme.metrics.assets.rasterScale,
+                                          availableBounds,
+                                          theme.metrics.meterControls.padScale * scaleMultiplier);
 }
 
 void PadButton::rebuildCachedPadImages() {

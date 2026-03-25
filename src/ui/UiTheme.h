@@ -6,13 +6,6 @@
 #include "../shared/SignalPresetCatalog.h"
 
 namespace Ui {
-    enum class AccentPalette {
-        blue,
-        green,
-        orange,
-        purple
-    };
-
     struct PanelMetrics {
         int analyzerToRackGap = 10;
         int rackHeight = 112;
@@ -57,13 +50,13 @@ namespace Ui {
         float rowGap = 6.0f;
         float textStackGap = 2.0f;
         float sourceToggleWidth = 40.0f;
-        float modeDisplayHeight = 28.0f;
+        float modeDisplayHeight = 30.0f;
         float modePickerPaddingX = 12.0f;
-        float swatchSize = 28.0f;
-        float actionSize = 24.0f;
-        float actionGap = 5.0f;
+        float swatchSize = 30.0f;
+        float actionSize = 28.0f;
+        float actionGap = 7.0f;
         float actionPadScaleMultiplier = 2.4f;
-        float actionPadIconScaleMultiplier = 0.9f;
+        float actionPadIconScaleMultiplier = 1.0f;
         float titleFontHeight = 15.0f;
         float hintFontHeight = 9.0f;
         float titleHeight = 17.0f;
@@ -122,8 +115,6 @@ namespace Ui {
         juce::Colour controlBorder;
         juce::Colour controlText;
         juce::Colour subtleText;
-        juce::Colour accentButton;
-        juce::Colour accentButtonActive;
         juce::Colour gridBorder;
         juce::Colour gridLine;
         juce::Colour axisText;
@@ -138,7 +129,7 @@ namespace Ui {
         Metrics metrics;
     };
 
-    Theme makeTheme(AccentPalette accentPalette);
+    Theme makeTheme();
     const Shared::SignalPresetSpec &getSignalPreset(int colourIndex);
     juce::Colour getSignalPresetColour(int colourIndex);
     juce::String getSignalPresetName(int colourIndex);

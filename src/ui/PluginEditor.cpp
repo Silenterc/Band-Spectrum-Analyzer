@@ -9,7 +9,7 @@
 //==============================================================================
 SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &audioProcessor)
     : AudioProcessorEditor(&audioProcessor),
-      theme(Ui::makeTheme(Ui::AccentPalette::blue)),
+      theme(Ui::makeTheme()),
       backgroundComponent(theme),
       mainLayout(audioProcessor, audioProcessor, audioProcessor, theme) {
     setOpaque(true);

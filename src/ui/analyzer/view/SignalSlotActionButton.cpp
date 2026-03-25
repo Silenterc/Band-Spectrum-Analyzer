@@ -21,7 +21,7 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
             g.setColour(fill);
             g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
         }
-        Ui::drawCancelIcon(g, bounds.reduced(4.0f), style.foreground);
+        Ui::drawCancelIcon(g, bounds.reduced(6.0f), style.foreground);
         return;
     }
 

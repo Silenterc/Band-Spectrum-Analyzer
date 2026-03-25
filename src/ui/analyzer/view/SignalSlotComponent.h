@@ -57,6 +57,8 @@ private:
     juce::Rectangle<float> getContentBounds() const;
     juce::Rectangle<float> getSourceToggleBounds() const;
     juce::Rectangle<float> getControlColumnBounds() const;
+    juce::Rectangle<float> getControlStackBounds() const;
+    float getActionRowHeight() const;
     juce::Rectangle<float> getModeRowBounds() const;
     juce::Rectangle<float> getActionRowBounds() const;
     float getActionClusterWidth() const;

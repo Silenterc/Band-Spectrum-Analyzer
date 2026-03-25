@@ -24,7 +24,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
     : uiStateSource(uiStateSourceToUse),
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
-      flatButtonLookAndFeel(themeToUse) {
+      addButton(themeToUse) {
     for (auto &slotDivider: slotDividers) {
         slotDivider = std::make_unique<SectionDividerComponent>(theme, SectionDividerComponent::Orientation::vertical);
         addAndMakeVisible(*slotDivider);
@@ -106,15 +106,22 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
     }
 
     addAndMakeVisible(addButton);
-    addButton.setLookAndFeel(&flatButtonLookAndFeel);
     addButton.onClick = [this] { addSignal(); };
     addButton.setTooltip("Add signal");
+    SignalSlotActionButton::Style addStyle;
+    addStyle.content = SignalSlotActionButton::Content::text;
+    addStyle.text = "+";
+    addStyle.fontHeight = 36.0f;
+    addStyle.fill = juce::Colours::transparentBlack;
+    addStyle.hoverFill = juce::Colours::transparentBlack;
+    addStyle.foreground = theme.hardwareMarkingLight;
+    addStyle.drawsBackground = false;
+    addButton.setStyle(addStyle);
     uiStateSource.addAnalyzerUiStateListener(*this);
     analyzerUiStateChanged(uiStateSource.getAnalyzerUiState());
 }
 
 SignalRackComponent::~SignalRackComponent() {
-    addButton.setLookAndFeel(nullptr);
     uiStateSource.removeAnalyzerUiStateListener(*this);
 }
 
@@ -219,9 +226,6 @@ void SignalRackComponent::refreshFromState(const bool force) {
                                                                 return slot.configuration.enabled;
                                                             }));
     addButton.setVisible(activeCount < static_cast<int>(Shared::maxSignalSlots));
-    addButton.setColour(juce::TextButton::buttonColourId, theme.controlSurface);
-    addButton.setColour(juce::TextButton::buttonOnColourId, theme.controlSurfaceHover);
-    addButton.setColour(juce::TextButton::textColourOffId, theme.controlText);
     resized();
     repaint();
 }

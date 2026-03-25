@@ -122,6 +122,30 @@ namespace Ui {
         return {topLeft.x, topLeft.y, width, height};
     }
 
+    juce::Rectangle<int> getScaledAssetBoundsWithin(const juce::Image &image,
+                                                    const float rasterScale,
+                                                    const juce::Rectangle<int> availableBounds,
+                                                    const float scaleFactor) {
+        jassert(rasterScale > 0.0f);
+
+        const auto logicalWidth = static_cast<float>(image.getWidth()) / rasterScale;
+        const auto logicalHeight = static_cast<float>(image.getHeight()) / rasterScale;
+        const auto widthScale = static_cast<float>(juce::jmax(1, availableBounds.getWidth())) / logicalWidth;
+        const auto fitScale = juce::jlimit(0.0f, 1.0f, widthScale) * juce::jmax(0.0f, scaleFactor);
+        const auto targetWidth = juce::jmax(1, juce::roundToInt(logicalWidth * fitScale));
+        const auto targetHeight = juce::jmax(1, juce::roundToInt(logicalHeight * fitScale));
+        return juce::Rectangle<int>(targetWidth, targetHeight).withCentre(availableBounds.getCentre());
+    }
+
+    juce::Rectangle<int> getScaledInnerBounds(const juce::Rectangle<int> outerBounds,
+                                              const float insetFraction,
+                                              const float scaleMultiplier) {
+        auto innerBounds = outerBounds.toFloat().reduced(static_cast<float>(outerBounds.getWidth()) * insetFraction);
+        innerBounds = innerBounds.withSizeKeepingCentre(innerBounds.getWidth() * juce::jmax(0.0f, scaleMultiplier),
+                                                        innerBounds.getHeight() * juce::jmax(0.0f, scaleMultiplier));
+        return innerBounds.getSmallestIntegerContainer();
+    }
+
     void drawAssetWithin(juce::Graphics &g,
                          const juce::Image &image,
                          const juce::Rectangle<int> &destinationBounds) {

@@ -10,9 +10,9 @@
 #include "../../SignalSlotUiState.h"
 #include "../../AnalyzerSettingsActions.h"
 #include "../../AnalyzerUiStateSource.h"
-#include "../../FlatButtonLookAndFeel.h"
 #include "../../SectionDividerComponent.h"
 #include "../../UiTheme.h"
+#include "SignalSlotActionButton.h"
 #include "SignalSlotComponent.h"
 #include "../helpers/SignalRackDragSession.h"
 #include "../helpers/SignalRackLayoutEngine.h"
@@ -47,14 +47,13 @@ private:
     AnalyzerUiStateSource &uiStateSource;
     AnalyzerSettingsActions &settingsActions;
     const Ui::Theme &theme;
-    FlatButtonLookAndFeel flatButtonLookAndFeel;
     SignalSlotOrderModel slotOrderModel;
     SignalRackLayoutEngine layoutEngine;
     SignalRackDragSession dragSession;
     std::array<std::unique_ptr<SectionDividerComponent>, Shared::maxSignalSlots - 1> slotDividers;
     std::array<std::unique_ptr<SignalSlotComponent>, Shared::maxSignalSlots> slotComponents;
     juce::Image draggedSnapshot;
-    juce::TextButton addButton { "+" };
+    SignalSlotActionButton addButton;
     std::optional<std::array<Ui::SignalSlotState, Shared::maxSignalSlots>> lastSignalSlots;
     std::optional<Shared::SignalSlotOrder> lastDisplayOrder;
     std::optional<bool> lastSidechainAvailable;

@@ -23,6 +23,15 @@ namespace Ui {
                                                float rasterScale,
                                                juce::Point<int> topLeft);
 
+    juce::Rectangle<int> getScaledAssetBoundsWithin(const juce::Image &image,
+                                                    float rasterScale,
+                                                    juce::Rectangle<int> availableBounds,
+                                                    float scaleFactor);
+
+    juce::Rectangle<int> getScaledInnerBounds(juce::Rectangle<int> outerBounds,
+                                              float insetFraction,
+                                              float scaleMultiplier);
+
     void drawAssetWithin(juce::Graphics &g,
                          const juce::Image &image,
                          const juce::Rectangle<int> &destinationBounds);

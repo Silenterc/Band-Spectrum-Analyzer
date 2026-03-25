@@ -1,6 +1,13 @@
 #include "SignalColourPopupContent.h"
 
 namespace {
+    int getColourRowCount(const int itemCount, const int columns) {
+        if (columns <= 0)
+            return 0;
+
+        return (itemCount + columns - 1) / columns;
+    }
+
     class SignalColourButton final : public juce::Button {
     public:
         SignalColourButton(const juce::Colour colourToUse, const bool selectedToUse)
@@ -94,8 +101,8 @@ int SignalColourPopupContent::getPreferredWidth() const {
 
 int SignalColourPopupContent::getPreferredHeight() const {
     const auto &popupMetrics = theme.metrics.popup;
-    constexpr int rows = 2;
+    const auto rows = getColourRowCount(static_cast<int>(colourButtons.size()), popupMetrics.colourColumns);
     return static_cast<int>(popupMetrics.padding * 2
                             + popupMetrics.swatchSize * static_cast<float>(rows)
-                            + popupMetrics.colourGap * static_cast<float>(rows - 1));
+                            + popupMetrics.colourGap * static_cast<float>(juce::jmax(0, rows - 1)));
 }
