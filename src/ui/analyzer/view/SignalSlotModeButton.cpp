@@ -13,18 +13,19 @@ void SignalSlotModeButton::setLabel(const juce::String &text) {
 }
 
 void SignalSlotModeButton::paint(juce::Graphics &g) {
+    const auto &slotMetrics = theme.metrics.slot;
     const auto bounds = getLocalBounds().toFloat();
 
     if (cachedBackground.isValid())
         g.drawImageAt(cachedBackground, 0, 0);
 
     if (hovered) {
-        g.setColour(juce::Colours::white.withAlpha(0.05f));
-        g.fillRoundedRectangle(bounds.reduced(1.5f, 1.5f), 5.0f);
+        g.setColour(juce::Colours::white.withAlpha(slotMetrics.modeHoverAlpha));
+        g.fillRoundedRectangle(bounds.reduced(1.5f, 1.5f), slotMetrics.modeHoverCornerRadius);
     }
 
     g.setColour(theme.hardwareMarkingDark);
-    g.setFont(juce::FontOptions(theme.metrics.slot.titleFontHeight + 1.0f, juce::Font::bold));
+    g.setFont(juce::FontOptions(slotMetrics.titleFontHeight + slotMetrics.modeTitleFontDelta, juce::Font::bold));
     g.drawText(label, getLocalBounds(), juce::Justification::centred);
 }
 
@@ -65,6 +66,6 @@ void SignalSlotModeButton::rebuildCachedBackground() {
     cachedBackground = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedBackground);
     Ui::drawAssetWithin(graphics,
-                        Ui::getRasterAsset(Ui::RasterAssetId::screen),
+                        Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screen),
                         bounds);
 }

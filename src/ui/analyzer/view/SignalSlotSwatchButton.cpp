@@ -37,7 +37,8 @@ void SignalSlotSwatchButton::mouseDrag(const juce::MouseEvent &event) {
 
     const auto newOpacity = juce::jlimit(Defaults::signalOpacityMin,
                                          Defaults::signalOpacityMax,
-                                         dragStartOpacity + (mouseDownPosition.y - event.position.y) * 0.005f);
+                                         dragStartOpacity
+                                             + (mouseDownPosition.y - event.position.y) * theme.metrics.slot.opacityPixelsToValue);
     opacity = newOpacity;
     onOpacityChanged(newOpacity);
 }

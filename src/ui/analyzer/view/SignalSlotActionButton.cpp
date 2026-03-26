@@ -13,24 +13,25 @@ void SignalSlotActionButton::setStyle(const Style &styleToUse) {
 }
 
 void SignalSlotActionButton::paint(juce::Graphics &g) {
+    const auto &slotMetrics = theme.metrics.slot;
     const auto bounds = getLocalBounds().toFloat();
     const auto fill = hovered ? style.hoverFill : style.fill;
 
     if (style.content == Content::cancel) {
         if (style.drawsBackground) {
             g.setColour(fill);
-            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+            g.fillRoundedRectangle(bounds, slotMetrics.buttonCornerRadius);
         }
-        Ui::drawCancelIcon(g, bounds.reduced(6.0f), style.foreground);
+        Ui::drawIcon(g, Ui::IconId::cancel, bounds.reduced(slotMetrics.cancelIconInset), style.foreground);
         return;
     }
 
     if (style.content == Content::power) {
         if (style.drawsBackground) {
             g.setColour(fill);
-            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+            g.fillRoundedRectangle(bounds, slotMetrics.buttonCornerRadius);
         }
-        Ui::drawPowerIcon(g, bounds.reduced(4.0f), style.foreground);
+        Ui::drawIcon(g, Ui::IconId::power, bounds.reduced(slotMetrics.powerIconInset), style.foreground);
         return;
     }
 
@@ -38,13 +39,13 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
         Ui::IconActionButtonStyle snowflakeStyle;
         snowflakeStyle.fill = fill;
         snowflakeStyle.icon = style.foreground;
-        Ui::drawSnowflakeActionButton(g, bounds, theme, snowflakeStyle, 4.0f);
+        Ui::drawSnowflakeActionButton(g, bounds, theme, snowflakeStyle, slotMetrics.snowflakeIconInset);
         return;
     }
 
     if (style.drawsBackground) {
         g.setColour(fill);
-        g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
+        g.fillRoundedRectangle(bounds, slotMetrics.buttonCornerRadius);
     }
     g.setColour(style.foreground);
     g.setFont(style.fontHeight);

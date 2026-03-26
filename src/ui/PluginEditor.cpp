@@ -15,7 +15,7 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(Spect
     setOpaque(true);
     addAndMakeVisible(backgroundComponent);
     addAndMakeVisible(mainLayout);
-    setSize(1000, 600);
+    setSize(theme.metrics.editor.initialWidth, theme.metrics.editor.initialHeight);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {

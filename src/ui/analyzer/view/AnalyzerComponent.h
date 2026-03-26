@@ -8,7 +8,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../shared/SignalSlotConfiguration.h"
-#include "../../AnalyzerDataSource.h"
+#include "../../AnalyzerRenderSource.h"
+#include "../../AnalyzerUiSnapshotSource.h"
 #include "../../UiTheme.h"
 #include "../AnalyzerRenderData.h"
 #include "../AnalyzerViewState.h"
@@ -20,12 +21,17 @@
 /**
  * Draws the analyzer plot from a precomputed view model
  */
-class AnalyzerComponent final : public juce::Component, private juce::Timer {
+class AnalyzerComponent final : public juce::Component,
+                                private juce::Timer,
+                                private AnalyzerUiSnapshotSource::Listener {
 public:
     /**
      * Binds the component to a read-only analyzer data source
      */
-    AnalyzerComponent(AnalyzerDataSource &dataSource, const Ui::Theme &theme);
+    AnalyzerComponent(AnalyzerRenderSource &renderSource,
+                      AnalyzerUiSnapshotSource &snapshotSource,
+                      const Ui::Theme &theme);
+    ~AnalyzerComponent() override;
 
     void paint(juce::Graphics &g) override;
     void resized() override;
@@ -59,10 +65,6 @@ private:
      */
     void drawBars(juce::Graphics &g) const;
 
-    /**
-     * Rebuilds the enabled-trace view state from the stored slot snapshot
-     */
-    void rebuildEnabledTraces();
     void syncFrozenSlotCache(const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &previousSignalSlots);
     Analyzer::RenderData composeDisplayRenderData(const Analyzer::RenderData &liveRenderData);
     void captureFrozenTrace(size_t slotIndex, const Analyzer::RenderData &sourceRenderData);
@@ -98,9 +100,12 @@ private:
      */
     void timerCallback() override;
     void processPendingHoverUpdate();
+    void analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) override;
 
-    // Read-only analyzer data source
-    AnalyzerDataSource &dataSource;
+    // High-frequency render data source
+    AnalyzerRenderSource &renderSource;
+    // Low-frequency immutable UI snapshot source
+    AnalyzerUiSnapshotSource &snapshotSource;
     // Shared UI theme
     const Ui::Theme &theme;
     // Latest immutable band layout from the processor

@@ -3,21 +3,25 @@
 #include <juce_graphics/juce_graphics.h>
 
 namespace Ui {
-    enum class RasterAssetId {
+    enum class SharedRasterAssetId {
         background,
-        background2,
-        background2Version,
-        decorGrid,
         padOff,
         padOn,
         padFreezeOn,
         screen,
         screw,
+    };
+
+    enum class AnalyzerRasterAssetId {
+        background2,
+        background2Version,
+        decorGrid,
         switchDown,
         switchUp,
     };
 
-    const juce::Image &getRasterAsset(RasterAssetId assetId);
+    const juce::Image &getSharedRasterAsset(SharedRasterAssetId assetId);
+    const juce::Image &getAnalyzerRasterAsset(AnalyzerRasterAssetId assetId);
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,
                                                float rasterScale,

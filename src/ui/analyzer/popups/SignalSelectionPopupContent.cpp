@@ -19,27 +19,28 @@ namespace {
         }
 
         void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
+            const auto &popupMetrics = theme.metrics.popup;
             auto bounds = getLocalBounds().toFloat();
 
             if (selected) {
                 Ui::drawAssetWithin(g,
-                                    Ui::getRasterAsset(Ui::RasterAssetId::screen),
+                                    Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screen),
                                     getLocalBounds());
             } else {
                 auto fill = theme.controlSurface;
                 if (isMouseOverButton)
                     fill = theme.controlSurfaceHover;
 
-                g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(0.45f));
-                g.fillRoundedRectangle(bounds, 3.0f);
-                g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(0.35f));
-                g.drawRoundedRectangle(bounds.reduced(0.5f), 3.0f, 1.0f);
+                g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(popupMetrics.rowDisabledAlpha));
+                g.fillRoundedRectangle(bounds, popupMetrics.rowCornerRadius);
+                g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.rowOutlineAlpha));
+                g.drawRoundedRectangle(bounds.reduced(0.5f), popupMetrics.rowCornerRadius, 1.0f);
             }
 
             g.setColour(selected ? theme.hardwareMarkingDark
                                  : (isEnabled() ? theme.axisText.brighter(0.18f)
                                                 : theme.axisText.withMultipliedAlpha(0.55f)));
-            g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+            g.setFont(juce::FontOptions(popupMetrics.rowTextFontHeight, juce::Font::bold));
             g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centred);
         }
 
@@ -66,7 +67,11 @@ SignalSelectionPopupContent::SignalSelectionPopupContent(
     for (size_t index = 0; index < Ui::signalSlotOptions.size(); ++index) {
         const auto &option = Ui::signalSlotOptions[index];
         auto button = std::make_unique<SignalSelectionRowButton>(
-            theme, option.label, currentSourceToUse == option.source && currentModeToUse == option.mode, option.source, option.mode);
+            theme,
+            option.modeLabel,
+            currentSourceToUse == option.source && currentModeToUse == option.mode,
+            option.source,
+            option.mode);
         auto *buttonPtr = button.get();
         addAndMakeVisible(*button);
         button->onClick = [this, buttonPtr] {
@@ -89,11 +94,12 @@ SignalSelectionPopupContent::~SignalSelectionPopupContent() {
 }
 
 void SignalSelectionPopupContent::paint(juce::Graphics &g) {
+    const auto &popupMetrics = theme.metrics.popup;
     const auto bounds = getLocalBounds().toFloat();
-    g.setColour(theme.controlSurface.withMultipliedBrightness(0.85f));
-    g.fillRoundedRectangle(bounds, 4.0f);
-    g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(0.45f));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), 4.0f, 1.0f);
+    g.setColour(theme.controlSurface.withMultipliedBrightness(popupMetrics.shellBrightness));
+    g.fillRoundedRectangle(bounds, popupMetrics.shellCornerRadius);
+    g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.shellBorderAlpha));
+    g.drawRoundedRectangle(bounds.reduced(0.5f), popupMetrics.shellCornerRadius, 1.0f);
 }
 
 void SignalSelectionPopupContent::setAvailability(
@@ -123,7 +129,10 @@ void SignalSelectionPopupContent::resized() {
 
 int SignalSelectionPopupContent::getPreferredHeight() const {
     const auto &popupMetrics = theme.metrics.popup;
-    return static_cast<int>(popupMetrics.padding * 2 + popupMetrics.rowHeight * 3 + popupMetrics.rowGap * 2);
+    const auto rowCount = Ui::getVisibleSignalSlotOptionCount(currentSource, true);
+    return static_cast<int>(popupMetrics.padding * 2
+                            + popupMetrics.rowHeight * static_cast<float>(rowCount)
+                            + popupMetrics.rowGap * static_cast<float>(juce::jmax<size_t>(0, rowCount - 1)));
 }
 
 int SignalSelectionPopupContent::getPreferredWidth() const {

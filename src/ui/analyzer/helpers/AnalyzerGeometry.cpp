@@ -4,17 +4,15 @@
 #include <cmath>
 
 namespace {
-    constexpr float tooltipWidth = 132.0f;
-    constexpr float tooltipHeight = 72.0f;
-    constexpr int interBandGapPixels = 1;
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<float> &localBounds) const {
     auto bounds = localBounds;
-    bounds.removeFromTop(AnalyzerLayout::plotMargins.top);
-    bounds.removeFromLeft(AnalyzerLayout::plotMargins.left);
-    bounds.removeFromRight(AnalyzerLayout::plotMargins.right);
-    bounds.removeFromBottom(AnalyzerLayout::plotMargins.bottom);
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    bounds.removeFromTop(plotMetrics.plotMarginTop);
+    bounds.removeFromLeft(plotMetrics.plotMarginLeft);
+    bounds.removeFromRight(plotMetrics.plotMarginRight);
+    bounds.removeFromBottom(plotMetrics.plotMarginBottom);
     return bounds;
 }
 
@@ -69,6 +67,7 @@ juce::Rectangle<float> AnalyzerGeometry::getBandDrawBounds(const size_t bandInde
         return {};
 
     const auto plotBoundsInt = plotBounds.getSmallestIntegerContainer();
+    const auto interBandGapPixels = theme.metrics.analyzerPlot.interBandGapPixels;
     const auto totalGapWidth = juce::jmax(0, static_cast<int>(bandCount - 1)) * interBandGapPixels;
     const auto availableBarWidth = juce::jmax(0, plotBoundsInt.getWidth() - totalGapWidth);
     const auto bandCountInt = static_cast<int>(bandCount);
@@ -126,17 +125,20 @@ juce::Rectangle<float> AnalyzerGeometry::getTooltipBounds(juce::Point<float> hov
                                                           const juce::Rectangle<float> &plotBounds,
                                                           const juce::Rectangle<float> &localBounds) const {
     // Keep the box slightly below the cursor so the pointer does not sit on its vertical centre
-    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + 12.0f, hoverPosition.y + 10.0f,
-                                                tooltipWidth, tooltipHeight);
+    const auto &tooltip = theme.metrics.tooltip;
+    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + tooltip.offsetX,
+                                                hoverPosition.y + tooltip.offsetY,
+                                                tooltip.width,
+                                                tooltip.height);
 
-    if (tooltipBounds.getRight() > localBounds.getRight() - 8.0f)
-        tooltipBounds.setX(hoverPosition.x - tooltipWidth - 12.0f);
+    if (tooltipBounds.getRight() > localBounds.getRight() - tooltip.edgeInset)
+        tooltipBounds.setX(hoverPosition.x - tooltip.width - tooltip.offsetX);
 
     if (tooltipBounds.getY() < plotBounds.getY())
         tooltipBounds.setY(plotBounds.getY());
 
-    if (tooltipBounds.getBottom() > localBounds.getBottom() - 8.0f)
-        tooltipBounds.setY(localBounds.getBottom() - tooltipHeight - 8.0f);
+    if (tooltipBounds.getBottom() > localBounds.getBottom() - tooltip.edgeInset)
+        tooltipBounds.setY(localBounds.getBottom() - tooltip.height - tooltip.edgeInset);
 
     return tooltipBounds;
 }

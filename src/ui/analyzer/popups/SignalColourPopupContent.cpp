@@ -10,32 +10,37 @@ namespace {
 
     class SignalColourButton final : public juce::Button {
     public:
-        SignalColourButton(const juce::Colour colourToUse, const bool selectedToUse)
-            : juce::Button({}), colour(colourToUse), selected(selectedToUse) {
+        SignalColourButton(const Ui::Theme &themeToUse, const juce::Colour colourToUse, const bool selectedToUse)
+            : juce::Button({}), theme(themeToUse), colour(colourToUse), selected(selectedToUse) {
         }
 
         void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
-            auto bounds = getLocalBounds().toFloat().reduced(4.0f);
+            const auto bounds = getLocalBounds().toFloat().reduced(theme.metrics.popup.swatchInset);
+            const auto &popupMetrics = theme.metrics.popup;
 
             g.setColour(colour.withMultipliedAlpha(isEnabled() ? 1.0f : 0.28f));
             g.fillEllipse(bounds);
 
             if (isMouseOverButton) {
-                g.setColour(juce::Colours::white.withAlpha(0.12f));
-                g.fillEllipse(bounds.reduced(2.0f));
+                g.setColour(juce::Colours::white.withAlpha(popupMetrics.swatchHoverAlpha));
+                g.fillEllipse(bounds.reduced(popupMetrics.swatchHoverInset));
             }
 
-            g.setColour(selected ? juce::Colours::white : juce::Colours::white.withAlpha(0.14f));
-            g.drawEllipse(bounds, selected ? 2.0f : 1.0f);
+            g.setColour(selected ? juce::Colours::white : juce::Colours::white.withAlpha(popupMetrics.swatchOutlineAlpha));
+            g.drawEllipse(bounds, selected ? popupMetrics.swatchSelectedOutlineThickness : popupMetrics.swatchOutlineThickness);
 
             if (!isEnabled()) {
                 g.setColour(juce::Colours::white.withAlpha(0.18f));
-                g.drawLine(bounds.getX() + 5.0f, bounds.getBottom() - 5.0f,
-                           bounds.getRight() - 5.0f, bounds.getY() + 5.0f, 1.5f);
+                g.drawLine(bounds.getX() + popupMetrics.swatchDisabledSlashInset,
+                           bounds.getBottom() - popupMetrics.swatchDisabledSlashInset,
+                           bounds.getRight() - popupMetrics.swatchDisabledSlashInset,
+                           bounds.getY() + popupMetrics.swatchDisabledSlashInset,
+                           popupMetrics.swatchDisabledSlashThickness);
             }
         }
 
     private:
+        const Ui::Theme &theme;
         juce::Colour colour;
         bool selected = false;
     };
@@ -58,7 +63,7 @@ void SignalColourPopupContent::addColourButton(const juce::Colour colour,
                                                const bool selected,
                                                const bool enabled,
                                                const int colourIndex) {
-    auto button = std::make_unique<SignalColourButton>(colour, selected);
+    auto button = std::make_unique<SignalColourButton>(theme, colour, selected);
     button->setEnabled(enabled);
     button->onClick = [this, colourIndex] {
         if (!onSelect)

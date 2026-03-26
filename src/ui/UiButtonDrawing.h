@@ -18,6 +18,6 @@ namespace Ui {
                                           const float iconInset) {
         g.setColour(style.fill);
         g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
-        Ui::drawSnowflakeIcon(g, bounds.reduced(iconInset), style.icon);
+        Ui::drawIcon(g, Ui::IconId::snowflake, bounds.reduced(iconInset), style.icon);
     }
 }

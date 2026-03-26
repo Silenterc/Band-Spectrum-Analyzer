@@ -8,12 +8,14 @@
 #include "../../../dsp/core/AnalyzerData.h"
 #include "../AnalyzerUiConstants.h"
 #include "../../SignalSlotUiState.h"
+#include "../../UiTheme.h"
 #include "../AnalyzerViewState.h"
 #include "../AnalyzerRenderData.h"
 #include "../helpers/AnalyzerGeometry.h"
 #include "../helpers/AnalyzerHoverModel.h"
 #include "../helpers/FrequencyFormatter.h"
 #include "../helpers/MusicTheory.h"
+#include "AnalyzerUiSelectors.h"
 #include "SignalSlotOrderModel.h"
 
 /**
@@ -75,7 +77,7 @@ struct AnalyzerTraceVisual {
  */
 class AnalyzerViewModel final {
 public:
-    AnalyzerViewModel();
+    explicit AnalyzerViewModel(const Ui::Theme &themeToUse);
 
     /**
      * Rebuilds the static analyzer layout that only changes when bounds or scale change
@@ -139,12 +141,12 @@ public:
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
     void updateBandBounds(size_t bandCount);
-    bool isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const;
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getHoldDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     void updateVisibleFrequencyRange(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState);
 
+    const Ui::Theme &theme;
     AnalyzerGeometry geometry;
     FrequencyFormatter formatter;
     MusicTheory musicTheory;

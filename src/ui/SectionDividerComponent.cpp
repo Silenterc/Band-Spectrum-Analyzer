@@ -22,17 +22,20 @@ void SectionDividerComponent::rebuildCachedLayer() {
 
     cachedLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedLayer);
+    const auto &dividerMetrics = theme.metrics.sectionDivider;
     juce::ColourGradient gradient(
-        theme.sectionDividerShadow.withMultipliedAlpha(0.90f),
+        theme.sectionDividerShadow.withMultipliedAlpha(dividerMetrics.startAlpha),
         0.0f,
         0.0f,
-        theme.sectionDividerHighlight.withMultipliedAlpha(0.46f),
+        theme.sectionDividerHighlight.withMultipliedAlpha(dividerMetrics.endAlpha),
         orientation == Orientation::vertical ? static_cast<float>(bounds.getWidth()) : 0.0f,
         orientation == Orientation::horizontal ? static_cast<float>(bounds.getHeight()) : 0.0f,
         false);
 
-    gradient.addColour(0.38, theme.sectionDividerShadow.withMultipliedAlpha(0.78f));
-    gradient.addColour(0.74, theme.sectionDividerHighlight.withMultipliedAlpha(0.26f));
+    gradient.addColour(dividerMetrics.middleStartPosition,
+                       theme.sectionDividerShadow.withMultipliedAlpha(dividerMetrics.middleStartAlpha));
+    gradient.addColour(dividerMetrics.middleEndPosition,
+                       theme.sectionDividerHighlight.withMultipliedAlpha(dividerMetrics.middleEndAlpha));
 
     graphics.setGradientFill(gradient);
     graphics.fillRect(bounds);

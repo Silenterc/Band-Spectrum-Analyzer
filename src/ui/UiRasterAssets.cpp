@@ -82,34 +82,42 @@ namespace {
 }
 
 namespace Ui {
-    const juce::Image &getRasterAsset(const RasterAssetId assetId) {
+    const juce::Image &getSharedRasterAsset(const SharedRasterAssetId assetId) {
         switch (assetId) {
-            case RasterAssetId::background:
+            case SharedRasterAssetId::background:
                 return getBackground();
-            case RasterAssetId::background2:
-                return getBackground2();
-            case RasterAssetId::background2Version:
-                return getBackground2Version();
-            case RasterAssetId::decorGrid:
-                return getDecorGrid();
-            case RasterAssetId::padOff:
+            case SharedRasterAssetId::padOff:
                 return getPadOff();
-            case RasterAssetId::padOn:
+            case SharedRasterAssetId::padOn:
                 return getPadOn();
-            case RasterAssetId::padFreezeOn:
+            case SharedRasterAssetId::padFreezeOn:
                 return getPadFreezeOn();
-            case RasterAssetId::screen:
+            case SharedRasterAssetId::screen:
                 return getScreen();
-            case RasterAssetId::screw:
+            case SharedRasterAssetId::screw:
                 return getScrew();
-            case RasterAssetId::switchDown:
-                return getSwitchDown();
-            case RasterAssetId::switchUp:
-                return getSwitchUp();
         }
 
         jassertfalse;
         return getBackground();
+    }
+
+    const juce::Image &getAnalyzerRasterAsset(const AnalyzerRasterAssetId assetId) {
+        switch (assetId) {
+            case AnalyzerRasterAssetId::background2:
+                return getBackground2();
+            case AnalyzerRasterAssetId::background2Version:
+                return getBackground2Version();
+            case AnalyzerRasterAssetId::decorGrid:
+                return getDecorGrid();
+            case AnalyzerRasterAssetId::switchDown:
+                return getSwitchDown();
+            case AnalyzerRasterAssetId::switchUp:
+                return getSwitchUp();
+        }
+
+        jassertfalse;
+        return getBackground2();
     }
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,

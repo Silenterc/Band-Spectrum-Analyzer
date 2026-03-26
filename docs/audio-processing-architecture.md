@@ -31,7 +31,8 @@ flowchart TD
     Processor --> ParamSchema[ParameterSchema]
     Processor --> ParamAccess[ParameterAccess]
     Processor --> Engine[Analyzer::Engine]
-    Processor --> DataSource[AnalyzerDataSource]
+    Processor --> RenderSource[AnalyzerRenderSource]
+    Processor --> SnapshotSource[AnalyzerUiSnapshotSource]
     Processor --> Settings[AnalyzerSettingsActions]
     Processor --> SlotOrderState[SignalSlotOrderState]
 
@@ -46,7 +47,8 @@ flowchart TD
 - `ParameterSchema` is the single source of truth for parameter ids, labels, choices, ranges, and APVTS layout construction.
 - `ParameterAccess` caches APVTS parameter pointers and exposes typed reads/writes for engine state, UI slot state, and meter/grid state.
 - The processor reads only `EngineParameterState` on the audio thread.
-- The UI reads slot presentation state, freeze state, grid settings, and meter settings through `AnalyzerDataSource`.
+- The UI reads analyzer traces and band metadata through `AnalyzerRenderSource`.
+- The UI reads slot presentation state, freeze state, grid settings, and meter settings through `AnalyzerUiSnapshotSource`.
 - The processor also exposes UI write actions through `AnalyzerSettingsActions`, including semantic slot operations used by the rack UI.
 - APVTS state plus persistent UI-only slot order are serialized in `getStateInformation()` / `setStateInformation()`.
 
@@ -219,18 +221,20 @@ flowchart TD
     Processor --> Grid[grid settings]
     Processor --> Sidechain[sidechain availability]
 
-    BandInfo --> DataSource[AnalyzerDataSource]
-    RawTraces --> DataSource
-    Slots --> DataSource
-    Freeze --> DataSource
-    Meter --> DataSource
-    Grid --> DataSource
-    Sidechain --> DataSource
-    ActivityState --> DataSource
+    BandInfo --> RenderSource[AnalyzerRenderSource]
+    RawTraces --> RenderSource
+    ActivityState --> RenderSource
 
-    DataSource --> AnalyzerComponent
-    DataSource --> SignalRack[signal rack UI]
-    DataSource --> MeterControls[meter toggle UI]
+    Slots --> SnapshotSource[AnalyzerUiSnapshotSource]
+    Freeze --> SnapshotSource
+    Meter --> SnapshotSource
+    Grid --> SnapshotSource
+    Sidechain --> SnapshotSource
+
+    RenderSource --> AnalyzerComponent
+    SnapshotSource --> AnalyzerComponent
+    SnapshotSource --> SignalRack[signal rack UI]
+    SnapshotSource --> MeterControls[meter toggle UI]
 ```
 
 ## 11. Current State
@@ -249,7 +253,12 @@ flowchart TD
   - opacity
 - Global freeze exists as a UI-facing parameter/state, and each slot now also has an independent UI-facing frozen state.
 - Meter visibility toggles (`Peak`, `RMS`, `Hold`) are UI-controlled existing parameters.
-- Recent-signal activity is runtime engine state exposed through `AnalyzerDataSource`, not serialized UI state.
+- Recent-signal activity is runtime engine state exposed through `AnalyzerRenderSource`, not serialized UI state.
+
+## Triple Buffer Boundary
+
+- The engine’s triple buffer remains the DSP-to-UI transport for raw analyzer traces only.
+- Immutable UI snapshots do not carry trace payloads and do not replace the triple buffer.
 
 ## Guiding Rule
 

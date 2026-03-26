@@ -3,9 +3,11 @@
 #include "../../UiRasterAssets.h"
 #include "../helpers/AnalyzerGeometry.h"
 
-AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerDataSource& dataSource, const Ui::Theme& themeToUse)
+AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRenderSource& renderSource,
+                                                   AnalyzerUiSnapshotSource& snapshotSource,
+                                                   const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      analyzerDisplayComponent(dataSource, themeToUse) {
+      analyzerDisplayComponent(renderSource, snapshotSource, themeToUse) {
     setOpaque(true);
     addAndMakeVisible(analyzerDisplayComponent);
 }
@@ -25,12 +27,12 @@ void AnalyzerSectionComponent::resized() {
 AnalyzerSectionComponent::Layout AnalyzerSectionComponent::computeLayout() const {
     Layout layout;
     const auto targetPlotBounds = getLocalBounds().reduced(theme.metrics.analyzerSection.plotInset);
-    const auto& plotMargins = AnalyzerLayout::plotMargins;
+    const auto& plotMargins = theme.metrics.analyzerPlot;
     layout.displayBounds = juce::Rectangle<int>(
-        juce::roundToInt(targetPlotBounds.getX() - plotMargins.left),
-        juce::roundToInt(targetPlotBounds.getY() - plotMargins.top),
-        juce::roundToInt(targetPlotBounds.getWidth() + plotMargins.left + plotMargins.right),
-        juce::roundToInt(targetPlotBounds.getHeight() + plotMargins.top + plotMargins.bottom));
+        juce::roundToInt(targetPlotBounds.getX() - plotMargins.plotMarginLeft),
+        juce::roundToInt(targetPlotBounds.getY() - plotMargins.plotMarginTop),
+        juce::roundToInt(targetPlotBounds.getWidth() + plotMargins.plotMarginLeft + plotMargins.plotMarginRight),
+        juce::roundToInt(targetPlotBounds.getHeight() + plotMargins.plotMarginTop + plotMargins.plotMarginBottom));
     return layout;
 }
 
@@ -43,7 +45,7 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
 
     cachedBackground = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedBackground);
-    const auto& backgroundImage = Ui::getRasterAsset(Ui::RasterAssetId::background2);
+    const auto& backgroundImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::background2);
     graphics.drawImage(backgroundImage,
                        bounds.getX(),
                        bounds.getY(),

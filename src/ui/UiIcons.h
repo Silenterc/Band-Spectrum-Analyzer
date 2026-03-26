@@ -1,25 +1,20 @@
 #pragma once
 
-#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace Ui {
-    void drawCancelIcon(juce::Graphics &g,
-                        const juce::Rectangle<float> &bounds,
-                        juce::Colour colour);
+    enum class IconId {
+        cancel,
+        power,
+        grip,
+        settings,
+        snowflake,
+    };
 
-    void drawPowerIcon(juce::Graphics &g,
-                       const juce::Rectangle<float> &bounds,
-                       juce::Colour colour);
+    juce::Drawable *getIconTemplate(IconId iconId);
 
-    void drawGripIcon(juce::Graphics &g,
-                      const juce::Rectangle<float> &bounds,
-                      juce::Colour colour);
-
-    void drawSettingsIcon(juce::Graphics &g,
-                          const juce::Rectangle<float> &bounds,
-                          juce::Colour colour);
-
-    void drawSnowflakeIcon(juce::Graphics &g,
-                           const juce::Rectangle<float> &bounds,
-                           juce::Colour colour);
+    void drawIcon(juce::Graphics &g,
+                  IconId iconId,
+                  const juce::Rectangle<float> &bounds,
+                  juce::Colour colour);
 }

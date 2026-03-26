@@ -7,9 +7,6 @@ namespace {
     bool nearlyEqual(const float lhs, const float rhs) {
         return std::abs(lhs - rhs) <= 0.0001f;
     }
-
-    constexpr float plotFrameExpansion = 1.0f;
-    constexpr float plotFrameCornerRadius = 8.0f;
 }
 
 bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey &other) const {
@@ -25,26 +22,36 @@ bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey 
            && nearlyEqual(visibleMaxFrequencyHz, other.visibleMaxFrequencyHz);
 }
 
-AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
-    : dataSource(source), theme(themeToUse), hoverOverlay(themeToUse) {
+AnalyzerComponent::AnalyzerComponent(AnalyzerRenderSource &renderSourceToUse,
+                                     AnalyzerUiSnapshotSource &snapshotSourceToUse,
+                                     const Ui::Theme &themeToUse)
+    : renderSource(renderSourceToUse),
+      snapshotSource(snapshotSourceToUse),
+      theme(themeToUse),
+      viewModel(themeToUse),
+      hoverOverlay(themeToUse) {
     setOpaque(false);
     addAndMakeVisible(hoverOverlay);
 
-    refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
-    bandInfo = dataSource.getBandInfo();
-    rawTraces = dataSource.getRawTraces();
+    uiSnapshot = snapshotSource.getAnalyzerUiSnapshot();
+    snapshotSource.addAnalyzerUiSnapshotListener(*this);
+    bandInfo = renderSource.getBandInfo();
+    rawTraces = renderSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
     displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
     renderData = composeDisplayRenderData(displayMeter.getRenderData());
     lastPaintedRenderData = renderData;
-    refreshModel.prime(dataSource);
+    refreshModel.prime(uiSnapshot);
     rebuildViewModels();
     startTimer(Ui::AnalyzerConstants::meterPollIntervalMs);
 }
 
+AnalyzerComponent::~AnalyzerComponent() {
+    snapshotSource.removeAnalyzerUiSnapshotListener(*this);
+}
+
 void AnalyzerComponent::paint(juce::Graphics &g) {
-    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
-        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData)) {
         rebuildViewModels();
     }
 
@@ -79,18 +86,24 @@ void AnalyzerComponent::mouseExit(const juce::MouseEvent &event) {
 
 void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
     const auto plotBounds = viewModel.getPlotBounds();
-    const auto plotFrameBounds = plotBounds.expanded(plotFrameExpansion);
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    const auto plotFrameBounds = plotBounds.expanded(plotMetrics.frameExpansion);
 
     g.setColour(theme.gridBorder);
-    g.drawRoundedRectangle(plotFrameBounds, plotFrameCornerRadius, 1.0f);
+    g.drawRoundedRectangle(plotFrameBounds, plotMetrics.frameCornerRadius, 1.0f);
 
     for (const auto &gridLine: viewModel.getGridLines()) {
         g.setColour(theme.gridLine.withMultipliedAlpha(0.9f));
         g.drawHorizontalLine(static_cast<int>(std::round(gridLine.y)), plotBounds.getX(), plotBounds.getRight());
 
         g.setColour(theme.axisText);
-        g.setFont(11.0f);
-        g.drawText(gridLine.label, 0, static_cast<int>(gridLine.y - 7.0f), 48, 14, juce::Justification::centredRight);
+        g.setFont(plotMetrics.gridLabelFontHeight);
+        g.drawText(gridLine.label,
+                   0,
+                   static_cast<int>(gridLine.y - plotMetrics.gridLabelYOffset),
+                   plotMetrics.gridLabelWidth,
+                   plotMetrics.gridLabelHeight,
+                   juce::Justification::centredRight);
     }
 
     for (const auto &frequencyMarker: viewModel.getFrequencyMarkers()) {
@@ -98,9 +111,12 @@ void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
         g.drawVerticalLine(static_cast<int>(std::round(frequencyMarker.x)), plotBounds.getY(), plotBounds.getBottom());
 
         g.setColour(theme.axisText);
-        g.drawText(frequencyMarker.label, static_cast<int>(frequencyMarker.x - 18.0f),
-                   static_cast<int>(plotBounds.getBottom() + 6.0f),
-                   36, 16, juce::Justification::centred);
+        g.drawText(frequencyMarker.label,
+                   static_cast<int>(frequencyMarker.x - plotMetrics.frequencyLabelXHalfSpan),
+                   static_cast<int>(plotBounds.getBottom() + plotMetrics.frequencyLabelYOffset),
+                   plotMetrics.frequencyLabelWidth,
+                   plotMetrics.frequencyLabelHeight,
+                   juce::Justification::centred);
     }
 }
 
@@ -148,15 +164,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (!lineBounds.isEmpty())
                 g.fillRect(lineBounds);
         }
-    }
-}
-
-void AnalyzerComponent::rebuildEnabledTraces() {
-    viewState.enabledTraces.clear();
-    for (size_t slotIndex = 0; slotIndex < uiSnapshot.signalSlots.size(); ++slotIndex) {
-        const auto &slot = uiSnapshot.signalSlots[slotIndex];
-        if (slot.configuration.enabled && slot.visible)
-            viewState.enabledTraces.push_back(Analyzer::traceKindForSlot(slotIndex));
     }
 }
 
@@ -260,7 +267,6 @@ bool AnalyzerComponent::isTraceCompatible(const Analyzer::RenderTrace &trace, co
 }
 
 void AnalyzerComponent::rebuildViewModels() {
-    rebuildEnabledTraces();
     refreshStaticViewModelIfNeeded();
     rebuildDynamicViewModel();
     updateHoverState();
@@ -292,7 +298,7 @@ void AnalyzerComponent::refreshStaticViewModelIfNeeded() {
 }
 
 void AnalyzerComponent::rebuildDynamicViewModel() {
-    viewModel.updateTraceVisuals(renderData, viewState, uiSnapshot.signalSlots, uiSnapshot.signalSlotOrder,
+    viewModel.updateTraceVisuals(renderData, viewState, uiSnapshot.signalSlots, uiSnapshot.slotOrder,
                                  uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb);
 }
 
@@ -322,18 +328,19 @@ void AnalyzerComponent::ensureStaticLayer() {
     staticLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics layerGraphics(staticLayer);
     const auto plotBounds = viewModel.getPlotBounds();
-    const auto plotFrameBounds = plotBounds.expanded(plotFrameExpansion);
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    const auto plotFrameBounds = plotBounds.expanded(plotMetrics.frameExpansion);
     juce::ColourGradient plotGradient(
-        theme.plotBackground.brighter(0.08f),
+        theme.plotBackground.brighter(plotMetrics.gradientTopBrightness),
         plotBounds.getCentreX(),
         plotBounds.getY(),
-        theme.plotBackground.darker(0.18f),
+        theme.plotBackground.darker(plotMetrics.gradientBottomDarkness),
         plotBounds.getCentreX(),
         plotBounds.getBottom(),
         false);
-    plotGradient.addColour(0.52, theme.plotBackground);
+    plotGradient.addColour(plotMetrics.gradientMidPoint, theme.plotBackground);
     layerGraphics.setGradientFill(plotGradient);
-    layerGraphics.fillRoundedRectangle(plotFrameBounds, plotFrameCornerRadius);
+    layerGraphics.fillRoundedRectangle(plotFrameBounds, plotMetrics.frameCornerRadius);
 
     drawGrid(layerGraphics);
     staticLayerDirty = false;
@@ -342,14 +349,9 @@ void AnalyzerComponent::ensureStaticLayer() {
 void AnalyzerComponent::timerCallback() {
     processPendingHoverUpdate();
 
-    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
-        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+    const auto refreshDecision = refreshModel.makeTimerDecision(renderSource, bandInfo, displayMeter, uiSnapshot);
+    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData))
         rebuildViewModels();
-    }
-
-    const auto previousSignalSlots = uiSnapshot.signalSlots;
-    const auto refreshDecision = refreshModel.makeTimerDecision(dataSource, bandInfo, displayMeter, uiSnapshot.gridMinDb, uiSnapshot);
-    syncFrozenSlotCache(previousSignalSlots);
     if (refreshDecision.pollingIntervalChanged)
         startTimer(refreshDecision.pollIntervalMs);
 
@@ -357,12 +359,11 @@ void AnalyzerComponent::timerCallback() {
         bandInfo = refreshDecision.nextBandInfo;
 
         if (!refreshDecision.shouldAdvanceDisplay
-            && !refreshDecision.uiSnapshotChanged
             && !refreshDecision.bandLayoutChanged)
             return;
 
         if (refreshDecision.shouldAdvanceDisplay || refreshDecision.bandLayoutChanged) {
-            rawTraces = dataSource.getRawTraces();
+            rawTraces = renderSource.getRawTraces();
             // Raw DSP measurements become render-ready RMS, peak, and hold values here
             displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, refreshDecision.dtSeconds);
         }
@@ -382,4 +383,23 @@ void AnalyzerComponent::processPendingHoverUpdate() {
 
     updateHoverState();
     hoverUpdatePending = false;
+}
+
+void AnalyzerComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) {
+    if (uiSnapshot == snapshot)
+        return;
+
+    const auto previousSignalSlots = uiSnapshot.signalSlots;
+    const auto wasFrozen = uiSnapshot.frozen;
+    uiSnapshot = snapshot;
+    syncFrozenSlotCache(previousSignalSlots);
+
+    if (uiSnapshot.frozen && !wasFrozen) {
+        renderData = lastPaintedRenderData;
+    } else {
+        renderData = composeDisplayRenderData(displayMeter.getRenderData());
+    }
+
+    rebuildViewModels();
+    repaint();
 }

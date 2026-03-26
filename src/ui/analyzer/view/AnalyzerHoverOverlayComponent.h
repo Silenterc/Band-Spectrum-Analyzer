@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <optional>
 #include <vector>
 
@@ -42,6 +41,6 @@ private:
     std::optional<juce::Rectangle<float>> hoveredBandBounds;
     std::vector<HoverTraceBarVisual> hoveredTraceBars;
     juce::Image tooltipChromeImage;
-    std::array<juce::GlyphArrangement, 4> tooltipLineGlyphs;
+    std::vector<juce::GlyphArrangement> tooltipLineGlyphs;
     float gridMinDb = 0.0f;
 };

@@ -9,7 +9,7 @@
 
 #include "../../SignalSlotUiState.h"
 #include "../../AnalyzerSettingsActions.h"
-#include "../../AnalyzerUiStateSource.h"
+#include "../../AnalyzerUiSnapshotSource.h"
 #include "../../SectionDividerComponent.h"
 #include "../../UiTheme.h"
 #include "SignalSlotActionButton.h"
@@ -20,9 +20,9 @@
 #include "../model/SignalSlotOptions.h"
 
 class SignalRackComponent final : public juce::Component,
-                                  private AnalyzerUiStateSource::Listener {
+                                  private AnalyzerUiSnapshotSource::Listener {
 public:
-    SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToUse,
+    SignalRackComponent(AnalyzerUiSnapshotSource &uiSnapshotSourceToUse,
                         AnalyzerSettingsActions &settingsActionsToUse,
                         const Ui::Theme &themeToUse);
     ~SignalRackComponent() override;
@@ -32,19 +32,14 @@ public:
 
 private:
     void refreshFromState(bool force = false);
-    void analyzerUiStateChanged(const Ui::AnalyzerUiState &state) override;
+    void analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) override;
     void addSignal();
-    void setLocalSlotState(size_t slotIndex, const Ui::SignalSlotState &slotState);
-    void updateLocalSlot(size_t slotIndex, const std::function<void(Ui::SignalSlotState &slotState)> &update);
-    void setLocalSlotOrder(const Shared::SignalSlotOrder &slotOrder);
-    void beginOptimisticUpdate();
-    void endOptimisticUpdate();
     SignalRackLayout buildLayout(const std::vector<size_t> &visibleOrderedSlots) const;
     std::vector<size_t> getVisibleOrderedSlots(const Shared::SignalSlotOrder &slotOrder) const;
     std::vector<SignalRackItemSpec> makeItemSpecs(const std::vector<size_t> &visibleOrderedSlots) const;
     SignalSlotComponent *findComponentForSlot(size_t slotIndex) const;
 
-    AnalyzerUiStateSource &uiStateSource;
+    AnalyzerUiSnapshotSource &uiSnapshotSource;
     AnalyzerSettingsActions &settingsActions;
     const Ui::Theme &theme;
     SignalSlotOrderModel slotOrderModel;
@@ -58,6 +53,5 @@ private:
     std::optional<Shared::SignalSlotOrder> lastDisplayOrder;
     std::optional<bool> lastSidechainAvailable;
     std::optional<size_t> lastDraggedSlotIndex;
-    Ui::AnalyzerUiState currentState;
-    int optimisticUpdateDepth = 0;
+    Ui::AnalyzerUiSnapshot currentSnapshot;
 };

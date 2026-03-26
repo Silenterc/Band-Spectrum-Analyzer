@@ -6,23 +6,17 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../dsp/core/AnalyzerData.h"
-
-namespace AnalyzerLayout {
-    struct PlotMargins {
-        float left = 56.0f;
-        float right = 16.0f;
-        float top = 16.0f;
-        float bottom = 34.0f;
-    };
-
-    inline constexpr PlotMargins plotMargins{};
-}
+#include "../../UiTheme.h"
 
 /**
  * Converts analyzer data between domain space and screen space
  */
 class AnalyzerGeometry final {
 public:
+    explicit AnalyzerGeometry(const Ui::Theme &themeToUse)
+        : theme(themeToUse) {
+    }
+
     /**
      * Returns the drawable plot area after reserving margins for labels
      */
@@ -80,4 +74,7 @@ public:
      */
     juce::Rectangle<float> getTooltipBounds(juce::Point<float> hoverPosition, const juce::Rectangle<float> &plotBounds,
                                             const juce::Rectangle<float> &localBounds) const;
+
+private:
+    const Ui::Theme &theme;
 };

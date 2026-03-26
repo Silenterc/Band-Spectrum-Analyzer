@@ -18,10 +18,10 @@ namespace {
     }
 }
 
-SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToUse,
+SignalRackComponent::SignalRackComponent(AnalyzerUiSnapshotSource &uiSnapshotSourceToUse,
                                          AnalyzerSettingsActions &settingsActionsToUse,
                                          const Ui::Theme &themeToUse)
-    : uiStateSource(uiStateSourceToUse),
+    : uiSnapshotSource(uiSnapshotSourceToUse),
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
       addButton(themeToUse) {
@@ -35,45 +35,25 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
         addAndMakeVisible(*slotComponent);
         slotComponent->onSignalSelected = [this](const size_t slotIndex, const Analyzer::SignalSource source,
                                                  const Analyzer::SignalMode mode) {
-            updateLocalSlot(slotIndex, [source, mode](Ui::SignalSlotState &slotState) {
-                slotState.configuration.source = source;
-                slotState.configuration.mode = mode;
-            });
             settingsActions.setSignalSlotSignal(slotIndex, source, mode);
         };
         slotComponent->onColourSelected = [this](const size_t slotIndex, const int colourIndex) {
-            updateLocalSlot(slotIndex, [colourIndex](Ui::SignalSlotState &slotState) {
-                slotState.colourIndex = colourIndex;
-            });
             settingsActions.setSignalSlotColour(slotIndex, colourIndex);
         };
         slotComponent->onVisibilityChanged = [this](const size_t slotIndex, const bool isVisible) {
-            updateLocalSlot(slotIndex, [isVisible](Ui::SignalSlotState &slotState) {
-                slotState.visible = isVisible;
-            });
             settingsActions.setSignalSlotVisible(slotIndex, isVisible);
         };
         slotComponent->onFrozenChanged = [this](const size_t slotIndex, const bool isFrozen) {
-            updateLocalSlot(slotIndex, [isFrozen](Ui::SignalSlotState &slotState) {
-                slotState.frozen = isFrozen;
-            });
             settingsActions.setSignalSlotFrozen(slotIndex, isFrozen);
         };
         slotComponent->onRemoveClicked = [this](const size_t slotIndex) {
-            updateLocalSlot(slotIndex, [](Ui::SignalSlotState &slotState) {
-                slotState.configuration.enabled = false;
-                slotState.frozen = false;
-            });
             settingsActions.removeSignalSlot(slotIndex);
         };
         slotComponent->onOpacityChanged = [this](const size_t slotIndex, const float opacity) {
-            updateLocalSlot(slotIndex, [opacity](Ui::SignalSlotState &slotState) {
-                slotState.opacity = opacity;
-            });
             settingsActions.setSignalSlotOpacity(slotIndex, opacity);
         };
         slotComponent->onReorderDragStarted = [this](const size_t slotIndex, const float startMouseX) {
-            const auto persistedOrder = currentState.slotOrder;
+            const auto persistedOrder = currentSnapshot.slotOrder;
             const auto visibleOrderedSlots = getVisibleOrderedSlots(persistedOrder);
             const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.begin(slotIndex, persistedOrder, visibleOrderedSlots, layout, startMouseX);
@@ -83,7 +63,7 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
         };
         slotComponent->onReorderDragged = [this](const size_t slotIndex, const float xPosition) {
             juce::ignoreUnused(slotIndex);
-            const auto previewOrder = dragSession.getDisplayOrder(currentState.slotOrder);
+            const auto previewOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
             const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
             const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.update(xPosition, layout);
@@ -91,15 +71,13 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
         };
         slotComponent->onReorderDragEnded = [this](const size_t slotIndex, const float xPosition) {
             juce::ignoreUnused(slotIndex);
-            const auto previewOrder = dragSession.getDisplayOrder(currentState.slotOrder);
+            const auto previewOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
             const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
             const auto layout = buildLayout(visibleOrderedSlots);
             dragSession.update(xPosition, layout);
             const auto reorderedSlots = dragSession.finish();
-            if (reorderedSlots.has_value()) {
-                setLocalSlotOrder(*reorderedSlots);
+            if (reorderedSlots.has_value())
                 settingsActions.setSignalSlotOrder(*reorderedSlots);
-            }
             draggedSnapshot = {};
             refreshFromState(true);
         };
@@ -111,22 +89,22 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiStateSource &uiStateSourceToU
     SignalSlotActionButton::Style addStyle;
     addStyle.content = SignalSlotActionButton::Content::text;
     addStyle.text = "+";
-    addStyle.fontHeight = 36.0f;
+    addStyle.fontHeight = theme.metrics.slot.addButtonFontHeight;
     addStyle.fill = juce::Colours::transparentBlack;
     addStyle.hoverFill = juce::Colours::transparentBlack;
     addStyle.foreground = theme.hardwareMarkingLight;
     addStyle.drawsBackground = false;
     addButton.setStyle(addStyle);
-    uiStateSource.addAnalyzerUiStateListener(*this);
-    analyzerUiStateChanged(uiStateSource.getAnalyzerUiState());
+    uiSnapshotSource.addAnalyzerUiSnapshotListener(*this);
+    analyzerUiSnapshotChanged(uiSnapshotSource.getAnalyzerUiSnapshot());
 }
 
 SignalRackComponent::~SignalRackComponent() {
-    uiStateSource.removeAnalyzerUiStateListener(*this);
+    uiSnapshotSource.removeAnalyzerUiSnapshotListener(*this);
 }
 
 void SignalRackComponent::resized() {
-    const auto displayOrder = dragSession.getDisplayOrder(currentState.slotOrder);
+    const auto displayOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
     const auto visibleOrderedSlots = getVisibleOrderedSlots(displayOrder);
     const auto layout = buildLayout(visibleOrderedSlots);
     const auto draggedSlotIndex = dragSession.getDraggedSlotIndex();
@@ -178,9 +156,9 @@ void SignalRackComponent::paintOverChildren(juce::Graphics &g) {
 }
 
 void SignalRackComponent::refreshFromState(const bool force) {
-    const auto &signalSlots = currentState.signalSlots;
-    const auto sidechainAvailable = currentState.sidechainAvailable;
-    const auto displayOrder = dragSession.getDisplayOrder(currentState.slotOrder);
+    const auto &signalSlots = currentSnapshot.signalSlots;
+    const auto sidechainAvailable = currentSnapshot.sidechainAvailable;
+    const auto displayOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
     const auto draggedSlotIndex = dragSession.getDraggedSlotIndex();
 
     if (!force
@@ -230,79 +208,32 @@ void SignalRackComponent::refreshFromState(const bool force) {
     repaint();
 }
 
-void SignalRackComponent::analyzerUiStateChanged(const Ui::AnalyzerUiState &state) {
-    if (optimisticUpdateDepth > 0)
-        return;
-
-    currentState = state;
+void SignalRackComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) {
+    currentSnapshot = snapshot;
     refreshFromState();
 }
 
 void SignalRackComponent::addSignal() {
-    const auto &signalSlots = currentState.signalSlots;
-    const auto currentSlotOrder = currentState.slotOrder;
+    const auto &signalSlots = currentSnapshot.signalSlots;
+    const auto currentSlotOrder = currentSnapshot.slotOrder;
 
     const auto freeSlotIndex = Ui::findFreeSignalSlot(signalSlots);
     if (!freeSlotIndex.has_value())
         return;
 
     Ui::SignalSlotState slotState;
-    slotState.configuration = Ui::chooseDefaultSignalConfiguration(signalSlots, currentState.sidechainAvailable);
+    slotState.configuration = Ui::chooseDefaultSignalConfiguration(signalSlots, currentSnapshot.sidechainAvailable);
     slotState.visible = true;
     slotState.frozen = false;
     slotState.colourIndex = Ui::chooseDefaultSignalColourIndex(signalSlots);
     slotState.opacity = Ui::defaultSignalOpacity;
 
-    beginOptimisticUpdate();
     const auto updatedSlotOrder = Ui::appendSlotToEnd(currentSlotOrder, *freeSlotIndex);
-    setLocalSlotState(*freeSlotIndex, slotState);
-    setLocalSlotOrder(updatedSlotOrder);
     settingsActions.addSignalSlot(*freeSlotIndex, slotState, updatedSlotOrder);
-    endOptimisticUpdate();
-}
-
-void SignalRackComponent::setLocalSlotState(const size_t slotIndex, const Ui::SignalSlotState &slotState) {
-    if (slotIndex >= currentState.signalSlots.size())
-        return;
-
-    currentState.signalSlots[slotIndex] = slotState;
-    refreshFromState(true);
-}
-
-void SignalRackComponent::updateLocalSlot(
-    const size_t slotIndex,
-    const std::function<void(Ui::SignalSlotState &slotState)> &update) {
-    if (slotIndex >= currentState.signalSlots.size() || update == nullptr)
-        return;
-
-    update(currentState.signalSlots[slotIndex]);
-    refreshFromState(true);
-}
-
-void SignalRackComponent::setLocalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
-    currentState.slotOrder = slotOrder;
-    refreshFromState(true);
-}
-
-void SignalRackComponent::beginOptimisticUpdate() {
-    ++optimisticUpdateDepth;
-}
-
-void SignalRackComponent::endOptimisticUpdate() {
-    if (optimisticUpdateDepth <= 0) {
-        optimisticUpdateDepth = 0;
-        return;
-    }
-
-    --optimisticUpdateDepth;
-    if (optimisticUpdateDepth == 0) {
-        currentState = uiStateSource.getAnalyzerUiState();
-        refreshFromState(true);
-    }
 }
 
 std::vector<size_t> SignalRackComponent::getVisibleOrderedSlots(const Shared::SignalSlotOrder &slotOrder) const {
-    return slotOrderModel.getVisibleOrderedSlots(currentState.signalSlots, slotOrder);
+    return slotOrderModel.getVisibleOrderedSlots(currentSnapshot.signalSlots, slotOrder);
 }
 
 SignalRackLayout SignalRackComponent::buildLayout(const std::vector<size_t> &visibleOrderedSlots) const {

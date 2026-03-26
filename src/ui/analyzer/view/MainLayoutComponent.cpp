@@ -1,13 +1,13 @@
 #include "MainLayoutComponent.h"
 
-MainLayoutComponent::MainLayoutComponent(AnalyzerDataSource& dataSourceToUse,
-                                         AnalyzerUiStateSource& uiStateSourceToUse,
+MainLayoutComponent::MainLayoutComponent(AnalyzerRenderSource& renderSourceToUse,
+                                         AnalyzerUiSnapshotSource& snapshotSourceToUse,
                                          AnalyzerSettingsActions& settingsActionsToUse,
                                          const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      analyzerSectionComponent(dataSourceToUse, themeToUse),
-      signalRackComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
-      meterControlsComponent(uiStateSourceToUse, settingsActionsToUse, themeToUse),
+      analyzerSectionComponent(renderSourceToUse, snapshotSourceToUse, themeToUse),
+      signalRackComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
+      meterControlsComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
       verticalSectionDivider(themeToUse, SectionDividerComponent::Orientation::vertical),
       horizontalSectionDivider(themeToUse, SectionDividerComponent::Orientation::horizontal) {
     addAndMakeVisible(analyzerSectionComponent);

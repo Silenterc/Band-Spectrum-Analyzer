@@ -14,19 +14,21 @@ public:
                                   juce::Graphics &g,
                                   const juce::Path &path,
                                   juce::Image &cachedImage) override {
+        const auto &popupMetrics = theme.metrics.popup;
         if (cachedImage.isNull()) {
             cachedImage = {juce::Image::ARGB, box.getWidth(), box.getHeight(), true,
                            *g.getInternalContext().getPreferredImageTypeForTemporaryImages()};
             cachedImage.setBackupEnabled(false);
 
             juce::Graphics shadowGraphics(cachedImage);
-            juce::DropShadow(juce::Colours::black.withAlpha(0.38f), 8, {0, 2}).drawForPath(shadowGraphics, path);
+            juce::DropShadow(juce::Colours::black.withAlpha(0.38f), getCallOutBoxBorderSize(box), {0, 2})
+                .drawForPath(shadowGraphics, path);
         }
 
         g.drawImageAt(cachedImage, 0, 0);
-        g.setColour(theme.controlSurface.withMultipliedBrightness(0.84f));
+        g.setColour(theme.controlSurface.withMultipliedBrightness(popupMetrics.shellBrightness));
         g.fillPath(path);
-        g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(0.28f));
+        g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.rowOutlineAlpha));
         g.strokePath(path, juce::PathStrokeType(1.0f));
     }
 
@@ -35,7 +37,7 @@ public:
     }
 
     float getCallOutBoxCornerSize(const juce::CallOutBox &) override {
-        return 4.0f;
+        return theme.metrics.popup.shellCornerRadius;
     }
 
 private:

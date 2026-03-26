@@ -103,7 +103,7 @@ int SignalSlotComponent::getPreferredWidth() const {
     const auto &slotMetrics = theme.metrics.slot;
     auto modeWidth = 0.0f;
     for (const auto &option: Ui::signalSlotOptions)
-        modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.label));
+        modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.modeLabel));
 
     const auto modePickerWidth = std::ceil(modeWidth + slotMetrics.modePickerPaddingX * 2.0f);
     const auto topRowWidth = slotMetrics.sourceToggleWidth + slotMetrics.sectionGap + modePickerWidth
@@ -121,7 +121,7 @@ void SignalSlotComponent::paint(juce::Graphics &g) {
     modulePath.addRoundedRectangle(bounds, radius);
 
     if (isDragged) {
-        g.setColour(juce::Colours::black.withAlpha(0.22f));
+        g.setColour(juce::Colours::black.withAlpha(theme.metrics.slot.draggedShadowAlpha));
         g.fillRoundedRectangle(bounds.translated(0.0f, theme.metrics.slot.shadowOffsetY), radius);
     }
 
@@ -131,7 +131,7 @@ void SignalSlotComponent::paint(juce::Graphics &g) {
         g.drawImage(cachedBackground, bounds);
     }
 
-    g.setColour(theme.controlBorder.withMultipliedAlpha(1.35f));
+    g.setColour(theme.controlBorder.withMultipliedAlpha(theme.metrics.slot.borderAlphaScale));
     g.drawRoundedRectangle(outerBounds, radius, 1.0f);
 }
 
@@ -177,7 +177,7 @@ void SignalSlotComponent::rebuildCachedBackground() {
     const auto targetBounds = moduleBounds.getSmallestIntegerContainer();
     cachedBackground = juce::Image(juce::Image::ARGB, targetBounds.getWidth(), targetBounds.getHeight(), true);
     juce::Graphics graphics(cachedBackground);
-    const auto &backgroundImage = Ui::getRasterAsset(Ui::RasterAssetId::background2Version);
+    const auto &backgroundImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::background2Version);
     graphics.drawImage(backgroundImage,
                        0,
                        0,

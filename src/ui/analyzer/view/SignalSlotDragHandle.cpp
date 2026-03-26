@@ -19,7 +19,7 @@ void SignalSlotDragHandle::paint(juce::Graphics &g) {
         g.drawImageAt(padImage, padBounds.getX(), padBounds.getY());
 
     const auto iconColour = (hovered || dragged) ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
-    Ui::drawGripIcon(g, iconBounds.toFloat(), iconColour);
+    Ui::drawIcon(g, Ui::IconId::grip, iconBounds.toFloat(), iconColour);
 }
 
 void SignalSlotDragHandle::resized() {
@@ -79,16 +79,18 @@ void SignalSlotDragHandle::rebuildCachedImages() {
         return;
     }
 
-    padBounds = Ui::getScaledAssetBoundsWithin(Ui::getRasterAsset(Ui::RasterAssetId::padOff),
+    padBounds = Ui::getScaledAssetBoundsWithin(Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOff),
                                                theme.metrics.assets.rasterScale,
                                                bounds,
                                                theme.metrics.meterControls.padScale * theme.metrics.slot.actionPadScaleMultiplier);
     iconBounds = Ui::getScaledInnerBounds(padBounds, 0.28f, theme.metrics.slot.actionPadIconScaleMultiplier);
 
-    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(padBounds.getWidth(),
-                                                                             padBounds.getHeight(),
-                                                                             juce::Graphics::highResamplingQuality);
-    cachedOnImage = Ui::getRasterAsset(Ui::RasterAssetId::padOn).rescaled(padBounds.getWidth(),
-                                                                           padBounds.getHeight(),
-                                                                           juce::Graphics::highResamplingQuality);
+    cachedOffImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOff).rescaled(
+        padBounds.getWidth(),
+        padBounds.getHeight(),
+        juce::Graphics::highResamplingQuality);
+    cachedOnImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOn).rescaled(
+        padBounds.getWidth(),
+        padBounds.getHeight(),
+        juce::Graphics::highResamplingQuality);
 }

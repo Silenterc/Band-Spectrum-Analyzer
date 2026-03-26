@@ -28,19 +28,19 @@ void PadButton::paint(juce::Graphics& g) {
                                    : theme.hardwareMarkingLight;
 
     if (overlayIcon != OverlayIcon::none) {
-        switch (overlayIcon) {
-            case OverlayIcon::none:
-                break;
-            case OverlayIcon::power:
-                Ui::drawPowerIcon(g, overlayIconBounds.toFloat(), markingColour);
-                break;
-            case OverlayIcon::settings:
-                Ui::drawSettingsIcon(g, overlayIconBounds.toFloat(), markingColour);
-                break;
-            case OverlayIcon::snowflake:
-                Ui::drawSnowflakeIcon(g, overlayIconBounds.toFloat(), markingColour);
-                break;
-        }
+            switch (overlayIcon) {
+                case OverlayIcon::none:
+                    break;
+                case OverlayIcon::power:
+                    Ui::drawIcon(g, Ui::IconId::power, overlayIconBounds.toFloat(), markingColour);
+                    break;
+                case OverlayIcon::settings:
+                    Ui::drawIcon(g, Ui::IconId::settings, overlayIconBounds.toFloat(), markingColour);
+                    break;
+                case OverlayIcon::snowflake:
+                    Ui::drawIcon(g, Ui::IconId::snowflake, overlayIconBounds.toFloat(), markingColour);
+                    break;
+            }
     }
 
     if (label.isEmpty())
@@ -137,17 +137,17 @@ void PadButton::mouseUp(const juce::MouseEvent& event) {
 const juce::Image& PadButton::getResolvedOnImage() const {
     switch (assetStyle) {
         case AssetStyle::standard:
-            return Ui::getRasterAsset(Ui::RasterAssetId::padOn);
+            return Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOn);
         case AssetStyle::freeze:
-            return Ui::getRasterAsset(Ui::RasterAssetId::padFreezeOn);
+            return Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padFreezeOn);
     }
 
     jassertfalse;
-    return Ui::getRasterAsset(Ui::RasterAssetId::padOn);
+    return Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOn);
 }
 
 juce::Rectangle<int> PadButton::getTargetPadBounds(const juce::Rectangle<int> availableBounds) const {
-    return Ui::getScaledAssetBoundsWithin(Ui::getRasterAsset(Ui::RasterAssetId::padOff),
+    return Ui::getScaledAssetBoundsWithin(Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOff),
                                           theme.metrics.assets.rasterScale,
                                           availableBounds,
                                           theme.metrics.meterControls.padScale * scaleMultiplier);
@@ -160,8 +160,9 @@ void PadButton::rebuildCachedPadImages() {
         return;
     }
 
-    cachedOffImage = Ui::getRasterAsset(Ui::RasterAssetId::padOff).rescaled(padBounds.getWidth(),
-                                                                             padBounds.getHeight(),
-                                                                             juce::Graphics::highResamplingQuality);
+    cachedOffImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::padOff).rescaled(
+        padBounds.getWidth(),
+        padBounds.getHeight(),
+        juce::Graphics::highResamplingQuality);
     cachedOnImage = getResolvedOnImage().rescaled(padBounds.getWidth(), padBounds.getHeight(), juce::Graphics::highResamplingQuality);
 }

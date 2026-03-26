@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <juce_graphics/juce_graphics.h>
 
 #include "SignalSlotUiState.h"
@@ -38,6 +40,51 @@ namespace Ui {
         int plotInset = 36;
     };
 
+    struct AnalyzerPlotMetrics {
+        float plotMarginLeft = 56.0f;
+        float plotMarginRight = 16.0f;
+        float plotMarginTop = 16.0f;
+        float plotMarginBottom = 34.0f;
+        int interBandGapPixels = 1;
+        float frameExpansion = 1.0f;
+        float frameCornerRadius = 8.0f;
+        float gridLabelFontHeight = 11.0f;
+        int gridLabelWidth = 48;
+        int gridLabelHeight = 14;
+        float gridLabelYOffset = 7.0f;
+        int frequencyLabelWidth = 36;
+        int frequencyLabelHeight = 16;
+        float frequencyLabelXHalfSpan = 18.0f;
+        float frequencyLabelYOffset = 6.0f;
+        float gradientTopBrightness = 0.08f;
+        float gradientBottomDarkness = 0.18f;
+        float gradientMidPoint = 0.52f;
+        float maxUiFrequencyHz = 20000.0f;
+        std::array<float, 10> frequencyScaleLabelsHz{
+            20.0f, 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f, 20000.0f
+        };
+    };
+
+    struct TooltipMetrics {
+        float width = 132.0f;
+        float height = 72.0f;
+        float offsetX = 12.0f;
+        float offsetY = 10.0f;
+        float edgeInset = 8.0f;
+        float cornerRadius = 8.0f;
+        int textPaddingX = 10;
+        int textPaddingY = 8;
+        int lineHeight = 16;
+        float fontHeight = 13.5f;
+        size_t maxLines = 4;
+        float fillTopBrightness = 0.06f;
+        float fillBottomDarkness = 0.12f;
+        float fillMidPoint = 0.45f;
+        float highlightStartAlpha = 0.055f;
+        float highlightEndAlpha = 0.0f;
+        float highlightHeightFraction = 0.45f;
+    };
+
     struct RackMetrics {
         float topInset = 0.0f;
         float bottomInset = 2.0f;
@@ -68,6 +115,21 @@ namespace Ui {
         float cellCornerRadius = 0.0f;
         float swatchCornerRadius = 7.0f;
         float buttonCornerRadius = 6.0f;
+        float modeHoverAlpha = 0.05f;
+        float modeHoverCornerRadius = 5.0f;
+        float modeTitleFontDelta = 1.0f;
+        float sourceToggleFontDelta = 1.0f;
+        float sourceToggleMaxLabelHeight = 11.0f;
+        float sourceToggleLabelHeightFraction = 0.32f;
+        float sourceToggleSwitchInsetX = 2.0f;
+        float addButtonFontHeight = 36.0f;
+        float powerIconInset = 4.0f;
+        float cancelIconInset = 6.0f;
+        float snowflakeIconInset = 4.0f;
+        float opacityDragThreshold = 3.0f;
+        float opacityPixelsToValue = 0.005f;
+        float draggedShadowAlpha = 0.22f;
+        float borderAlphaScale = 1.35f;
     };
 
     struct PopupMetrics {
@@ -79,6 +141,21 @@ namespace Ui {
         float swatchSize = 32.0f;
         int colourColumns = 4;
         float colourGap = 4.0f;
+        float shellCornerRadius = 4.0f;
+        float shellBrightness = 0.85f;
+        float shellBorderAlpha = 0.45f;
+        float rowCornerRadius = 3.0f;
+        float rowOutlineAlpha = 0.35f;
+        float rowDisabledAlpha = 0.45f;
+        float rowTextFontHeight = 14.0f;
+        float swatchInset = 4.0f;
+        float swatchHoverInset = 2.0f;
+        float swatchHoverAlpha = 0.12f;
+        float swatchOutlineAlpha = 0.14f;
+        float swatchSelectedOutlineThickness = 2.0f;
+        float swatchOutlineThickness = 1.0f;
+        float swatchDisabledSlashInset = 5.0f;
+        float swatchDisabledSlashThickness = 1.5f;
     };
 
     struct BackgroundMetrics {
@@ -88,16 +165,30 @@ namespace Ui {
 
     struct SectionDividerMetrics {
         int thickness = 6;
+        float startAlpha = 0.90f;
+        float endAlpha = 0.46f;
+        float middleStartPosition = 0.38f;
+        float middleStartAlpha = 0.78f;
+        float middleEndPosition = 0.74f;
+        float middleEndAlpha = 0.26f;
     };
 
     struct AssetMetrics {
         float rasterScale = 2.0f;
     };
 
+    struct EditorMetrics {
+        int initialWidth = 1000;
+        int initialHeight = 600;
+    };
+
     struct Metrics {
+        EditorMetrics editor;
         PanelMetrics panel;
         MeterControlsMetrics meterControls;
         AnalyzerSectionMetrics analyzerSection;
+        AnalyzerPlotMetrics analyzerPlot;
+        TooltipMetrics tooltip;
         RackMetrics rack;
         SlotMetrics slot;
         PopupMetrics popup;

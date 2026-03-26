@@ -2,9 +2,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../AnalyzerDataSource.h"
+#include "../../AnalyzerRenderSource.h"
 #include "../../AnalyzerSettingsActions.h"
-#include "../../AnalyzerUiStateSource.h"
+#include "../../AnalyzerUiSnapshotSource.h"
 #include "../../SectionDividerComponent.h"
 #include "../../UiTheme.h"
 #include "AnalyzerSectionComponent.h"
@@ -13,8 +13,8 @@
 
 class MainLayoutComponent final : public juce::Component {
 public:
-    MainLayoutComponent(AnalyzerDataSource& dataSource,
-                        AnalyzerUiStateSource& uiStateSource,
+    MainLayoutComponent(AnalyzerRenderSource& renderSource,
+                        AnalyzerUiSnapshotSource& snapshotSource,
                         AnalyzerSettingsActions& settingsActions,
                         const Ui::Theme& theme);
     ~MainLayoutComponent() override;

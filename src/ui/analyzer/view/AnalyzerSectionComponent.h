@@ -3,13 +3,16 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../AnalyzerDataSource.h"
+#include "../../AnalyzerRenderSource.h"
+#include "../../AnalyzerUiSnapshotSource.h"
 #include "../../UiTheme.h"
 #include "AnalyzerComponent.h"
 
 class AnalyzerSectionComponent final : public juce::Component {
 public:
-    AnalyzerSectionComponent(AnalyzerDataSource& dataSource, const Ui::Theme& theme);
+    AnalyzerSectionComponent(AnalyzerRenderSource& renderSource,
+                             AnalyzerUiSnapshotSource& snapshotSource,
+                             const Ui::Theme& theme);
     ~AnalyzerSectionComponent() override;
 
     void paint(juce::Graphics& g) override;

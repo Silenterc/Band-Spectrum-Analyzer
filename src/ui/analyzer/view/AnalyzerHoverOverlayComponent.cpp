@@ -4,6 +4,7 @@ AnalyzerHoverOverlayComponent::AnalyzerHoverOverlayComponent(const Ui::Theme &th
     : theme(themeToUse) {
     setOpaque(false);
     setInterceptsMouseClicks(false, false);
+    tooltipLineGlyphs.resize(theme.metrics.tooltip.maxLines);
 }
 
 void AnalyzerHoverOverlayComponent::paint(juce::Graphics &g) {
@@ -135,34 +136,34 @@ void AnalyzerHoverOverlayComponent::rebuildTooltipChrome() {
     const auto localBounds = juce::Rectangle<float>(0.0f, 0.0f,
                                                     static_cast<float>(tooltipBounds.getWidth()),
                                                     static_cast<float>(tooltipBounds.getHeight()));
-    constexpr float tooltipCornerRadius = 8.0f;
+    const auto &tooltipMetrics = theme.metrics.tooltip;
 
     juce::ColourGradient fillGradient(
-        theme.tooltipBackground.brighter(0.06f),
+        theme.tooltipBackground.brighter(tooltipMetrics.fillTopBrightness),
         localBounds.getCentreX(),
         localBounds.getY(),
-        theme.tooltipBackground.darker(0.12f),
+        theme.tooltipBackground.darker(tooltipMetrics.fillBottomDarkness),
         localBounds.getCentreX(),
         localBounds.getBottom(),
         false);
-    fillGradient.addColour(0.45, theme.tooltipBackground);
+    fillGradient.addColour(tooltipMetrics.fillMidPoint, theme.tooltipBackground);
     g.setGradientFill(fillGradient);
-    g.fillRoundedRectangle(localBounds, tooltipCornerRadius);
+    g.fillRoundedRectangle(localBounds, tooltipMetrics.cornerRadius);
 
     const auto highlightBounds = localBounds.reduced(1.0f, 1.0f);
     juce::ColourGradient highlightGradient(
-        juce::Colours::white.withAlpha(0.055f),
+        juce::Colours::white.withAlpha(tooltipMetrics.highlightStartAlpha),
         highlightBounds.getCentreX(),
         highlightBounds.getY(),
-        juce::Colours::white.withAlpha(0.0f),
+        juce::Colours::white.withAlpha(tooltipMetrics.highlightEndAlpha),
         highlightBounds.getCentreX(),
-        highlightBounds.getY() + highlightBounds.getHeight() * 0.45f,
+        highlightBounds.getY() + highlightBounds.getHeight() * tooltipMetrics.highlightHeightFraction,
         false);
     g.setGradientFill(highlightGradient);
-    g.fillRoundedRectangle(highlightBounds, tooltipCornerRadius - 1.0f);
+    g.fillRoundedRectangle(highlightBounds, tooltipMetrics.cornerRadius - 1.0f);
 
     g.setColour(theme.tooltipBorder);
-    g.drawRoundedRectangle(localBounds, tooltipCornerRadius, 1.0f);
+    g.drawRoundedRectangle(localBounds, tooltipMetrics.cornerRadius, 1.0f);
 }
 
 void AnalyzerHoverOverlayComponent::rebuildTooltipGlyphs() {
@@ -176,9 +177,10 @@ void AnalyzerHoverOverlayComponent::rebuildTooltipGlyphs() {
     if (tooltipBounds.isEmpty())
         return;
 
-    const auto textBounds = tooltipBounds.withPosition(0, 0).reduced(10, 8);
-    constexpr int lineHeight = 16;
-    const juce::Font tooltipFont(juce::FontOptions{}.withHeight(13.5f));
+    const auto &tooltipMetrics = theme.metrics.tooltip;
+    const auto textBounds = tooltipBounds.withPosition(0, 0).reduced(tooltipMetrics.textPaddingX, tooltipMetrics.textPaddingY);
+    const auto lineHeight = tooltipMetrics.lineHeight;
+    const juce::Font tooltipFont(juce::FontOptions{}.withHeight(tooltipMetrics.fontHeight));
 
     for (size_t lineIndex = 0; lineIndex < hoverInfo->lineCount; ++lineIndex) {
         const auto y = textBounds.getY() + static_cast<int>(lineIndex) * lineHeight;

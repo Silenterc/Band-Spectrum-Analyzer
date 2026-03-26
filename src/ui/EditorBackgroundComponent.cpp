@@ -26,7 +26,7 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
     cachedLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics graphics(cachedLayer);
 
-    const auto& background = Ui::getRasterAsset(Ui::RasterAssetId::background);
+    const auto& background = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::background);
     graphics.drawImage(background,
                        bounds.getX(),
                        bounds.getY(),
@@ -37,7 +37,7 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
                        background.getWidth(),
                        background.getHeight());
 
-    const auto& screw = Ui::getRasterAsset(Ui::RasterAssetId::screw);
+    const auto& screw = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto screwPadding = theme.metrics.background.screwPadding;
     const auto topLeftBounds = Ui::getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});

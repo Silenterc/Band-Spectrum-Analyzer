@@ -2,10 +2,10 @@
 
 #include "../../UiRasterAssets.h"
 
-AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSource &uiStateSourceToUse,
+AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiSnapshotSource &uiSnapshotSourceToUse,
                                                                AnalyzerSettingsActions &settingsActionsToUse,
                                                                const Ui::Theme &themeToUse)
-    : uiStateSource(uiStateSourceToUse),
+    : uiSnapshotSource(uiSnapshotSourceToUse),
       settingsActions(settingsActionsToUse),
       theme(themeToUse),
       settingsButton(themeToUse, {}),
@@ -27,27 +27,19 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSo
     };
 
     peakButton.onClick = [this] {
-        const auto nextEnabled = !currentState.meterSettings.showPeak;
-        currentState.meterSettings.showPeak = nextEnabled;
-        peakButton.setActive(nextEnabled);
+        const auto nextEnabled = !currentSnapshot.meterSettings.showPeak;
         settingsActions.setShowPeakEnabled(nextEnabled);
     };
     rmsButton.onClick = [this] {
-        const auto nextEnabled = !currentState.meterSettings.showRms;
-        currentState.meterSettings.showRms = nextEnabled;
-        rmsButton.setActive(nextEnabled);
+        const auto nextEnabled = !currentSnapshot.meterSettings.showRms;
         settingsActions.setShowRmsEnabled(nextEnabled);
     };
     holdButton.onClick = [this] {
-        const auto nextEnabled = !currentState.meterSettings.showHold;
-        currentState.meterSettings.showHold = nextEnabled;
-        holdButton.setActive(nextEnabled);
+        const auto nextEnabled = !currentSnapshot.meterSettings.showHold;
         settingsActions.setShowHoldEnabled(nextEnabled);
     };
     freezeButton.onClick = [this] {
-        const auto nextFrozen = !currentState.frozen;
-        currentState.frozen = nextFrozen;
-        freezeButton.setActive(nextFrozen);
+        const auto nextFrozen = !currentSnapshot.frozen;
         settingsActions.setFreezeEnabled(nextFrozen);
     };
 
@@ -66,26 +58,29 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiStateSo
     freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
     freezeButton.setOverlayIconScaleMultiplier(theme.metrics.meterControls.freezeIconScaleMultiplier);
 
-    uiStateSource.addAnalyzerUiStateListener(*this);
-    analyzerUiStateChanged(uiStateSource.getAnalyzerUiState());
+    uiSnapshotSource.addAnalyzerUiSnapshotListener(*this);
+    analyzerUiSnapshotChanged(uiSnapshotSource.getAnalyzerUiSnapshot());
 }
 
 AnalyzerMeterControlsComponent::~AnalyzerMeterControlsComponent() {
-    uiStateSource.removeAnalyzerUiStateListener(*this);
+    uiSnapshotSource.removeAnalyzerUiSnapshotListener(*this);
 }
 
 void AnalyzerMeterControlsComponent::paint(juce::Graphics &g) {
     if (!settingsSeparatorBounds.isEmpty()) {
+        const auto &dividerMetrics = theme.metrics.sectionDivider;
         juce::ColourGradient gradient(
-            theme.sectionDividerShadow.withMultipliedAlpha(0.90f),
+            theme.sectionDividerShadow.withMultipliedAlpha(dividerMetrics.startAlpha),
             0.0f,
             static_cast<float>(settingsSeparatorBounds.getY()),
-            theme.sectionDividerHighlight.withMultipliedAlpha(0.46f),
+            theme.sectionDividerHighlight.withMultipliedAlpha(dividerMetrics.endAlpha),
             0.0f,
             static_cast<float>(settingsSeparatorBounds.getBottom()),
             false);
-        gradient.addColour(0.38, theme.sectionDividerShadow.withMultipliedAlpha(0.78f));
-        gradient.addColour(0.74, theme.sectionDividerHighlight.withMultipliedAlpha(0.26f));
+        gradient.addColour(dividerMetrics.middleStartPosition,
+                           theme.sectionDividerShadow.withMultipliedAlpha(dividerMetrics.middleStartAlpha));
+        gradient.addColour(dividerMetrics.middleEndPosition,
+                           theme.sectionDividerHighlight.withMultipliedAlpha(dividerMetrics.middleEndAlpha));
         g.setGradientFill(gradient);
         g.fillRect(settingsSeparatorBounds);
     }
@@ -149,20 +144,20 @@ void AnalyzerMeterControlsComponent::resized() {
     freezeButton.setBounds(applyContentOffset(bounds.removeFromTop(freezeHeight)));
 }
 
-void AnalyzerMeterControlsComponent::analyzerUiStateChanged(const Ui::AnalyzerUiState &state) {
-    currentState = state;
-    syncButtonStates(currentState);
+void AnalyzerMeterControlsComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) {
+    currentSnapshot = snapshot;
+    syncButtonStates(currentSnapshot);
 }
 
-void AnalyzerMeterControlsComponent::syncButtonStates(const Ui::AnalyzerUiState &state) {
-    peakButton.setActive(state.meterSettings.showPeak);
-    rmsButton.setActive(state.meterSettings.showRms);
-    holdButton.setActive(state.meterSettings.showHold);
-    freezeButton.setActive(state.frozen);
+void AnalyzerMeterControlsComponent::syncButtonStates(const Ui::AnalyzerUiSnapshot &snapshot) {
+    peakButton.setActive(snapshot.meterSettings.showPeak);
+    rmsButton.setActive(snapshot.meterSettings.showRms);
+    holdButton.setActive(snapshot.meterSettings.showHold);
+    freezeButton.setActive(snapshot.frozen);
 }
 
 int AnalyzerMeterControlsComponent::getDecorPreferredHeight(const int availableWidth) const {
-    const auto& sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::decorGrid);
+    const auto& sourceImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::decorGrid);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / rasterScale;
     const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / rasterScale;
@@ -177,7 +172,7 @@ void AnalyzerMeterControlsComponent::rebuildCachedDecor() {
         return;
     }
 
-    const auto& sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::decorGrid);
+    const auto& sourceImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::decorGrid);
     const auto rasterScale = theme.metrics.assets.rasterScale;
     const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / rasterScale;
     const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / rasterScale;

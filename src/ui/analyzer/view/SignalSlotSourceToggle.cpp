@@ -1,6 +1,7 @@
 #include "SignalSlotSourceToggle.h"
 
 #include "../../UiRasterAssets.h"
+#include "../model/SignalSlotOptions.h"
 
 SignalSlotSourceToggle::SignalSlotSourceToggle(const Ui::Theme &themeToUse)
     : theme(themeToUse) {
@@ -14,6 +15,7 @@ void SignalSlotSourceToggle::setState(const Analyzer::SignalSource sourceToUse, 
 }
 
 void SignalSlotSourceToggle::paint(juce::Graphics &g) {
+    const auto &slotMetrics = theme.metrics.slot;
     const auto mainActive = source == Analyzer::SignalSource::main;
     const auto sidechainActive = source == Analyzer::SignalSource::sidechain;
 
@@ -21,15 +23,15 @@ void SignalSlotSourceToggle::paint(juce::Graphics &g) {
     if (cachedSwitchImage.isValid())
         g.drawImageAt(cachedSwitchImage, switchBounds.getX(), switchBounds.getY());
 
-    g.setFont(theme.metrics.slot.hintFontHeight + 1.0f);
+    g.setFont(slotMetrics.hintFontHeight + slotMetrics.sourceToggleFontDelta);
     g.setColour(mainActive ? theme.controlText : theme.axisText);
-    g.drawText("Main", getTopLabelBounds(), juce::Justification::centred);
+    g.drawText(Ui::getSignalSourceLabel(Analyzer::SignalSource::main), getTopLabelBounds(), juce::Justification::centred);
 
     const auto sidechainColour = sidechainAvailable
                                      ? (sidechainActive ? theme.controlText : theme.axisText)
                                      : theme.subtleText.withMultipliedAlpha(0.7f);
     g.setColour(sidechainColour);
-    g.drawText("Sidechain", getBottomLabelBounds(), juce::Justification::centred);
+    g.drawText(Ui::getSignalSourceLabel(Analyzer::SignalSource::sidechain), getBottomLabelBounds(), juce::Justification::centred);
 }
 
 void SignalSlotSourceToggle::resized() {
@@ -73,12 +75,14 @@ juce::Rectangle<float> SignalSlotSourceToggle::getSidechainBounds() const {
 
 juce::Rectangle<float> SignalSlotSourceToggle::getSwitchBounds() const {
     auto bounds = getLocalBounds().toFloat();
-    const auto labelHeight = juce::jmin(11.0f, bounds.getHeight() * 0.32f);
+    const auto &slotMetrics = theme.metrics.slot;
+    const auto labelHeight = juce::jmin(slotMetrics.sourceToggleMaxLabelHeight,
+                                        bounds.getHeight() * slotMetrics.sourceToggleLabelHeightFraction);
     bounds.removeFromTop(labelHeight);
     bounds.removeFromBottom(labelHeight);
-    bounds = bounds.reduced(2.0f, 0.0f);
+    bounds = bounds.reduced(slotMetrics.sourceToggleSwitchInsetX, 0.0f);
 
-    const auto &sourceImage = Ui::getRasterAsset(Ui::RasterAssetId::switchUp);
+    const auto &sourceImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::switchUp);
     const auto logicalWidth = static_cast<float>(sourceImage.getWidth()) / theme.metrics.assets.rasterScale;
     const auto logicalHeight = static_cast<float>(sourceImage.getHeight()) / theme.metrics.assets.rasterScale;
     const auto fitScale = juce::jmin(bounds.getWidth() / logicalWidth, bounds.getHeight() / logicalHeight);
@@ -115,9 +119,9 @@ void SignalSlotSourceToggle::rebuildCachedSwitch() {
         return;
     }
 
-    const auto &sourceImage = Ui::getRasterAsset(source == Analyzer::SignalSource::sidechain
-                                                     ? Ui::RasterAssetId::switchDown
-                                                     : Ui::RasterAssetId::switchUp);
+    const auto &sourceImage = Ui::getAnalyzerRasterAsset(source == Analyzer::SignalSource::sidechain
+                                                             ? Ui::AnalyzerRasterAssetId::switchDown
+                                                             : Ui::AnalyzerRasterAssetId::switchUp);
     cachedSwitchImage = juce::Image(juce::Image::ARGB, switchBounds.getWidth(), switchBounds.getHeight(), true);
     juce::Graphics graphics(cachedSwitchImage);
     graphics.drawImage(sourceImage,
