@@ -25,6 +25,9 @@ void SignalSlotSwatchButton::mouseDown(const juce::MouseEvent &event) {
     mouseDownPosition = event.position;
     dragStartOpacity = opacity;
     didOpacityDrag = false;
+
+    if (onPress)
+        onPress();
 }
 
 void SignalSlotSwatchButton::mouseDrag(const juce::MouseEvent &event) {

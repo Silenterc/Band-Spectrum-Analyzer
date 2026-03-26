@@ -24,11 +24,11 @@ void SignalSlotSourceToggle::paint(juce::Graphics &g) {
         g.drawImageAt(cachedSwitchImage, switchBounds.getX(), switchBounds.getY());
 
     g.setFont(slotMetrics.hintFontHeight + slotMetrics.sourceToggleFontDelta);
-    g.setColour(mainActive ? theme.controlText : theme.axisText);
+    g.setColour(mainActive ? theme.hardwareMarkingLight : theme.axisText);
     g.drawText(Ui::getSignalSourceLabel(Analyzer::SignalSource::main), getTopLabelBounds(), juce::Justification::centred);
 
     const auto sidechainColour = sidechainAvailable
-                                     ? (sidechainActive ? theme.controlText : theme.axisText)
+                                     ? (sidechainActive ? theme.hardwareMarkingLight : theme.axisText)
                                      : theme.subtleText.withMultipliedAlpha(0.7f);
     g.setColour(sidechainColour);
     g.drawText(Ui::getSignalSourceLabel(Analyzer::SignalSource::sidechain), getBottomLabelBounds(), juce::Justification::centred);

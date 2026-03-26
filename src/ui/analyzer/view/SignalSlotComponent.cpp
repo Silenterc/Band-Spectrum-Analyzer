@@ -8,12 +8,6 @@
 #include "../popups/SignalSelectionPopupContent.h"
 
 namespace {
-    float measureTextWidth(const float fontHeight, const juce::String &text) {
-        juce::GlyphArrangement glyphs;
-        glyphs.addLineOfText(juce::Font(juce::FontOptions(fontHeight)), text, 0.0f, 0.0f);
-        return glyphs.getBoundingBox(0, -1, true).getWidth();
-    }
-
     juce::Rectangle<int> getCenteredSquareBounds(const juce::Rectangle<float> laneBounds, const float size) {
         return juce::Rectangle<float>(size, size).withCentre(laneBounds.getCentre()).toNearestInt();
     }
@@ -40,6 +34,13 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     sourceToggle.onSourceSelected = [this](const Analyzer::SignalSource source) { handleSourceSelected(source); };
     modeButton.onPress = [this] { handleModePressed(); };
     modeButton.onClick = [this] { handleModeClicked(); };
+    swatchButton.onPress = [this] {
+        if (openPopupMenu != OpenPopupMenu::colour)
+            return;
+
+        dismissOpenMenu();
+        suppressNextSwatchClick = true;
+    };
     swatchButton.onClick = [this] { handleSwatchClicked(); };
     swatchButton.onOpacityChanged = [this](const float opacity) { handleOpacityChanged(opacity); };
     swatchButton.onOpacityReset = [this] { handleOpacityReset(); };
@@ -101,15 +102,11 @@ size_t SignalSlotComponent::getSlotIndex() const {
 
 int SignalSlotComponent::getPreferredWidth() const {
     const auto &slotMetrics = theme.metrics.slot;
-    auto modeWidth = 0.0f;
-    for (const auto &option: Ui::signalSlotOptions)
-        modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.modeLabel));
-
-    const auto modePickerWidth = std::ceil(modeWidth + slotMetrics.modePickerPaddingX * 2.0f);
-    const auto topRowWidth = slotMetrics.sourceToggleWidth + slotMetrics.sectionGap + modePickerWidth
-                             + slotMetrics.actionGap + slotMetrics.actionSize;
+    const auto topRowWidth = slotMetrics.cellPaddingX + slotMetrics.sourceToggleWidth + slotMetrics.sectionGap
+                             + slotMetrics.modeDisplayWidth + slotMetrics.modeActionGap + slotMetrics.actionSize
+                             + slotMetrics.topRowEdgeInset;
     const auto bottomRowWidth = getActionClusterWidth();
-    const auto totalWidth = slotMetrics.cellPaddingX + std::max(topRowWidth, bottomRowWidth) + slotMetrics.cellPaddingX;
+    const auto totalWidth = std::max(topRowWidth, bottomRowWidth);
     return static_cast<int>(std::ceil(totalWidth));
 }
 
@@ -141,24 +138,40 @@ void SignalSlotComponent::resized() {
     const auto &slotMetrics = theme.metrics.slot;
     const auto actionControlSize = slotMetrics.actionSize;
     const auto swatchControlSize = slotMetrics.swatchSize;
+    const auto moduleBounds = getModuleBounds();
     auto modeRowBounds = getModeRowBounds();
     auto actionRowBounds = getActionRowBounds();
 
     sourceToggle.setBounds(getSourceToggleBounds().toNearestInt());
 
-    removeButton.setBounds(getCenteredSquareBounds(modeRowBounds.removeFromRight(actionControlSize), actionControlSize));
-    modeRowBounds.removeFromRight(static_cast<int>(std::round(slotMetrics.actionGap)));
-    modeButton.setBounds(juce::Rectangle<float>(modeRowBounds.getWidth(), slotMetrics.modeDisplayHeight)
-                             .withCentre(modeRowBounds.getCentre())
-                             .toNearestInt());
+    const auto removeButtonBounds = juce::Rectangle<float>(
+        moduleBounds.getRight() - slotMetrics.topRowEdgeInset - actionControlSize,
+        modeRowBounds.getY() + (modeRowBounds.getHeight() - actionControlSize) * 0.5f,
+        actionControlSize,
+        actionControlSize);
+    removeButton.setBounds(removeButtonBounds.toNearestInt());
 
-    swatchButton.setBounds(getCenteredSquareBounds(actionRowBounds.removeFromLeft(swatchControlSize), swatchControlSize));
-    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    dragHandle.setBounds(getCenteredSquareBounds(actionRowBounds.removeFromLeft(actionControlSize), actionControlSize));
-    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    visibilityButton.setBounds(getCenteredSquareBounds(actionRowBounds.removeFromLeft(actionControlSize), actionControlSize));
-    actionRowBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    freezeButton.setBounds(getCenteredSquareBounds(actionRowBounds.removeFromLeft(actionControlSize), actionControlSize));
+    const auto modeButtonRight = removeButtonBounds.getX() - slotMetrics.modeActionGap;
+    const auto modeButtonBounds = juce::Rectangle<float>(
+        modeButtonRight - slotMetrics.modeDisplayWidth,
+        modeRowBounds.getY() + (modeRowBounds.getHeight() - slotMetrics.modeDisplayHeight) * 0.5f,
+        slotMetrics.modeDisplayWidth,
+        slotMetrics.modeDisplayHeight);
+    modeButton.setBounds(modeButtonBounds.toNearestInt());
+
+    auto actionClusterBounds = juce::Rectangle<float>(
+        modeButtonBounds.getRight() - slotMetrics.modeDisplayWidth,
+        actionRowBounds.getY(),
+        slotMetrics.modeDisplayWidth,
+        actionRowBounds.getHeight());
+
+    swatchButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(swatchControlSize), swatchControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    dragHandle.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    visibilityButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    freezeButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
 }
 
 juce::Rectangle<float> SignalSlotComponent::getModuleBounds() const {
@@ -187,6 +200,23 @@ void SignalSlotComponent::rebuildCachedBackground() {
                        0,
                        backgroundImage.getWidth(),
                        backgroundImage.getHeight());
+
+    const auto &screwImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
+    const auto screwPadding = juce::roundToInt(theme.metrics.slot.screwPadding);
+    const auto topLeftScrewBounds = Ui::getScaledAssetBoundsWithin(screwImage,
+                                                                   theme.metrics.assets.rasterScale,
+                                                                   {screwPadding,
+                                                                    screwPadding,
+                                                                    targetBounds.getWidth(),
+                                                                    targetBounds.getHeight()},
+                                                                   theme.metrics.slot.screwScale)
+                                        .withPosition(screwPadding, screwPadding);
+    const auto topRightScrewBounds = topLeftScrewBounds.withX(targetBounds.getWidth()
+                                                              - screwPadding
+                                                              - topLeftScrewBounds.getWidth());
+
+    Ui::drawAssetWithin(graphics, screwImage, topLeftScrewBounds);
+    Ui::drawAssetWithin(graphics, screwImage, topRightScrewBounds);
 }
 
 void SignalSlotComponent::refreshChildState() {
@@ -209,7 +239,9 @@ void SignalSlotComponent::refreshChildState() {
 }
 
 juce::Rectangle<float> SignalSlotComponent::getContentBounds() const {
-    return getModuleBounds().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
+    auto bounds = getModuleBounds().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
+    bounds.removeFromTop(theme.metrics.slot.contentOffsetY);
+    return bounds;
 }
 
 juce::Rectangle<float> SignalSlotComponent::getSourceToggleBounds() const {
@@ -253,7 +285,8 @@ juce::Rectangle<float> SignalSlotComponent::getActionRowBounds() const {
 
 float SignalSlotComponent::getActionClusterWidth() const {
     return theme.metrics.slot.sourceToggleWidth + theme.metrics.slot.sectionGap
-           + theme.metrics.slot.actionSize * 4.0f + theme.metrics.slot.actionGap * 3.0f;
+           + theme.metrics.slot.swatchSize + theme.metrics.slot.actionSize * 3.0f
+           + theme.metrics.slot.actionGap * 3.0f;
 }
 
 bool SignalSlotComponent::isColourAvailable(const int colourIndex) const {
@@ -441,6 +474,11 @@ void SignalSlotComponent::handleRemoveClicked() {
 }
 
 void SignalSlotComponent::handleSwatchClicked() {
+    if (suppressNextSwatchClick) {
+        suppressNextSwatchClick = false;
+        return;
+    }
+
     showColourMenu();
 }
 

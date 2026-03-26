@@ -96,6 +96,12 @@ public:
     void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) override;
     void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) override;
     void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) override;
+    void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) override;
+    void applySignalSlotState(size_t slotIndex, const Ui::SignalSlotState &state) override;
+    void removeSignalSlot(size_t slotIndex) override;
+    void addSignalSlot(size_t slotIndex,
+                       const Ui::SignalSlotState &state,
+                       const Shared::SignalSlotOrder &slotOrder) override;
     void setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) override;
     void setSignalSlotColour(size_t slotIndex, int colourIndex) override;
     void setSignalSlotOpacity(size_t slotIndex, float opacity) override;

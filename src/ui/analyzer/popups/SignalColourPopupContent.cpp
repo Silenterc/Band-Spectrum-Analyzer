@@ -1,5 +1,7 @@
 #include "SignalColourPopupContent.h"
 
+#include "../../PopupChrome.h"
+
 namespace {
     int getColourRowCount(const int itemCount, const int columns) {
         if (columns <= 0)
@@ -22,15 +24,16 @@ namespace {
             g.fillEllipse(bounds);
 
             if (isMouseOverButton) {
-                g.setColour(juce::Colours::white.withAlpha(popupMetrics.swatchHoverAlpha));
+                g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.swatchHoverAlpha));
                 g.fillEllipse(bounds.reduced(popupMetrics.swatchHoverInset));
             }
 
-            g.setColour(selected ? juce::Colours::white : juce::Colours::white.withAlpha(popupMetrics.swatchOutlineAlpha));
+            g.setColour(selected ? theme.hardwareMarkingLight
+                                 : theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.swatchOutlineAlpha));
             g.drawEllipse(bounds, selected ? popupMetrics.swatchSelectedOutlineThickness : popupMetrics.swatchOutlineThickness);
 
             if (!isEnabled()) {
-                g.setColour(juce::Colours::white.withAlpha(0.18f));
+                g.setColour(theme.axisText.withMultipliedAlpha(0.18f));
                 g.drawLine(bounds.getX() + popupMetrics.swatchDisabledSlashInset,
                            bounds.getBottom() - popupMetrics.swatchDisabledSlashInset,
                            bounds.getRight() - popupMetrics.swatchDisabledSlashInset,
@@ -57,6 +60,10 @@ SignalColourPopupContent::SignalColourPopupContent(const Ui::Theme &themeToUse,
 SignalColourPopupContent::~SignalColourPopupContent() {
     if (onDismiss)
         onDismiss();
+}
+
+void SignalColourPopupContent::paint(juce::Graphics &g) {
+    Ui::paintPopupShell(g, getLocalBounds().toFloat(), theme);
 }
 
 void SignalColourPopupContent::addColourButton(const juce::Colour colour,

@@ -22,7 +22,10 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
             g.setColour(fill);
             g.fillRoundedRectangle(bounds, slotMetrics.buttonCornerRadius);
         }
-        Ui::drawIcon(g, Ui::IconId::cancel, bounds.reduced(slotMetrics.cancelIconInset), style.foreground);
+        Ui::drawIcon(g,
+                     Ui::IconId::cancel,
+                     bounds.reduced(slotMetrics.cancelIconInset),
+                     style.foreground);
         return;
     }
 

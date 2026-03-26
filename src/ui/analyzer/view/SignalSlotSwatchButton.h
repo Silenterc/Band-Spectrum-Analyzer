@@ -12,6 +12,7 @@ public:
 
     void setState(int colourIndexToUse, float opacityToUse);
 
+    std::function<void()> onPress;
     std::function<void()> onClick;
     std::function<void(float)> onOpacityChanged;
     std::function<void()> onOpacityReset;

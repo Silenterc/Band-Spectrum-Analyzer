@@ -1,5 +1,6 @@
 #include "SignalSelectionPopupContent.h"
 
+#include "../../PopupChrome.h"
 #include "../../UiRasterAssets.h"
 
 namespace {
@@ -94,12 +95,7 @@ SignalSelectionPopupContent::~SignalSelectionPopupContent() {
 }
 
 void SignalSelectionPopupContent::paint(juce::Graphics &g) {
-    const auto &popupMetrics = theme.metrics.popup;
-    const auto bounds = getLocalBounds().toFloat();
-    g.setColour(theme.controlSurface.withMultipliedBrightness(popupMetrics.shellBrightness));
-    g.fillRoundedRectangle(bounds, popupMetrics.shellCornerRadius);
-    g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.shellBorderAlpha));
-    g.drawRoundedRectangle(bounds.reduced(0.5f), popupMetrics.shellCornerRadius, 1.0f);
+    Ui::paintPopupShell(g, getLocalBounds().toFloat(), theme);
 }
 
 void SignalSelectionPopupContent::setAvailability(

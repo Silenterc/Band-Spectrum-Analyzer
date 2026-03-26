@@ -318,50 +318,91 @@ juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcess
 
 void SpectrumAnalyzerAudioProcessor::setFreezeEnabled(const bool isFrozenValue) {
     parameterAccess.writeFreeze(isFrozenValue);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotEnabled(const size_t slotIndex, const bool isEnabled) {
     parameterAccess.writeSlotEnabled(slotIndex, isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex, const bool isVisible) {
     parameterAccess.writeSlotVisible(slotIndex, isVisible);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotFrozen(const size_t slotIndex, const bool isFrozenValue) {
     parameterAccess.writeSlotFrozen(slotIndex, isFrozenValue);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotSource(const size_t slotIndex, const Analyzer::SignalSource source) {
     parameterAccess.writeSlotSignal(slotIndex, source, parameterAccess.readUiSlot(slotIndex).configuration.mode);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotMode(const size_t slotIndex, const Analyzer::SignalMode mode) {
     parameterAccess.writeSlotSignal(slotIndex, parameterAccess.readUiSlot(slotIndex).configuration.source, mode);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotSignal(const size_t slotIndex,
+                                                         const Analyzer::SignalSource source,
+                                                         const Analyzer::SignalMode mode) {
+    parameterAccess.writeSlotSignal(slotIndex, source, mode);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::applySignalSlotState(const size_t slotIndex, const Ui::SignalSlotState &state) {
+    parameterAccess.writeSlotState(slotIndex, state);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::removeSignalSlot(const size_t slotIndex) {
+    auto state = parameterAccess.readUiSlot(slotIndex);
+    state.configuration.enabled = false;
+    state.visible = false;
+    state.frozen = false;
+    parameterAccess.writeSlotState(slotIndex, state);
+    triggerUiStateUpdate();
+}
+
+void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
+                                                   const Ui::SignalSlotState &state,
+                                                   const Shared::SignalSlotOrder &slotOrder) {
+    parameterAccess.writeSlotState(slotIndex, state);
+    signalSlotOrderState.setOrder(slotOrder);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
     signalSlotOrderState.setOrder(slotOrder);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotColour(const size_t slotIndex, const int colourIndex) {
     parameterAccess.writeSlotColour(slotIndex, colourIndex);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOpacity(const size_t slotIndex, const float opacity) {
     parameterAccess.writeSlotOpacity(slotIndex, opacity);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowPeakEnabled(const bool isEnabled) {
     parameterAccess.writeShowPeak(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowRmsEnabled(const bool isEnabled) {
     parameterAccess.writeShowRms(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowHoldEnabled(const bool isEnabled) {
     parameterAccess.writeShowHold(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,

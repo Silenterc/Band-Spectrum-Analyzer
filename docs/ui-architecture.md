@@ -97,6 +97,7 @@ Rules:
 - shared UI primitives only
 - shared theme tokens
 - shared popup shell
+- shared popup chrome helpers
 - shared icons and shared assets
 - no analyzer-specific policy
 
@@ -121,7 +122,7 @@ Rules:
 ### `src/ui/analyzer/popups/`
 
 - popup content components only
-- consume centralized popup tokens and signal metadata
+- consume centralized popup tokens, popup chrome helpers, and signal metadata
 
 ### `src/ui/analyzer/helpers/`
 

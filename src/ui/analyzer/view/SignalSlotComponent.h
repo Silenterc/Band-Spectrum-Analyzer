@@ -90,6 +90,7 @@ private:
     bool isSidechainRouted = false;
     bool isDragged = false;
     bool suppressNextModeButtonClick = false;
+    bool suppressNextSwatchClick = false;
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
     juce::Component::SafePointer<juce::CallOutBox> activeCallout;
     juce::Image cachedBackground;
