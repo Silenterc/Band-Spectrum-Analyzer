@@ -39,38 +39,20 @@ void SignalSlotSourceToggle::resized() {
 }
 
 void SignalSlotSourceToggle::mouseMove(const juce::MouseEvent &event) {
-    hoveredHalf = getHoverHalf(event.position);
-    const auto canClick = hoveredHalf == HoverHalf::main || (hoveredHalf == HoverHalf::sidechain && sidechainAvailable);
-    setMouseCursor(canClick ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
-}
-
-void SignalSlotSourceToggle::mouseExit(const juce::MouseEvent &event) {
     juce::ignoreUnused(event);
-    hoveredHalf = HoverHalf::none;
-    setMouseCursor(juce::MouseCursor::NormalCursor);
+    setMouseCursor(sidechainAvailable ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
 }
 
 void SignalSlotSourceToggle::mouseUp(const juce::MouseEvent &event) {
-    if (event.mouseWasDraggedSinceMouseDown())
+    if (event.mouseWasDraggedSinceMouseDown() || onSourceSelected == nullptr)
         return;
 
-    const auto half = getHoverHalf(event.position);
-    if (half == HoverHalf::main && onSourceSelected)
+    if (source == Analyzer::SignalSource::main) {
+        if (sidechainAvailable)
+            onSourceSelected(Analyzer::SignalSource::sidechain);
+    } else {
         onSourceSelected(Analyzer::SignalSource::main);
-    else if (half == HoverHalf::sidechain && sidechainAvailable && onSourceSelected)
-        onSourceSelected(Analyzer::SignalSource::sidechain);
-}
-
-juce::Rectangle<float> SignalSlotSourceToggle::getMainBounds() const {
-    auto bounds = getLocalBounds().toFloat();
-    bounds.setHeight(bounds.getCentreY());
-    return bounds;
-}
-
-juce::Rectangle<float> SignalSlotSourceToggle::getSidechainBounds() const {
-    auto bounds = getLocalBounds().toFloat();
-    bounds.removeFromTop(bounds.getCentreY());
-    return bounds;
+    }
 }
 
 juce::Rectangle<float> SignalSlotSourceToggle::getSwitchBounds() const {
@@ -102,14 +84,6 @@ juce::Rectangle<int> SignalSlotSourceToggle::getBottomLabelBounds() const {
     auto bounds = getLocalBounds();
     bounds.removeFromTop(static_cast<int>(std::round(getSwitchBounds().getBottom())));
     return bounds;
-}
-
-SignalSlotSourceToggle::HoverHalf SignalSlotSourceToggle::getHoverHalf(const juce::Point<float> position) const {
-    if (getMainBounds().contains(position))
-        return HoverHalf::main;
-    if (getSidechainBounds().contains(position))
-        return HoverHalf::sidechain;
-    return HoverHalf::none;
 }
 
 void SignalSlotSourceToggle::rebuildCachedSwitch() {
