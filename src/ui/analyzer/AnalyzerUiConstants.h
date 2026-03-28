@@ -9,7 +9,7 @@ namespace Ui::AnalyzerConstants {
     inline constexpr float defaultVisibleMinFrequencyHz = Analyzer::Constants::minFrequencyHz;
     inline constexpr float defaultVisibleMaxFrequencyHz = maxUiFrequencyHz;
 
-    inline constexpr int meterPollIntervalMs = 33; // ~30 Hz
+    inline constexpr int meterPollIntervalMs = 16; // ~60 Hz
     inline constexpr int idleMeterPollIntervalMs = 120; // ~8 Hz while waiting for signal to return
     inline constexpr float meterPollIntervalSeconds = static_cast<float>(meterPollIntervalMs) * 0.001f;
 
