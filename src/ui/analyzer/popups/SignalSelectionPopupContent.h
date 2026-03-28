@@ -12,7 +12,6 @@
 class SignalSelectionPopupContent final : public juce::Component {
 public:
     SignalSelectionPopupContent(const Ui::Theme &themeToUse,
-                                bool sidechainAvailableToUse,
                                 Analyzer::SignalSource currentSourceToUse,
                                 Analyzer::SignalMode currentModeToUse,
                                 std::function<void(Analyzer::SignalSource, Analyzer::SignalMode)> onSelectToUse,
@@ -27,10 +26,10 @@ public:
     int getPreferredWidth() const;
 
 private:
+    void paint(juce::Graphics &g) override;
+
     const Ui::Theme &theme;
-    bool sidechainAvailable = false;
-    juce::Label mainLabel;
-    juce::Label sidechainLabel;
+    Analyzer::SignalSource currentSource = Analyzer::SignalSource::main;
     std::array<std::unique_ptr<juce::Button>, Ui::signalSlotOptions.size()> buttons;
     std::function<void(Analyzer::SignalSource, Analyzer::SignalMode)> onSelect;
     std::function<void()> onDismiss;

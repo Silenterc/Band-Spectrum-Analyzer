@@ -251,22 +251,25 @@ std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProc
     return engine.getBandInfo();
 }
 
-Ui::AnalyzerUiState SpectrumAnalyzerAudioProcessor::getAnalyzerUiState() const {
-    Ui::AnalyzerUiState state;
+Ui::AnalyzerUiSnapshot SpectrumAnalyzerAudioProcessor::getAnalyzerUiSnapshot() const {
+    Ui::AnalyzerUiSnapshot state;
     state.signalSlots = getSignalSlots();
     state.slotOrder = getSignalSlotOrder();
     state.meterSettings = getMeterSettings();
     state.frozen = isFrozen();
     state.sidechainAvailable = isSidechainAvailable();
+    state.gridMinDb = getGridMinDb();
+    state.gridMaxDb = getGridMaxDb();
+    state.gridStepDb = getGridStepDb();
     return state;
 }
 
-void SpectrumAnalyzerAudioProcessor::addAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) {
-    uiStateListeners.add(&listener);
+void SpectrumAnalyzerAudioProcessor::addAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) {
+    uiSnapshotListeners.add(&listener);
 }
 
-void SpectrumAnalyzerAudioProcessor::removeAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) {
-    uiStateListeners.remove(&listener);
+void SpectrumAnalyzerAudioProcessor::removeAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) {
+    uiSnapshotListeners.remove(&listener);
 }
 
 std::vector<Analyzer::RawTrace> SpectrumAnalyzerAudioProcessor::getRawTraces() const {
@@ -315,40 +318,53 @@ juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcess
 
 void SpectrumAnalyzerAudioProcessor::setFreezeEnabled(const bool isFrozenValue) {
     parameterAccess.writeFreeze(isFrozenValue);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotEnabled(const size_t slotIndex, const bool isEnabled) {
     parameterAccess.writeSlotEnabled(slotIndex, isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex, const bool isVisible) {
     parameterAccess.writeSlotVisible(slotIndex, isVisible);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotFrozen(const size_t slotIndex, const bool isFrozenValue) {
     parameterAccess.writeSlotFrozen(slotIndex, isFrozenValue);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotSource(const size_t slotIndex, const Analyzer::SignalSource source) {
     parameterAccess.writeSlotSignal(slotIndex, source, parameterAccess.readUiSlot(slotIndex).configuration.mode);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotMode(const size_t slotIndex, const Analyzer::SignalMode mode) {
     parameterAccess.writeSlotSignal(slotIndex, parameterAccess.readUiSlot(slotIndex).configuration.source, mode);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotSignal(const size_t slotIndex,
                                                          const Analyzer::SignalSource source,
                                                          const Analyzer::SignalMode mode) {
     parameterAccess.writeSlotSignal(slotIndex, source, mode);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::applySignalSlotState(const size_t slotIndex, const Ui::SignalSlotState &state) {
     parameterAccess.writeSlotState(slotIndex, state);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::removeSignalSlot(const size_t slotIndex) {
-    parameterAccess.writeSlotEnabled(slotIndex, false);
+    auto state = parameterAccess.readUiSlot(slotIndex);
+    state.configuration.enabled = false;
+    state.visible = false;
+    state.frozen = false;
+    parameterAccess.writeSlotState(slotIndex, state);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
@@ -356,30 +372,37 @@ void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
                                                    const Shared::SignalSlotOrder &slotOrder) {
     parameterAccess.writeSlotState(slotIndex, state);
     signalSlotOrderState.setOrder(slotOrder);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
     signalSlotOrderState.setOrder(slotOrder);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotColour(const size_t slotIndex, const int colourIndex) {
     parameterAccess.writeSlotColour(slotIndex, colourIndex);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOpacity(const size_t slotIndex, const float opacity) {
     parameterAccess.writeSlotOpacity(slotIndex, opacity);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowPeakEnabled(const bool isEnabled) {
     parameterAccess.writeShowPeak(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowRmsEnabled(const bool isEnabled) {
     parameterAccess.writeShowRms(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowHoldEnabled(const bool isEnabled) {
     parameterAccess.writeShowHold(isEnabled);
+    triggerUiStateUpdate();
 }
 
 void SpectrumAnalyzerAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
@@ -419,13 +442,13 @@ void SpectrumAnalyzerAudioProcessor::signalSlotOrderChanged(const Shared::Signal
 }
 
 void SpectrumAnalyzerAudioProcessor::handleAsyncUpdate() {
-    const auto state = getAnalyzerUiState();
-    if (lastPublishedUiState.has_value() && *lastPublishedUiState == state)
+    const auto snapshot = getAnalyzerUiSnapshot();
+    if (lastPublishedUiSnapshot.has_value() && *lastPublishedUiSnapshot == snapshot)
         return;
 
-    lastPublishedUiState = state;
-    uiStateListeners.call([&state](AnalyzerUiStateSource::Listener &listener) {
-        listener.analyzerUiStateChanged(state);
+    lastPublishedUiSnapshot = snapshot;
+    uiSnapshotListeners.call([&snapshot](AnalyzerUiSnapshotSource::Listener &listener) {
+        listener.analyzerUiSnapshotChanged(snapshot);
     });
 }
 

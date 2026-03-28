@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include "../../UiTheme.h"
-
-AnalyzerViewModel::AnalyzerViewModel()
-    : hoverModel(geometry, formatter, musicTheory) {
+AnalyzerViewModel::AnalyzerViewModel(const Ui::Theme &themeToUse)
+    : theme(themeToUse),
+      geometry(themeToUse),
+      hoverModel(geometry, formatter, musicTheory) {
 }
 
 void AnalyzerViewModel::updateStaticLayout(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
@@ -18,7 +18,7 @@ void AnalyzerViewModel::updateStaticLayout(const Analyzer::RenderData &renderDat
     updateBandBounds(renderData.bandInfo.size());
 }
 
-void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
+void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState & /*viewState*/,
                                            const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
                                            const Shared::SignalSlotOrder &signalSlotOrder,
                                            float gridMinDb, float gridMaxDb) {
@@ -28,7 +28,7 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
     orderedTraces.reserve(renderData.traces.size());
 
     for (const auto &trace: renderData.traces) {
-        if (!isTraceEnabled(trace.kind, viewState))
+        if (!Ui::isTraceVisible(trace.kind, signalSlots))
             continue;
 
         orderedTraces.push_back(&trace);
@@ -76,10 +76,9 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
     }
 }
 
-void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState,
-                                    const Shared::SignalSlotOrder &signalSlotOrder,
-                                    const Analyzer::MeterSettings &meterSettings,
-                                    float gridMinDb,
+void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData,
+                                    const float gridMinDb,
+                                    const float gridMaxDb,
                                     const juce::Rectangle<float> &localBounds,
                                     const std::optional<juce::Point<float>> &hoverPositionToUse) {
     if (!hoverPositionToUse.has_value()) {
@@ -87,16 +86,13 @@ void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData, cons
         return;
     }
 
-    // Hover uses the first visible trace as its source until we add multi-trace hover policy
-    const auto *primaryTrace = getPrimaryVisibleTrace(renderData, viewState, signalSlotOrder);
-
-    if (primaryTrace == nullptr) {
+    if (renderData.bandInfo.empty()) {
         hoverInfo.reset();
         return;
     }
 
-    hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, primaryTrace->frame,
-                                 meterSettings, gridMinDb, visibleMinFrequencyHz, visibleMaxFrequencyHz,
+    hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, gridMinDb, gridMaxDb,
+                                 visibleMinFrequencyHz, visibleMaxFrequencyHz,
                                  *hoverPositionToUse);
 }
 
@@ -135,7 +131,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     gridLines.clear();
     frequencyMarkers.clear();
     gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
-    frequencyMarkers.reserve(Ui::AnalyzerConstants::frequencyScaleLabelsHz.size());
+    frequencyMarkers.reserve(theme.metrics.analyzerPlot.frequencyScaleLabelsHz.size());
 
     for (float db = gridMinDb; db <= gridMaxDb + 0.001f; db += gridStepDb) {
         AnalyzerGridLine gridLine;
@@ -144,7 +140,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
         gridLines.push_back(gridLine);
     }
 
-    for (auto frequencyHz: Ui::AnalyzerConstants::frequencyScaleLabelsHz) {
+    for (auto frequencyHz: theme.metrics.analyzerPlot.frequencyScaleLabelsHz) {
         AnalyzerFrequencyMarker frequencyMarker;
         frequencyMarker.x = geometry.xForFrequency(frequencyHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
         frequencyMarker.label = formatter.formatScaleFrequency(frequencyHz);
@@ -159,43 +155,8 @@ void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
     if (bandCount == 0)
         return;
 
-    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
-
-    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
-        const auto x = plotBounds.getX() + static_cast<float>(bandIndex) * bandWidth;
-        bandBounds.emplace_back(x + 1.0f, plotBounds.getY(), bandWidth - 2.0f, plotBounds.getHeight());
-    }
-}
-
-const Analyzer::RenderTrace *AnalyzerViewModel::getPrimaryVisibleTrace(const Analyzer::RenderData &renderData,
-                                                                       const AnalyzerViewState &viewState,
-                                                                       const Shared::SignalSlotOrder &signalSlotOrder) const {
-    for (const auto slotIndex: signalSlotOrder) {
-        const auto kind = Analyzer::traceKindForSlot(slotIndex);
-        if (!isTraceEnabled(kind, viewState))
-            continue;
-
-        const auto traceIterator = std::find_if(renderData.traces.begin(), renderData.traces.end(),
-                                                [kind](const Analyzer::RenderTrace &trace) {
-                                                    return trace.kind == kind;
-                                                });
-        if (traceIterator != renderData.traces.end())
-            return &*traceIterator;
-    }
-
-    for (const auto &trace: renderData.traces) {
-        if (isTraceEnabled(trace.kind, viewState))
-            return &trace;
-    }
-
-    return nullptr;
-}
-
-bool AnalyzerViewModel::isTraceEnabled(Analyzer::TraceKind kind, const AnalyzerViewState &viewState) const {
-    if (viewState.enabledTraces.empty())
-        return false;
-
-    return std::find(viewState.enabledTraces.begin(), viewState.enabledTraces.end(), kind) != viewState.enabledTraces.end();
+    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex)
+        bandBounds.push_back(geometry.getBandDrawBounds(bandIndex, bandCount, plotBounds));
 }
 
 float AnalyzerViewModel::getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
@@ -229,13 +190,14 @@ void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &
 
     const auto fullMinFrequencyHz = renderData.bandInfo.front().lowHz;
     const auto fullMaxFrequencyHz = renderData.bandInfo.back().highHz;
+    const auto uiMaxFrequencyHz = juce::jmin(fullMaxFrequencyHz, theme.metrics.analyzerPlot.maxUiFrequencyHz);
 
     if (!viewState.useCustomFrequencyRange) {
         visibleMinFrequencyHz = fullMinFrequencyHz;
-        visibleMaxFrequencyHz = fullMaxFrequencyHz;
+        visibleMaxFrequencyHz = uiMaxFrequencyHz;
         return;
     }
 
-    visibleMinFrequencyHz = juce::jlimit(fullMinFrequencyHz, fullMaxFrequencyHz, viewState.visibleMinFrequencyHz);
-    visibleMaxFrequencyHz = juce::jlimit(visibleMinFrequencyHz, fullMaxFrequencyHz, viewState.visibleMaxFrequencyHz);
+    visibleMinFrequencyHz = juce::jlimit(fullMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMinFrequencyHz);
+    visibleMaxFrequencyHz = juce::jlimit(visibleMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMaxFrequencyHz);
 }

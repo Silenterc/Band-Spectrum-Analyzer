@@ -6,12 +6,17 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../dsp/core/AnalyzerData.h"
+#include "../../UiTheme.h"
 
 /**
  * Converts analyzer data between domain space and screen space
  */
 class AnalyzerGeometry final {
 public:
+    explicit AnalyzerGeometry(const Ui::Theme &themeToUse)
+        : theme(themeToUse) {
+    }
+
     /**
      * Returns the drawable plot area after reserving margins for labels
      */
@@ -35,7 +40,25 @@ public:
     float yForDb(float decibels, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
 
     /**
-     * Returns the hovered bar index for equal-width bar drawing
+     * Maps a cursor y position back into a dB value on the same vertical scale
+     */
+    float dbForY(float y, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
+
+    /**
+     * Returns the visible draw bounds for one analyzer band using stable pixel partitioning
+     * plus the configured inter-band gap.
+     */
+    juce::Rectangle<float> getBandDrawBounds(size_t bandIndex, size_t bandCount,
+                                             const juce::Rectangle<float> &plotBounds) const;
+
+    /**
+     * Returns the continuous hit bounds for one analyzer band with no dead gap between bands.
+     */
+    juce::Rectangle<float> getBandHitBounds(size_t bandIndex, size_t bandCount,
+                                            const juce::Rectangle<float> &plotBounds) const;
+
+    /**
+     * Returns the hovered band index using continuous hit regions across the full plot width.
      */
     std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,
                                       const juce::Rectangle<float> &plotBounds) const;
@@ -51,4 +74,7 @@ public:
      */
     juce::Rectangle<float> getTooltipBounds(juce::Point<float> hoverPosition, const juce::Rectangle<float> &plotBounds,
                                             const juce::Rectangle<float> &localBounds) const;
+
+private:
+    const Ui::Theme &theme;
 };

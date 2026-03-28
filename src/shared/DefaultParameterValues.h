@@ -4,6 +4,7 @@
 #include "SignalSlotConfiguration.h"
 
 namespace Defaults {
+    // Global analyzer parameter defaults
     inline constexpr Analyzer::BandMode bandMode = Analyzer::BandMode::bands45;
 
     inline constexpr bool showRms = false;
@@ -13,10 +14,36 @@ namespace Defaults {
 
     inline constexpr float holdMs = 2000.0f;
     inline constexpr float gridMinDb = -50.0f;
-    inline constexpr float gridMaxDb = 0.0f;
+    inline constexpr float gridMaxDb = 3.0f;
     inline constexpr float gridStepDb = 5.0f;
 
+    // Global parameter ranges
+    inline constexpr float holdMsMin = 0.0f;
+    inline constexpr float holdMsMax = 5000.0f;
+    inline constexpr float holdMsStep = 1.0f;
+
+    inline constexpr float gridMinDbMin = -120.0f;
+    inline constexpr float gridMinDbMax = -12.0f;
+    inline constexpr float gridMinDbStep = 1.0f;
+
+    inline constexpr float gridMaxDbMin = -24.0f;
+    inline constexpr float gridMaxDbMax = 24.0f;
+    inline constexpr float gridMaxDbStep = 1.0f;
+
+    inline constexpr float gridStepDbMin = 1.0f;
+    inline constexpr float gridStepDbMax = 24.0f;
+    inline constexpr float gridStepDbStep = 1.0f;
+
     inline constexpr float signalOpacity = 0.78f;
+    inline constexpr float signalOpacityMin = 0.15f;
+    inline constexpr float signalOpacityMax = 1.0f;
+    inline constexpr float signalOpacityStep = 0.01f;
+
+    // Display-rate meter tuning
+    inline constexpr float rmsWindowMs = 180.0f;
+    inline constexpr float rmsDecayDbPerSecond = 15.0f;
+    inline constexpr float peakDecayDbPerSecond = 15.0f;
+    inline constexpr float holdDecayDbPerSecond = 6.0f;
 
     inline constexpr bool isSignalSlotEnabled(const size_t slotIndex) {
         return slotIndex == 0;

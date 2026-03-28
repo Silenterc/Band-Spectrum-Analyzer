@@ -14,5 +14,6 @@ juce::String FrequencyFormatter::formatHoverFrequency(float frequencyHz) const {
 }
 
 juce::String FrequencyFormatter::formatDecibels(float decibels) const {
-    return juce::String(decibels, 1) + " dB";
+    const auto displayDb = std::abs(decibels) < 0.05f ? 0.0f : decibels;
+    return juce::String(displayDb, 1) + " dB";
 }

@@ -22,38 +22,49 @@ bool AnalyzerComponent::StaticViewStateKey::operator==(const StaticViewStateKey 
            && nearlyEqual(visibleMaxFrequencyHz, other.visibleMaxFrequencyHz);
 }
 
-AnalyzerComponent::AnalyzerComponent(AnalyzerDataSource &source, const Ui::Theme &themeToUse)
-    : dataSource(source), theme(themeToUse) {
-    setOpaque(true);
+AnalyzerComponent::AnalyzerComponent(AnalyzerRenderSource &renderSourceToUse,
+                                     AnalyzerUiSnapshotSource &snapshotSourceToUse,
+                                     const Ui::Theme &themeToUse)
+    : renderSource(renderSourceToUse),
+      snapshotSource(snapshotSourceToUse),
+      theme(themeToUse),
+      viewModel(themeToUse),
+      hoverOverlay(themeToUse) {
+    setOpaque(false);
+    addAndMakeVisible(hoverOverlay);
 
-    refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
-    bandInfo = dataSource.getBandInfo();
-    rawTraces = dataSource.getRawTraces();
+    uiSnapshot = snapshotSource.getAnalyzerUiSnapshot();
+    snapshotSource.addAnalyzerUiSnapshotListener(*this);
+    bandInfo = renderSource.getBandInfo();
+    rawTraces = renderSource.getRawTraces();
     // Prime the meter so the first paint already has render-ready values
     displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
     renderData = composeDisplayRenderData(displayMeter.getRenderData());
     lastPaintedRenderData = renderData;
-    refreshModel.prime(dataSource);
+    refreshModel.prime(uiSnapshot);
     rebuildViewModels();
     startTimer(Ui::AnalyzerConstants::meterPollIntervalMs);
 }
 
+AnalyzerComponent::~AnalyzerComponent() {
+    snapshotSource.removeAnalyzerUiSnapshotListener(*this);
+}
+
 void AnalyzerComponent::paint(juce::Graphics &g) {
-    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
-        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData)) {
         rebuildViewModels();
     }
 
     ensureStaticLayer();
     g.drawImageAt(staticLayer, 0, 0);
     drawBars(g);
-    drawHoverInfo(g);
 
     lastPaintedRenderData = renderData;
 }
 
 void AnalyzerComponent::resized() {
     staticLayerDirty = true;
+    hoverOverlay.setBounds(getLocalBounds());
     rebuildViewModels();
 }
 
@@ -75,34 +86,41 @@ void AnalyzerComponent::mouseExit(const juce::MouseEvent &event) {
 
 void AnalyzerComponent::drawGrid(juce::Graphics &g) const {
     const auto plotBounds = viewModel.getPlotBounds();
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    const auto plotFrameBounds = plotBounds.expanded(plotMetrics.frameExpansion);
 
     g.setColour(theme.gridBorder);
-    g.drawRoundedRectangle(plotBounds.expanded(1.0f), 8.0f, 1.0f);
+    g.drawRoundedRectangle(plotFrameBounds, plotMetrics.frameCornerRadius, 1.0f);
 
     for (const auto &gridLine: viewModel.getGridLines()) {
-        g.setColour(theme.gridLine);
+        g.setColour(theme.gridLine.withMultipliedAlpha(0.9f));
         g.drawHorizontalLine(static_cast<int>(std::round(gridLine.y)), plotBounds.getX(), plotBounds.getRight());
 
         g.setColour(theme.axisText);
-        g.setFont(11.0f);
-        g.drawText(gridLine.label, 0, static_cast<int>(gridLine.y - 7.0f), 48, 14, juce::Justification::centredRight);
+        g.setFont(plotMetrics.gridLabelFontHeight);
+        g.drawText(gridLine.label,
+                   0,
+                   static_cast<int>(gridLine.y - plotMetrics.gridLabelYOffset),
+                   plotMetrics.gridLabelWidth,
+                   plotMetrics.gridLabelHeight,
+                   juce::Justification::centredRight);
     }
 
     for (const auto &frequencyMarker: viewModel.getFrequencyMarkers()) {
-        g.setColour(theme.gridLine);
+        g.setColour(theme.gridLine.withMultipliedAlpha(0.62f));
         g.drawVerticalLine(static_cast<int>(std::round(frequencyMarker.x)), plotBounds.getY(), plotBounds.getBottom());
 
         g.setColour(theme.axisText);
-        g.drawText(frequencyMarker.label, static_cast<int>(frequencyMarker.x - 18.0f),
-                   static_cast<int>(plotBounds.getBottom() + 6.0f),
-                   36, 16, juce::Justification::centred);
+        g.drawText(frequencyMarker.label,
+                   static_cast<int>(frequencyMarker.x - plotMetrics.frequencyLabelXHalfSpan),
+                   static_cast<int>(plotBounds.getBottom() + plotMetrics.frequencyLabelYOffset),
+                   plotMetrics.frequencyLabelWidth,
+                   plotMetrics.frequencyLabelHeight,
+                   juce::Justification::centred);
     }
 }
 
 void AnalyzerComponent::drawBars(juce::Graphics &g) const {
-    const auto hoveredBandIndex = viewModel.getHoverInfo().has_value()
-                                      ? std::optional<size_t>{viewModel.getHoverInfo()->bandIndex}
-                                      : std::nullopt;
     const auto clipBounds = g.getClipBounds().toFloat();
 
     for (const auto &traceVisual: viewModel.getTraceVisuals()) {
@@ -112,9 +130,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(peakColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds) || bar.peakDb <= viewModel.getGridMinDb())
                 continue;
@@ -126,9 +141,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(rmsColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds) || bar.rmsDb <= viewModel.getGridMinDb())
                 continue;
@@ -140,92 +152,18 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
 
         g.setColour(lineColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            if (hoveredBandIndex.has_value() && bandIndex == *hoveredBandIndex)
-                continue;
-
             const auto &bar = traceVisual.bars[bandIndex];
             if (!bar.bandBounds.intersects(clipBounds))
                 continue;
 
-            const auto lineDb = bar.holdDb > viewModel.getGridMinDb() ? bar.holdDb : bar.peakDb;
-            const auto lineY = bar.holdDb > viewModel.getGridMinDb() ? bar.holdY : bar.peakY;
-            if (lineDb <= viewModel.getGridMinDb())
+            if (bar.holdDb <= viewModel.getGridMinDb())
                 continue;
 
-            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), lineY - 1.0f,
+            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), bar.holdY - 1.0f,
                                                            bar.bandBounds.getWidth(), 2.0f).getSmallestIntegerContainer();
             if (!lineBounds.isEmpty())
                 g.fillRect(lineBounds);
         }
-
-        if (!hoveredBandIndex.has_value() || *hoveredBandIndex >= traceVisual.bars.size())
-            continue;
-
-        const auto &hoveredBar = traceVisual.bars[*hoveredBandIndex];
-        if (!hoveredBar.bandBounds.intersects(clipBounds))
-            continue;
-
-        const auto hoveredPeakColour = peakColour.brighter(0.18f);
-        const auto hoveredRmsColour = hoveredPeakColour.withMultipliedAlpha(0.45f);
-        const auto hoveredLineColour = hoveredPeakColour.brighter(0.1f);
-
-        if (hoveredBar.peakDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredPeakColour);
-            const auto peakBounds = hoveredBar.peakBounds.getSmallestIntegerContainer();
-            if (!peakBounds.isEmpty())
-                g.fillRect(peakBounds);
-        }
-
-        if (hoveredBar.rmsDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredRmsColour);
-            const auto rmsBounds = hoveredBar.rmsBounds.getSmallestIntegerContainer();
-            if (!rmsBounds.isEmpty())
-                g.fillRect(rmsBounds);
-        }
-
-        const auto lineDb = hoveredBar.holdDb > viewModel.getGridMinDb() ? hoveredBar.holdDb : hoveredBar.peakDb;
-        const auto lineY = hoveredBar.holdDb > viewModel.getGridMinDb() ? hoveredBar.holdY : hoveredBar.peakY;
-        if (lineDb > viewModel.getGridMinDb()) {
-            g.setColour(hoveredLineColour);
-            const auto lineBounds = juce::Rectangle<float>(hoveredBar.bandBounds.getX(), lineY - 1.0f,
-                                                           hoveredBar.bandBounds.getWidth(), 2.0f)
-                                        .getSmallestIntegerContainer();
-            if (!lineBounds.isEmpty())
-                g.fillRect(lineBounds);
-        }
-    }
-}
-
-void AnalyzerComponent::drawHoverInfo(juce::Graphics &g) const {
-    if (!viewModel.getHoverInfo().has_value())
-        return;
-
-    const auto &hoverInfo = *viewModel.getHoverInfo();
-
-    g.setColour(theme.tooltipBackground);
-    g.fillRoundedRectangle(hoverInfo.bounds, 8.0f);
-
-    g.setColour(theme.tooltipBorder);
-    g.drawRoundedRectangle(hoverInfo.bounds, 8.0f, 1.0f);
-
-    g.setColour(theme.tooltipText);
-    g.setFont(12.0f);
-    const auto textBounds = hoverInfo.bounds.toNearestInt().reduced(10, 8);
-    constexpr int lineHeight = 16;
-
-    for (size_t lineIndex = 0; lineIndex < hoverInfo.lineCount; ++lineIndex) {
-        const auto y = textBounds.getY() + static_cast<int>(lineIndex) * lineHeight;
-        g.drawText(hoverInfo.lines[lineIndex], textBounds.getX(), y, textBounds.getWidth(), lineHeight,
-                   juce::Justification::centredLeft, false);
-    }
-}
-
-void AnalyzerComponent::rebuildEnabledTraces() {
-    viewState.enabledTraces.clear();
-    for (size_t slotIndex = 0; slotIndex < uiSnapshot.signalSlots.size(); ++slotIndex) {
-        const auto &slot = uiSnapshot.signalSlots[slotIndex];
-        if (slot.configuration.enabled && slot.visible)
-            viewState.enabledTraces.push_back(Analyzer::traceKindForSlot(slotIndex));
     }
 }
 
@@ -329,7 +267,6 @@ bool AnalyzerComponent::isTraceCompatible(const Analyzer::RenderTrace &trace, co
 }
 
 void AnalyzerComponent::rebuildViewModels() {
-    rebuildEnabledTraces();
     refreshStaticViewModelIfNeeded();
     rebuildDynamicViewModel();
     updateHoverState();
@@ -361,23 +298,20 @@ void AnalyzerComponent::refreshStaticViewModelIfNeeded() {
 }
 
 void AnalyzerComponent::rebuildDynamicViewModel() {
-    viewModel.updateTraceVisuals(renderData, viewState, uiSnapshot.signalSlots, uiSnapshot.signalSlotOrder,
+    viewModel.updateTraceVisuals(renderData, viewState, uiSnapshot.signalSlots, uiSnapshot.slotOrder,
                                  uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb);
 }
 
 void AnalyzerComponent::updateHoverState() {
-    viewModel.updateHover(renderData, viewState, uiSnapshot.signalSlotOrder, uiSnapshot.meterSettings, uiSnapshot.gridMinDb,
-                          getLocalBounds().toFloat(), hoverPosition);
-}
+    viewModel.updateHover(renderData, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, getLocalBounds().toFloat(), hoverPosition);
+    std::optional<juce::Rectangle<float>> hoveredBandBounds;
+    if (const auto &hoverInfo = viewModel.getHoverInfo(); hoverInfo.has_value())
+        hoveredBandBounds = viewModel.getBandBounds(hoverInfo->bandIndex);
 
-void AnalyzerComponent::processPendingHoverUpdate() {
-    if (!hoverUpdatePending)
-        return;
-
-    const auto previousHoverInfo = viewModel.getHoverInfo();
-    updateHoverState();
-    repaintHoverDelta(previousHoverInfo);
-    hoverUpdatePending = false;
+    hoverOverlay.updateState(viewModel.getHoverInfo(),
+                             viewModel.getTraceVisuals(),
+                             viewModel.getGridMinDb(),
+                             hoveredBandBounds);
 }
 
 void AnalyzerComponent::ensureStaticLayer() {
@@ -393,45 +327,31 @@ void AnalyzerComponent::ensureStaticLayer() {
 
     staticLayer = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     juce::Graphics layerGraphics(staticLayer);
-    layerGraphics.fillAll(theme.analyzerBackground);
-
     const auto plotBounds = viewModel.getPlotBounds();
-    layerGraphics.setColour(theme.plotBackground);
-    layerGraphics.fillRoundedRectangle(plotBounds.expanded(6.0f, 6.0f), 10.0f);
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    const auto plotFrameBounds = plotBounds.expanded(plotMetrics.frameExpansion);
+    juce::ColourGradient plotGradient(
+        theme.plotBackground.brighter(plotMetrics.gradientTopBrightness),
+        plotBounds.getCentreX(),
+        plotBounds.getY(),
+        theme.plotBackground.darker(plotMetrics.gradientBottomDarkness),
+        plotBounds.getCentreX(),
+        plotBounds.getBottom(),
+        false);
+    plotGradient.addColour(plotMetrics.gradientMidPoint, theme.plotBackground);
+    layerGraphics.setGradientFill(plotGradient);
+    layerGraphics.fillRoundedRectangle(plotFrameBounds, plotMetrics.frameCornerRadius);
+
     drawGrid(layerGraphics);
     staticLayerDirty = false;
-}
-
-void AnalyzerComponent::repaintHoverDelta(const std::optional<AnalyzerHoverInfo> &previousHoverInfo) {
-    auto dirtyBounds = getHoverDirtyBounds(previousHoverInfo);
-    dirtyBounds = dirtyBounds.getUnion(getHoverDirtyBounds(viewModel.getHoverInfo()));
-
-    if (!dirtyBounds.isEmpty())
-        repaint(dirtyBounds);
-}
-
-juce::Rectangle<int> AnalyzerComponent::getHoverDirtyBounds(const std::optional<AnalyzerHoverInfo> &hoverInfo) const {
-    if (!hoverInfo.has_value())
-        return {};
-
-    auto dirtyBounds = hoverInfo->bounds.getSmallestIntegerContainer().expanded(2);
-    if (const auto bandBounds = viewModel.getBandBounds(hoverInfo->bandIndex); bandBounds.has_value())
-        dirtyBounds = dirtyBounds.getUnion(bandBounds->getSmallestIntegerContainer().expanded(2));
-
-    return dirtyBounds;
 }
 
 void AnalyzerComponent::timerCallback() {
     processPendingHoverUpdate();
 
-    if (refreshModel.syncFreezeEdge(dataSource, renderData, lastPaintedRenderData)) {
-        refreshModel.refreshUiSnapshot(dataSource, uiSnapshot);
+    const auto refreshDecision = refreshModel.makeTimerDecision(renderSource, bandInfo, displayMeter, uiSnapshot);
+    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData))
         rebuildViewModels();
-    }
-
-    const auto previousSignalSlots = uiSnapshot.signalSlots;
-    const auto refreshDecision = refreshModel.makeTimerDecision(dataSource, bandInfo, displayMeter, uiSnapshot.gridMinDb, uiSnapshot);
-    syncFrozenSlotCache(previousSignalSlots);
     if (refreshDecision.pollingIntervalChanged)
         startTimer(refreshDecision.pollIntervalMs);
 
@@ -439,12 +359,11 @@ void AnalyzerComponent::timerCallback() {
         bandInfo = refreshDecision.nextBandInfo;
 
         if (!refreshDecision.shouldAdvanceDisplay
-            && !refreshDecision.uiSnapshotChanged
             && !refreshDecision.bandLayoutChanged)
             return;
 
         if (refreshDecision.shouldAdvanceDisplay || refreshDecision.bandLayoutChanged) {
-            rawTraces = dataSource.getRawTraces();
+            rawTraces = renderSource.getRawTraces();
             // Raw DSP measurements become render-ready RMS, peak, and hold values here
             displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, refreshDecision.dtSeconds);
         }
@@ -452,6 +371,33 @@ void AnalyzerComponent::timerCallback() {
         renderData = composeDisplayRenderData(displayMeter.getRenderData());
     } else {
         bandInfo = refreshDecision.nextBandInfo;
+    }
+
+    rebuildViewModels();
+    repaint();
+}
+
+void AnalyzerComponent::processPendingHoverUpdate() {
+    if (!hoverUpdatePending)
+        return;
+
+    updateHoverState();
+    hoverUpdatePending = false;
+}
+
+void AnalyzerComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) {
+    if (uiSnapshot == snapshot)
+        return;
+
+    const auto previousSignalSlots = uiSnapshot.signalSlots;
+    const auto wasFrozen = uiSnapshot.frozen;
+    uiSnapshot = snapshot;
+    syncFrozenSlotCache(previousSignalSlots);
+
+    if (uiSnapshot.frozen && !wasFrozen) {
+        renderData = lastPaintedRenderData;
+    } else {
+        renderData = composeDisplayRenderData(displayMeter.getRenderData());
     }
 
     rebuildViewModels();

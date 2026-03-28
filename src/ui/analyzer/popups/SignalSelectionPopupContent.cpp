@@ -1,5 +1,8 @@
 #include "SignalSelectionPopupContent.h"
 
+#include "../../PopupChrome.h"
+#include "../../UiRasterAssets.h"
+
 namespace {
     class SignalSelectionRowButton final : public juce::Button {
     public:
@@ -17,21 +20,29 @@ namespace {
         }
 
         void paintButton(juce::Graphics &g, bool isMouseOverButton, bool) override {
+            const auto &popupMetrics = theme.metrics.popup;
             auto bounds = getLocalBounds().toFloat();
-            const auto fill = selected ? theme.controlSurfaceHover.brighter(0.18f)
-                                       : isMouseOverButton ? theme.controlSurfaceHover
-                                                           : theme.controlSurface;
-            g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(0.45f));
-            g.fillRoundedRectangle(bounds, theme.metrics.slot.buttonCornerRadius);
 
             if (selected) {
-                g.setColour(theme.controlBorder.brighter(0.6f));
-                g.drawRoundedRectangle(bounds.reduced(0.5f), theme.metrics.slot.buttonCornerRadius, 1.5f);
+                Ui::drawAssetWithin(g,
+                                    Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screen),
+                                    getLocalBounds());
+            } else {
+                auto fill = theme.controlSurface;
+                if (isMouseOverButton)
+                    fill = theme.controlSurfaceHover;
+
+                g.setColour(isEnabled() ? fill : fill.withMultipliedAlpha(popupMetrics.rowDisabledAlpha));
+                g.fillRoundedRectangle(bounds, popupMetrics.rowCornerRadius);
+                g.setColour(theme.sectionDividerHighlight.withMultipliedAlpha(popupMetrics.rowOutlineAlpha));
+                g.drawRoundedRectangle(bounds.reduced(0.5f), popupMetrics.rowCornerRadius, 1.0f);
             }
 
-            g.setColour(isEnabled() ? theme.controlText : theme.subtleText.withMultipliedAlpha(0.75f));
-            g.setFont(14.0f);
-            g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft);
+            g.setColour(selected ? theme.hardwareMarkingDark
+                                 : (isEnabled() ? theme.axisText.brighter(0.18f)
+                                                : theme.axisText.withMultipliedAlpha(0.55f)));
+            g.setFont(juce::FontOptions(popupMetrics.rowTextFontHeight, juce::Font::bold));
+            g.drawText(label, bounds.reduced(10.0f, 0.0f).toNearestInt(), juce::Justification::centred);
         }
 
         Analyzer::SignalSource source;
@@ -46,31 +57,22 @@ namespace {
 
 SignalSelectionPopupContent::SignalSelectionPopupContent(
     const Ui::Theme &themeToUse,
-    const bool sidechainAvailableToUse,
     const Analyzer::SignalSource currentSourceToUse,
     const Analyzer::SignalMode currentModeToUse,
     std::function<void(Analyzer::SignalSource, Analyzer::SignalMode)> onSelectToUse,
     std::function<void()> onDismissToUse)
     : theme(themeToUse),
-      sidechainAvailable(sidechainAvailableToUse),
+      currentSource(currentSourceToUse),
       onSelect(std::move(onSelectToUse)),
       onDismiss(std::move(onDismissToUse)) {
-    addAndMakeVisible(mainLabel);
-    mainLabel.setText("Main", juce::dontSendNotification);
-    mainLabel.setFont(juce::FontOptions(11.0f));
-    mainLabel.setColour(juce::Label::textColourId, theme.subtleText);
-    mainLabel.setJustificationType(juce::Justification::centredLeft);
-
-    addAndMakeVisible(sidechainLabel);
-    sidechainLabel.setText("Sidechain", juce::dontSendNotification);
-    sidechainLabel.setFont(juce::FontOptions(11.0f));
-    sidechainLabel.setColour(juce::Label::textColourId, theme.subtleText);
-    sidechainLabel.setJustificationType(juce::Justification::centredLeft);
-
     for (size_t index = 0; index < Ui::signalSlotOptions.size(); ++index) {
         const auto &option = Ui::signalSlotOptions[index];
         auto button = std::make_unique<SignalSelectionRowButton>(
-            theme, option.label, currentSourceToUse == option.source && currentModeToUse == option.mode, option.source, option.mode);
+            theme,
+            option.modeLabel,
+            currentSourceToUse == option.source && currentModeToUse == option.mode,
+            option.source,
+            option.mode);
         auto *buttonPtr = button.get();
         addAndMakeVisible(*button);
         button->onClick = [this, buttonPtr] {
@@ -92,60 +94,41 @@ SignalSelectionPopupContent::~SignalSelectionPopupContent() {
         onDismiss();
 }
 
+void SignalSelectionPopupContent::paint(juce::Graphics &g) {
+    Ui::paintPopupShell(g, getLocalBounds().toFloat(), theme);
+}
+
 void SignalSelectionPopupContent::setAvailability(
     const std::function<bool(Analyzer::SignalSource, Analyzer::SignalMode)> &isAvailable) {
     for (size_t index = 0; index < buttons.size(); ++index) {
         const auto &option = Ui::signalSlotOptions[index];
         auto &button = buttons[index];
-        const auto visible = !option.requiresSidechain || sidechainAvailable;
+        const auto visible = option.source == currentSource;
         button->setVisible(visible);
         button->setEnabled(visible && isAvailable(option.source, option.mode));
     }
-
-    mainLabel.setVisible(sidechainAvailable);
-    sidechainLabel.setVisible(sidechainAvailable);
 }
 
 void SignalSelectionPopupContent::resized() {
     const auto &popupMetrics = theme.metrics.popup;
     auto bounds = getLocalBounds().reduced(static_cast<int>(popupMetrics.padding));
 
-    auto layoutSection = [&](juce::Label &header, const Analyzer::SignalSource source) {
-        if (header.isVisible()) {
-            header.setBounds(bounds.removeFromTop(static_cast<int>(popupMetrics.headerHeight)));
-            bounds.removeFromTop(static_cast<int>(popupMetrics.rowGap));
-        }
+    for (size_t index = 0; index < buttons.size(); ++index) {
+        const auto &option = Ui::signalSlotOptions[index];
+        if (option.source != currentSource || !buttons[index]->isVisible())
+            continue;
 
-        bool anyVisible = false;
-        for (size_t index = 0; index < buttons.size(); ++index) {
-            const auto &option = Ui::signalSlotOptions[index];
-            if (option.source != source || !buttons[index]->isVisible())
-                continue;
-
-            buttons[index]->setBounds(bounds.removeFromTop(static_cast<int>(popupMetrics.rowHeight)));
-            bounds.removeFromTop(static_cast<int>(popupMetrics.rowGap));
-            anyVisible = true;
-        }
-
-        if (anyVisible)
-            bounds.removeFromTop(static_cast<int>(popupMetrics.sectionGap - popupMetrics.rowGap));
-    };
-
-    layoutSection(mainLabel, Analyzer::SignalSource::main);
-    if (sidechainAvailable)
-        layoutSection(sidechainLabel, Analyzer::SignalSource::sidechain);
+        buttons[index]->setBounds(bounds.removeFromTop(static_cast<int>(popupMetrics.rowHeight)));
+        bounds.removeFromTop(static_cast<int>(popupMetrics.rowGap));
+    }
 }
 
 int SignalSelectionPopupContent::getPreferredHeight() const {
     const auto &popupMetrics = theme.metrics.popup;
-    if (!sidechainAvailable)
-        return static_cast<int>(popupMetrics.padding * 2 + popupMetrics.rowHeight * 3 + popupMetrics.rowGap * 2);
-
+    const auto rowCount = Ui::getVisibleSignalSlotOptionCount(currentSource, true);
     return static_cast<int>(popupMetrics.padding * 2
-                            + popupMetrics.headerHeight * 2
-                            + popupMetrics.rowHeight * 6
-                            + popupMetrics.rowGap * 6
-                            + popupMetrics.sectionGap);
+                            + popupMetrics.rowHeight * static_cast<float>(rowCount)
+                            + popupMetrics.rowGap * static_cast<float>(juce::jmax<size_t>(0, rowCount - 1)));
 }
 
 int SignalSelectionPopupContent::getPreferredWidth() const {

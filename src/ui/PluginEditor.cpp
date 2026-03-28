@@ -9,11 +9,13 @@
 //==============================================================================
 SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &audioProcessor)
     : AudioProcessorEditor(&audioProcessor),
-      theme(Ui::makeTheme(Ui::AccentPalette::blue)),
-      analyzerPanel(audioProcessor, audioProcessor, audioProcessor, theme) {
+      theme(Ui::makeTheme()),
+      backgroundComponent(theme),
+      mainLayout(audioProcessor, audioProcessor, audioProcessor, theme) {
     setOpaque(true);
-    addAndMakeVisible(analyzerPanel);
-    setSize(1000, 600);
+    addAndMakeVisible(backgroundComponent);
+    addAndMakeVisible(mainLayout);
+    setSize(theme.metrics.editor.initialWidth, theme.metrics.editor.initialHeight);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {
@@ -32,5 +34,6 @@ void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
 }
 
 void SpectrumAnalyzerAudioProcessorEditor::resized() {
-    analyzerPanel.setBounds(getLocalBounds().reduced(theme.metrics.panel.outerPadding));
+    backgroundComponent.setBounds(getLocalBounds());
+    mainLayout.setBounds(getLocalBounds());
 }

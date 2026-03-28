@@ -1,6 +1,21 @@
 juce_add_binary_data(BsaUiAssets
     SOURCES
-        ui/assets/icons/snowflake.svg)
+        ui/assets/icons/cancel.svg
+        ui/assets/icons/dots.svg
+        ui/assets/icons/power.svg
+        ui/assets/icons/settings.svg
+        ui/assets/icons/snowflake.svg
+        ui/assets/uikit/background/background.png
+        ui/assets/uikit/background/background_2.png
+        ui/assets/uikit/background/background_2_version.png
+        ui/assets/uikit/decor_grid.png
+        ui/assets/uikit/pad/pad_off.png
+        ui/assets/uikit/pad/pad_freeze_on.png
+        ui/assets/uikit/pad/pad_on.png
+        ui/assets/uikit/screen.png
+        ui/assets/uikit/screw.png
+        ui/assets/uikit/switch/switch_down.png
+        ui/assets/uikit/switch/switch_up.png)
 
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -30,12 +45,23 @@ target_sources(${PROJECT_NAME}
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
         ui/UiIcons.cpp
+        ui/UiRasterAssets.cpp
+        ui/PadButton.cpp
+        ui/SectionDividerComponent.cpp
         ui/UiTheme.cpp
-        ui/analyzer/view/AnalyzerPanelComponent.cpp
+        ui/EditorBackgroundComponent.cpp
+        ui/analyzer/view/MainLayoutComponent.cpp
+        ui/analyzer/view/AnalyzerSectionComponent.cpp
         ui/analyzer/view/AnalyzerComponent.cpp
+        ui/analyzer/view/AnalyzerHoverOverlayComponent.cpp
         ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/view/SignalRackComponent.cpp
+        ui/analyzer/view/SignalSlotActionButton.cpp
         ui/analyzer/view/SignalSlotComponent.cpp
+        ui/analyzer/view/SignalSlotDragHandle.cpp
+        ui/analyzer/view/SignalSlotModeButton.cpp
+        ui/analyzer/view/SignalSlotSourceToggle.cpp
+        ui/analyzer/view/SignalSlotSwatchButton.cpp
         ui/analyzer/popups/SignalColourPopupContent.cpp
         ui/analyzer/popups/SignalSelectionPopupContent.cpp
         ui/analyzer/model/AnalyzerRefreshModel.cpp

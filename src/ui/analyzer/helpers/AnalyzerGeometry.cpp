@@ -4,20 +4,15 @@
 #include <cmath>
 
 namespace {
-    constexpr float leftMargin = 56.0f;
-    constexpr float rightMargin = 16.0f;
-    constexpr float topMargin = 16.0f;
-    constexpr float bottomMargin = 34.0f;
-    constexpr float tooltipWidth = 132.0f;
-    constexpr float tooltipHeight = 88.0f;
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getPlotBounds(const juce::Rectangle<float> &localBounds) const {
     auto bounds = localBounds;
-    bounds.removeFromTop(topMargin);
-    bounds.removeFromLeft(leftMargin);
-    bounds.removeFromRight(rightMargin);
-    bounds.removeFromBottom(bottomMargin);
+    const auto &plotMetrics = theme.metrics.analyzerPlot;
+    bounds.removeFromTop(plotMetrics.plotMarginTop);
+    bounds.removeFromLeft(plotMetrics.plotMarginLeft);
+    bounds.removeFromRight(plotMetrics.plotMarginRight);
+    bounds.removeFromBottom(plotMetrics.plotMarginBottom);
     return bounds;
 }
 
@@ -55,15 +50,62 @@ float AnalyzerGeometry::yForDb(float decibels, float minDb, float maxDb,
     return plotBounds.getBottom() - normalised * plotBounds.getHeight();
 }
 
+float AnalyzerGeometry::dbForY(float y, float minDb, float maxDb,
+                               const juce::Rectangle<float> &plotBounds) const {
+    if (maxDb <= minDb || plotBounds.getHeight() <= 0.0f)
+        return minDb;
+
+    const auto clampedY = juce::jlimit(plotBounds.getY(), plotBounds.getBottom(), y);
+    const auto normalised = juce::jlimit(0.0f, 1.0f, (plotBounds.getBottom() - clampedY) / plotBounds.getHeight());
+    return juce::jmap(normalised, 0.0f, 1.0f, minDb, maxDb);
+}
+
+juce::Rectangle<float> AnalyzerGeometry::getBandDrawBounds(const size_t bandIndex,
+                                                           const size_t bandCount,
+                                                           const juce::Rectangle<float> &plotBounds) const {
+    if (bandCount == 0 || bandIndex >= bandCount)
+        return {};
+
+    const auto plotBoundsInt = plotBounds.getSmallestIntegerContainer();
+    const auto interBandGapPixels = theme.metrics.analyzerPlot.interBandGapPixels;
+    const auto totalGapWidth = juce::jmax(0, static_cast<int>(bandCount - 1)) * interBandGapPixels;
+    const auto availableBarWidth = juce::jmax(0, plotBoundsInt.getWidth() - totalGapWidth);
+    const auto bandCountInt = static_cast<int>(bandCount);
+    const auto leftEdge = (static_cast<int>(bandIndex) * availableBarWidth) / bandCountInt;
+    const auto rightEdge = (static_cast<int>(bandIndex + 1) * availableBarWidth) / bandCountInt;
+    const auto x = plotBoundsInt.getX() + leftEdge + static_cast<int>(bandIndex) * interBandGapPixels;
+    const auto width = juce::jmax(0, rightEdge - leftEdge);
+    return juce::Rectangle<int>(x, plotBoundsInt.getY(), width, plotBoundsInt.getHeight()).toFloat();
+}
+
+juce::Rectangle<float> AnalyzerGeometry::getBandHitBounds(const size_t bandIndex,
+                                                          const size_t bandCount,
+                                                          const juce::Rectangle<float> &plotBounds) const {
+    if (bandCount == 0 || bandIndex >= bandCount)
+        return {};
+
+    const auto plotBoundsInt = plotBounds.getSmallestIntegerContainer();
+    const auto bandCountInt = static_cast<int>(bandCount);
+    const auto leftEdge = (static_cast<int>(bandIndex) * plotBoundsInt.getWidth()) / bandCountInt;
+    const auto rightEdge = (static_cast<int>(bandIndex + 1) * plotBoundsInt.getWidth()) / bandCountInt;
+    const auto width = juce::jmax(0, rightEdge - leftEdge);
+    return juce::Rectangle<int>(plotBoundsInt.getX() + leftEdge,
+                                plotBoundsInt.getY(),
+                                width,
+                                plotBoundsInt.getHeight()).toFloat();
+}
+
 std::optional<size_t> AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
                                                     const juce::Rectangle<float> &plotBounds) const {
     if (bandCount == 0 || !plotBounds.contains(position))
         return std::nullopt;
 
-    const auto bandCountFloat = static_cast<float>(bandCount);
-    const auto bandWidth = plotBounds.getWidth() / bandCountFloat;
-    const auto bandIndex = static_cast<size_t>((position.x - plotBounds.getX()) / bandWidth);
-    return std::min(bandIndex, bandCount - 1);
+    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
+        if (getBandHitBounds(bandIndex, bandCount, plotBounds).contains(position))
+            return bandIndex;
+    }
+
+    return std::nullopt;
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t bandCount, float displayedDb, float minDb,
@@ -71,27 +113,32 @@ juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t b
     if (bandCount == 0)
         return {};
 
-    const auto bandWidth = plotBounds.getWidth() / static_cast<float>(bandCount);
-    const auto x = plotBounds.getX() + static_cast<float>(bandIndex) * bandWidth;
+    const auto bandDrawBounds = getBandDrawBounds(bandIndex, bandCount, plotBounds);
+    if (bandDrawBounds.isEmpty())
+        return {};
+
     const auto y = yForDb(displayedDb, minDb, maxDb, plotBounds);
-    return {x + 1.0f, y, bandWidth - 2.0f, plotBounds.getBottom() - y};
+    return {bandDrawBounds.getX(), y, bandDrawBounds.getWidth(), plotBounds.getBottom() - y};
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getTooltipBounds(juce::Point<float> hoverPosition,
                                                           const juce::Rectangle<float> &plotBounds,
                                                           const juce::Rectangle<float> &localBounds) const {
     // Keep the box slightly below the cursor so the pointer does not sit on its vertical centre
-    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + 12.0f, hoverPosition.y + 10.0f,
-                                                tooltipWidth, tooltipHeight);
+    const auto &tooltip = theme.metrics.tooltip;
+    auto tooltipBounds = juce::Rectangle<float>(hoverPosition.x + tooltip.offsetX,
+                                                hoverPosition.y + tooltip.offsetY,
+                                                tooltip.width,
+                                                tooltip.height);
 
-    if (tooltipBounds.getRight() > localBounds.getRight() - 8.0f)
-        tooltipBounds.setX(hoverPosition.x - tooltipWidth - 12.0f);
+    if (tooltipBounds.getRight() > localBounds.getRight() - tooltip.edgeInset)
+        tooltipBounds.setX(hoverPosition.x - tooltip.width - tooltip.offsetX);
 
     if (tooltipBounds.getY() < plotBounds.getY())
         tooltipBounds.setY(plotBounds.getY());
 
-    if (tooltipBounds.getBottom() > localBounds.getBottom() - 8.0f)
-        tooltipBounds.setY(localBounds.getBottom() - tooltipHeight - 8.0f);
+    if (tooltipBounds.getBottom() > localBounds.getBottom() - tooltip.edgeInset)
+        tooltipBounds.setY(localBounds.getBottom() - tooltip.height - tooltip.edgeInset);
 
     return tooltipBounds;
 }

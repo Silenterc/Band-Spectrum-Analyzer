@@ -7,9 +7,9 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "../dsp/core/EngineParameterState.h"
-#include "../ui/AnalyzerDataSource.h"
+#include "../ui/AnalyzerRenderSource.h"
 #include "../ui/AnalyzerSettingsActions.h"
-#include "../ui/AnalyzerUiStateSource.h"
+#include "../ui/AnalyzerUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
 #include "parameters/ParameterAccess.h"
 #include "parameters/ParameterSchema.h"
@@ -17,9 +17,9 @@
 
 //==============================================================================
 class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
-                                             public AnalyzerDataSource,
+                                             public AnalyzerRenderSource,
                                              public AnalyzerSettingsActions,
-                                             public AnalyzerUiStateSource,
+                                             public AnalyzerUiSnapshotSource,
                                              private juce::ValueTree::Listener,
                                              private SignalSlotOrderState::Listener,
                                              private juce::AsyncUpdater {
@@ -82,24 +82,13 @@ public:
         return parameters;
     }
 
-    Ui::AnalyzerUiState getAnalyzerUiState() const override;
-    void addAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) override;
-    void removeAnalyzerUiStateListener(AnalyzerUiStateSource::Listener &listener) override;
+    Ui::AnalyzerUiSnapshot getAnalyzerUiSnapshot() const override;
+    void addAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
+    void removeAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
 
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
     std::vector<Analyzer::RawTrace> getRawTraces() const override;
-    std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const override;
-    Shared::SignalSlotOrder getSignalSlotOrder() const override;
-    bool isSidechainAvailable() const override;
     bool hasRecentSignal() const override;
-    bool isFrozen() const override;
-    Analyzer::MeterSettings getMeterSettings() const override;
-
-    float getGridMinDb() const override;
-
-    float getGridMaxDb() const override;
-
-    float getGridStepDb() const override;
 
     void setFreezeEnabled(bool isFrozen) override;
     void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
@@ -110,7 +99,9 @@ public:
     void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) override;
     void applySignalSlotState(size_t slotIndex, const Ui::SignalSlotState &state) override;
     void removeSignalSlot(size_t slotIndex) override;
-    void addSignalSlot(size_t slotIndex, const Ui::SignalSlotState &state, const Shared::SignalSlotOrder &slotOrder) override;
+    void addSignalSlot(size_t slotIndex,
+                       const Ui::SignalSlotState &state,
+                       const Shared::SignalSlotOrder &slotOrder) override;
     void setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) override;
     void setSignalSlotColour(size_t slotIndex, int colourIndex) override;
     void setSignalSlotOpacity(size_t slotIndex, float opacity) override;
@@ -119,14 +110,23 @@ public:
     void setShowHoldEnabled(bool isEnabled) override;
 
 private:
+    std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const;
+    Shared::SignalSlotOrder getSignalSlotOrder() const;
+    bool isSidechainAvailable() const;
+    bool isFrozen() const;
+    Analyzer::MeterSettings getMeterSettings() const;
+    float getGridMinDb() const;
+    float getGridMaxDb() const;
+    float getGridStepDb() const;
+
     Analyzer::Engine engine;
     juce::AudioProcessorValueTreeState parameters;
     PluginParameters::Access parameterAccess;
     SignalSlotOrderState signalSlotOrderState;
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
-    std::optional<Ui::AnalyzerUiState> lastPublishedUiState;
-    juce::ListenerList<AnalyzerUiStateSource::Listener> uiStateListeners;
+    std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
+    juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void registerUiStateParameterListeners();

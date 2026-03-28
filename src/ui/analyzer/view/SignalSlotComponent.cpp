@@ -3,21 +3,71 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../../UiButtonDrawing.h"
-#include "../../UiIcons.h"
+#include "../../UiRasterAssets.h"
 #include "../popups/SignalColourPopupContent.h"
 #include "../popups/SignalSelectionPopupContent.h"
 
 namespace {
-    float measureTextWidth(const float fontHeight, const juce::String &text) {
-        juce::GlyphArrangement glyphs;
-        glyphs.addLineOfText(juce::Font(juce::FontOptions(fontHeight)), text, 0.0f, 0.0f);
-        return glyphs.getBoundingBox(0, -1, true).getWidth();
+    juce::Rectangle<int> getCenteredSquareBounds(const juce::Rectangle<float> laneBounds, const float size) {
+        return juce::Rectangle<float>(size, size).withCentre(laneBounds.getCentre()).toNearestInt();
     }
 }
 
 SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
-    : theme(themeToUse) {
+    : theme(themeToUse),
+      popupLookAndFeel(themeToUse),
+      sourceToggle(themeToUse),
+      modeButton(themeToUse),
+      swatchButton(themeToUse),
+      dragHandle(themeToUse),
+      visibilityButton(themeToUse, {}),
+      freezeButton(themeToUse, {}),
+      removeButton(themeToUse) {
+    addAndMakeVisible(sourceToggle);
+    addAndMakeVisible(modeButton);
+    addAndMakeVisible(swatchButton);
+    addAndMakeVisible(dragHandle);
+    addAndMakeVisible(visibilityButton);
+    addAndMakeVisible(freezeButton);
+    addAndMakeVisible(removeButton);
+
+    sourceToggle.onSourceSelected = [this](const Analyzer::SignalSource source) { handleSourceSelected(source); };
+    modeButton.onPress = [this] { handleModePressed(); };
+    modeButton.onClick = [this] { handleModeClicked(); };
+    swatchButton.onPress = [this] {
+        if (openPopupMenu != OpenPopupMenu::colour)
+            return;
+
+        dismissOpenMenu();
+        suppressNextSwatchClick = true;
+    };
+    swatchButton.onClick = [this] { handleSwatchClicked(); };
+    swatchButton.onOpacityChanged = [this](const float opacity) { handleOpacityChanged(opacity); };
+    swatchButton.onOpacityReset = [this] { handleOpacityReset(); };
+    dragHandle.onDragStarted = [this](const float parentX) { handleReorderDragStarted(parentX); };
+    dragHandle.onDragged = [this](const float parentX) { handleReorderDragged(parentX); };
+    dragHandle.onDragEnded = [this](const float parentX) { handleReorderDragEnded(parentX); };
+    visibilityButton.onClick = [this] { handleVisibilityClicked(); };
+    freezeButton.onClick = [this] { handleFreezeClicked(); };
+    removeButton.onClick = [this] { handleRemoveClicked(); };
+
+    visibilityButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
+    visibilityButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
+    visibilityButton.setOverlayIcon(PadButton::OverlayIcon::power);
+
+    freezeButton.setAssetStyle(PadButton::AssetStyle::freeze);
+    freezeButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
+    freezeButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
+    freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
+    freezeButton.setActiveMarkingColour(theme.hardwareMarkingCoolDark);
+}
+
+SignalSlotComponent::~SignalSlotComponent() {
+    if (activeCallout != nullptr) {
+        activeCallout->setLookAndFeel(nullptr);
+        activeCallout->dismiss();
+        activeCallout = nullptr;
+    }
 }
 
 void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
@@ -28,15 +78,17 @@ void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
     settings = settingsToUse;
     usedColours = usedColoursToUse;
     usedSignalConfigs = usedSignalConfigsToUse;
-    repaint();
+    refreshChildState();
 }
 
 void SignalSlotComponent::setSidechainAvailable(const bool isAvailable) {
     isSidechainRouted = isAvailable;
+    refreshChildState();
 }
 
 void SignalSlotComponent::setDragged(const bool isDraggedValue) {
     isDragged = isDraggedValue;
+    dragHandle.setDragged(isDraggedValue);
     repaint();
 }
 
@@ -50,318 +102,191 @@ size_t SignalSlotComponent::getSlotIndex() const {
 
 int SignalSlotComponent::getPreferredWidth() const {
     const auto &slotMetrics = theme.metrics.slot;
-    auto modeWidth = 0.0f;
-    for (const auto &option: Ui::signalSlotOptions)
-        modeWidth = std::max(modeWidth, measureTextWidth(slotMetrics.titleFontHeight, option.label));
-
-    const auto hintWidth = std::max(measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::main)),
-                                    measureTextWidth(slotMetrics.hintFontHeight, Ui::getSignalSourceHint(Analyzer::SignalSource::sidechain)));
-    const auto textWidth = std::ceil(std::max(modeWidth, hintWidth));
-    const auto actionWidth = getActionClusterWidth();
-
-    const auto totalWidth = slotMetrics.cellPaddingX + slotMetrics.swatchSize + slotMetrics.sectionGap + textWidth
-                            + slotMetrics.sectionGap + actionWidth + slotMetrics.cellPaddingX;
-
+    const auto topRowWidth = slotMetrics.cellPaddingX + slotMetrics.sourceToggleWidth + slotMetrics.sectionGap
+                             + slotMetrics.modeDisplayWidth + slotMetrics.modeActionGap + slotMetrics.actionSize
+                             + slotMetrics.topRowEdgeInset;
+    const auto bottomRowWidth = getActionClusterWidth();
+    const auto totalWidth = std::max(topRowWidth, bottomRowWidth);
     return static_cast<int>(std::ceil(totalWidth));
 }
 
 void SignalSlotComponent::paint(juce::Graphics &g) {
-    const auto &slotMetrics = theme.metrics.slot;
-    const auto bounds = getLocalBounds().toFloat();
-    const auto drawActionButton = [this, &g, &slotMetrics](const juce::Rectangle<float> &buttonBounds,
-                                                           const bool isHovered,
-                                                           const juce::String &label,
-                                                           const juce::Colour &fill,
-                                                           const juce::Colour &textColour,
-                                                           const float fontHeight) {
-        g.setColour(isHovered ? theme.controlSurfaceHover : fill);
-        g.fillRoundedRectangle(buttonBounds, slotMetrics.buttonCornerRadius);
-        g.setColour(textColour);
-        g.setFont(fontHeight);
-        g.drawText(label, buttonBounds.toNearestInt(), juce::Justification::centred);
-    };
+    const auto bounds = getModuleBounds();
+    const auto radius = theme.metrics.slot.cellCornerRadius;
+    const auto outerBounds = bounds.reduced(0.5f);
+    juce::Path modulePath;
+    modulePath.addRoundedRectangle(bounds, radius);
+
     if (isDragged) {
-        g.setColour(juce::Colours::black.withAlpha(0.22f));
-        g.fillRoundedRectangle(bounds.translated(0.0f, slotMetrics.shadowOffsetY), slotMetrics.cellCornerRadius);
+        g.setColour(juce::Colours::black.withAlpha(theme.metrics.slot.draggedShadowAlpha));
+        g.fillRoundedRectangle(bounds.translated(0.0f, theme.metrics.slot.shadowOffsetY), radius);
     }
 
-    g.setColour(theme.controlSurface);
-    g.fillRoundedRectangle(bounds, slotMetrics.cellCornerRadius);
-
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(bounds.reduced(0.5f), slotMetrics.cellCornerRadius, 1.0f);
-
-    const auto swatchBounds = getSwatchBounds();
-    const auto signalColour = Ui::getSignalPresetColour(settings.colourIndex).withAlpha(settings.opacity);
-    g.setColour(signalColour);
-    g.fillRoundedRectangle(swatchBounds, slotMetrics.swatchCornerRadius);
-    g.setColour(theme.controlBorder);
-    g.drawRoundedRectangle(swatchBounds, slotMetrics.swatchCornerRadius, 1.0f);
-
-    auto labelBounds = getLabelBounds();
-    g.setColour(theme.controlText);
-    g.setFont(slotMetrics.titleFontHeight);
-    g.drawText(Ui::getSignalModeLabel(settings.configuration.mode), labelBounds.removeFromTop(static_cast<int>(slotMetrics.titleHeight)).toNearestInt(),
-               juce::Justification::centredLeft);
-    labelBounds.removeFromTop(static_cast<int>(slotMetrics.textStackGap));
-
-    g.setColour(theme.subtleText);
-    g.setFont(slotMetrics.hintFontHeight);
-    g.drawText(Ui::getSignalSourceHint(settings.configuration.source), labelBounds.removeFromTop(static_cast<int>(slotMetrics.hintHeight)).toNearestInt(),
-               juce::Justification::centredLeft);
-
-    const auto dragHandleBounds = getDragHandleBounds();
-    g.setColour(theme.subtleText);
-    const auto gripX = dragHandleBounds.getCentreX() - slotMetrics.gripWidth * 0.5f;
-    const auto gripY = dragHandleBounds.getCentreY() - slotMetrics.gripHeight * 0.5f;
-    const auto columnStep = slotMetrics.gripWidth - slotMetrics.gripDotDiameter;
-    const auto rowStep = (slotMetrics.gripHeight - slotMetrics.gripDotDiameter) * 0.5f;
-    for (int dotColumn = 0; dotColumn < 2; ++dotColumn) {
-        for (int dotRow = 0; dotRow < 3; ++dotRow) {
-            const auto x = gripX + static_cast<float>(dotColumn) * columnStep;
-            const auto y = gripY + static_cast<float>(dotRow) * rowStep;
-            g.fillEllipse(x, y, slotMetrics.gripDotDiameter, slotMetrics.gripDotDiameter);
-        }
+    if (cachedBackground.isValid()) {
+        juce::Graphics::ScopedSaveState saveState(g);
+        g.reduceClipRegion(modulePath);
+        g.drawImage(cachedBackground, bounds);
     }
 
-    const auto visibilityBounds = getVisibilityBounds();
-    const auto visibilityHovered = hoveredHitArea == SignalSlotHitArea::visibility;
-    const auto visibilityFill = settings.visible
-                                    ? (visibilityHovered ? theme.accentButton.brighter(0.14f) : theme.accentButton)
-                                    : (visibilityHovered ? theme.controlSurfaceHover : theme.controlSurface);
-    drawActionButton(visibilityBounds,
-                     false,
-                     settings.visible ? "On" : "Off",
-                     visibilityFill,
-                     theme.controlText,
-                     11.0f);
-
-    const auto freezeBounds = getFreezeBounds();
-    const auto freezeHovered = hoveredHitArea == SignalSlotHitArea::freeze;
-    const auto freezeStyle = Ui::getSnowflakeButtonStyle(theme, settings.frozen, freezeHovered);
-    Ui::drawSnowflakeActionButton(g,
-                                  freezeBounds,
-                                  theme,
-                                  freezeStyle,
-                                  4.0f);
-
-    const auto removeBounds = getRemoveBounds();
-    drawActionButton(removeBounds,
-                     hoveredHitArea == SignalSlotHitArea::remove,
-                     "x",
-                     theme.controlSurface,
-                     hoveredHitArea == SignalSlotHitArea::remove ? theme.controlText : theme.subtleText,
-                     15.0f);
+    g.setColour(theme.controlBorder.withMultipliedAlpha(theme.metrics.slot.borderAlphaScale));
+    g.drawRoundedRectangle(outerBounds, radius, 1.0f);
 }
 
-void SignalSlotComponent::mouseDown(const juce::MouseEvent &event) {
-    mouseDownHitArea = getHitAreaAt(event.position);
-    mouseDownPosition = event.position;
-    suppressMouseUpAction = false;
+void SignalSlotComponent::resized() {
+    rebuildCachedBackground();
 
-    const auto requestedPopupMenu = popupMenuForHitArea(mouseDownHitArea);
-    if (openPopupMenu != OpenPopupMenu::none) {
-        const auto clickedSamePopupActivator = requestedPopupMenu != OpenPopupMenu::none
-                                               && requestedPopupMenu == openPopupMenu;
-        dismissOpenMenu();
-        suppressMouseUpAction = clickedSamePopupActivator;
-    }
+    const auto &slotMetrics = theme.metrics.slot;
+    const auto actionControlSize = slotMetrics.actionSize;
+    const auto swatchControlSize = slotMetrics.swatchSize;
+    const auto moduleBounds = getModuleBounds();
+    auto modeRowBounds = getModeRowBounds();
+    auto actionRowBounds = getActionRowBounds();
 
-    isTrackingOpacityDrag = mouseDownHitArea == SignalSlotHitArea::swatch;
-    didOpacityDrag = false;
-    isTrackingReorderDrag = mouseDownHitArea == SignalSlotHitArea::dragHandle;
-    isReorderDragging = false;
-    dragStartOpacity = settings.opacity;
+    sourceToggle.setBounds(getSourceToggleBounds().toNearestInt());
+
+    const auto removeButtonBounds = juce::Rectangle<float>(
+        moduleBounds.getRight() - slotMetrics.topRowEdgeInset - actionControlSize,
+        modeRowBounds.getY() + (modeRowBounds.getHeight() - actionControlSize) * 0.5f,
+        actionControlSize,
+        actionControlSize);
+    removeButton.setBounds(removeButtonBounds.toNearestInt());
+
+    const auto modeButtonRight = removeButtonBounds.getX() - slotMetrics.modeActionGap;
+    const auto modeButtonBounds = juce::Rectangle<float>(
+        modeButtonRight - slotMetrics.modeDisplayWidth,
+        modeRowBounds.getY() + (modeRowBounds.getHeight() - slotMetrics.modeDisplayHeight) * 0.5f,
+        slotMetrics.modeDisplayWidth,
+        slotMetrics.modeDisplayHeight);
+    modeButton.setBounds(modeButtonBounds.toNearestInt());
+
+    auto actionClusterBounds = juce::Rectangle<float>(
+        modeButtonBounds.getRight() - slotMetrics.modeDisplayWidth,
+        actionRowBounds.getY(),
+        slotMetrics.modeDisplayWidth,
+        actionRowBounds.getHeight());
+
+    swatchButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(swatchControlSize), swatchControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    dragHandle.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    visibilityButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    freezeButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
 }
 
-void SignalSlotComponent::mouseMove(const juce::MouseEvent &event) {
-    setHoveredHitArea(getHitAreaAt(event.position));
-    updateCursor(event.position);
+juce::Rectangle<float> SignalSlotComponent::getModuleBounds() const {
+    auto bounds = getLocalBounds().toFloat();
+    bounds.removeFromBottom(theme.metrics.rack.bottomInset);
+    return bounds;
 }
 
-void SignalSlotComponent::mouseDrag(const juce::MouseEvent &event) {
-    const auto delta = event.position - mouseDownPosition;
-
-    if (isTrackingOpacityDrag) {
-        if (std::abs(delta.y) > 3.0f && std::abs(delta.y) >= std::abs(delta.x))
-            didOpacityDrag = true;
-
-        if (didOpacityDrag) {
-            const auto newOpacity = juce::jlimit(0.15f, 1.0f,
-                                                 dragStartOpacity + (mouseDownPosition.y - event.position.y) * 0.005f);
-            settings.opacity = newOpacity;
-            if (onOpacityChanged)
-                onOpacityChanged(slotIndex, newOpacity);
-        }
-    }
-
-    if (isTrackingReorderDrag) {
-        if (!isReorderDragging && delta.getDistanceFromOrigin() > 6.0f) {
-            isReorderDragging = true;
-            if (onReorderDragStarted)
-                onReorderDragStarted(slotIndex, event.getEventRelativeTo(getParentComponent()).position.x);
-        }
-
-        if (isReorderDragging) {
-            if (onReorderDragged)
-                onReorderDragged(slotIndex, event.getEventRelativeTo(getParentComponent()).position.x);
-        }
-    }
-
-    updateCursor(event.position);
-    setHoveredHitArea(getHitAreaAt(event.position));
-}
-
-void SignalSlotComponent::mouseUp(const juce::MouseEvent &event) {
-    const auto releaseHitArea = getHitAreaAt(event.position);
-
-    if (suppressMouseUpAction) {
-        suppressMouseUpAction = false;
-        isTrackingOpacityDrag = false;
-        didOpacityDrag = false;
-        isTrackingReorderDrag = false;
-        isReorderDragging = false;
+void SignalSlotComponent::rebuildCachedBackground() {
+    const auto moduleBounds = getModuleBounds();
+    if (moduleBounds.isEmpty()) {
+        cachedBackground = {};
         return;
     }
 
-    if (isTrackingReorderDrag) {
-        if (isReorderDragging) {
-            if (onReorderDragEnded)
-                onReorderDragEnded(slotIndex, event.getEventRelativeTo(getParentComponent()).position.x);
-        }
+    const auto targetBounds = moduleBounds.getSmallestIntegerContainer();
+    cachedBackground = juce::Image(juce::Image::ARGB, targetBounds.getWidth(), targetBounds.getHeight(), true);
+    juce::Graphics graphics(cachedBackground);
+    const auto &backgroundImage = Ui::getAnalyzerRasterAsset(Ui::AnalyzerRasterAssetId::background2Version);
+    graphics.drawImage(backgroundImage,
+                       0,
+                       0,
+                       targetBounds.getWidth(),
+                       targetBounds.getHeight(),
+                       0,
+                       0,
+                       backgroundImage.getWidth(),
+                       backgroundImage.getHeight());
 
-        isTrackingReorderDrag = false;
-        isReorderDragging = false;
-        return;
-    }
+    const auto &screwImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
+    const auto screwPadding = juce::roundToInt(theme.metrics.slot.screwPadding);
+    const auto topLeftScrewBounds = Ui::getScaledAssetBoundsWithin(screwImage,
+                                                                   theme.metrics.assets.rasterScale,
+                                                                   {screwPadding,
+                                                                    screwPadding,
+                                                                    targetBounds.getWidth(),
+                                                                    targetBounds.getHeight()},
+                                                                   theme.metrics.slot.screwScale)
+                                        .withPosition(screwPadding, screwPadding);
+    const auto topRightScrewBounds = topLeftScrewBounds.withX(targetBounds.getWidth()
+                                                              - screwPadding
+                                                              - topLeftScrewBounds.getWidth());
 
-    if (isTrackingOpacityDrag) {
-        if (!didOpacityDrag && releaseHitArea == SignalSlotHitArea::swatch)
-            showColourMenu();
-
-        isTrackingOpacityDrag = false;
-        didOpacityDrag = false;
-        return;
-    }
-
-    if (releaseHitArea != mouseDownHitArea)
-        return;
-
-    switch (releaseHitArea) {
-        case SignalSlotHitArea::swatch:
-            showColourMenu();
-            break;
-        case SignalSlotHitArea::label:
-        case SignalSlotHitArea::body:
-            showSignalMenu();
-            break;
-        case SignalSlotHitArea::visibility:
-            settings.visible = !settings.visible;
-            if (onVisibilityChanged)
-                onVisibilityChanged(slotIndex, settings.visible);
-            break;
-        case SignalSlotHitArea::freeze:
-            settings.frozen = !settings.frozen;
-            if (onFrozenChanged)
-                onFrozenChanged(slotIndex, settings.frozen);
-            break;
-        case SignalSlotHitArea::remove:
-            if (onRemoveClicked)
-                onRemoveClicked(slotIndex);
-            break;
-        case SignalSlotHitArea::dragHandle:
-            break;
-    }
+    Ui::drawAssetWithin(graphics, screwImage, topLeftScrewBounds);
+    Ui::drawAssetWithin(graphics, screwImage, topRightScrewBounds);
 }
 
-void SignalSlotComponent::mouseDoubleClick(const juce::MouseEvent &event) {
-    if (!getSwatchBounds().contains(event.position))
-        return;
+void SignalSlotComponent::refreshChildState() {
+    sourceToggle.setState(settings.configuration.source, isSidechainRouted);
+    modeButton.setLabel(Ui::getSignalModeLabel(settings.configuration.mode));
+    swatchButton.setState(settings.colourIndex, settings.opacity);
+    dragHandle.setDragged(isDragged);
+    visibilityButton.setActive(settings.visible);
+    freezeButton.setActive(settings.frozen);
 
-    settings.opacity = Ui::defaultSignalOpacity;
-    if (onOpacityChanged)
-        onOpacityChanged(slotIndex, settings.opacity);
+    SignalSlotActionButton::Style removeStyle;
+    removeStyle.content = SignalSlotActionButton::Content::cancel;
+    removeStyle.fill = juce::Colours::transparentBlack;
+    removeStyle.hoverFill = juce::Colours::transparentBlack;
+    removeStyle.foreground = theme.hardwareMarkingLight;
+    removeStyle.drawsBackground = false;
+    removeButton.setStyle(removeStyle);
+
+    repaint();
 }
 
-void SignalSlotComponent::mouseExit(const juce::MouseEvent &event) {
-    juce::ignoreUnused(event);
-    setHoveredHitArea(std::nullopt);
-    setMouseCursor(juce::MouseCursor::NormalCursor);
+juce::Rectangle<float> SignalSlotComponent::getContentBounds() const {
+    auto bounds = getModuleBounds().reduced(theme.metrics.slot.cellPaddingX, theme.metrics.slot.cellPaddingY);
+    bounds.removeFromTop(theme.metrics.slot.contentOffsetY);
+    return bounds;
 }
 
-juce::Rectangle<float> SignalSlotComponent::getSwatchBounds() const {
+juce::Rectangle<float> SignalSlotComponent::getSourceToggleBounds() const {
+    auto contentBounds = getContentBounds();
+    contentBounds.setWidth(theme.metrics.slot.sourceToggleWidth);
+    return contentBounds;
+}
+
+juce::Rectangle<float> SignalSlotComponent::getControlColumnBounds() const {
+    auto contentBounds = getContentBounds();
+    contentBounds.removeFromLeft(theme.metrics.slot.sourceToggleWidth);
+    contentBounds.removeFromLeft(theme.metrics.slot.sectionGap);
+    return contentBounds;
+}
+
+juce::Rectangle<float> SignalSlotComponent::getControlStackBounds() const {
     const auto &slotMetrics = theme.metrics.slot;
-    auto contentBounds = getLocalBounds().toFloat().reduced(slotMetrics.cellPaddingX, slotMetrics.cellPaddingY);
-    const auto y = contentBounds.getCentreY() - slotMetrics.swatchSize * 0.5f;
-    return {contentBounds.getX(), y, slotMetrics.swatchSize, slotMetrics.swatchSize};
+    const auto controlColumnBounds = getControlColumnBounds();
+    const auto stackHeight = slotMetrics.modeDisplayHeight + slotMetrics.rowGap + getActionRowHeight();
+    return juce::Rectangle<float>(controlColumnBounds.getWidth(), stackHeight)
+        .withCentre(controlColumnBounds.getCentre());
 }
 
-juce::Rectangle<float> SignalSlotComponent::getLabelBounds() const {
-    const auto &slotMetrics = theme.metrics.slot;
-    auto contentBounds = getLocalBounds().toFloat().reduced(slotMetrics.cellPaddingX, slotMetrics.cellPaddingY);
-    contentBounds.removeFromLeft(slotMetrics.swatchSize + slotMetrics.sectionGap);
-    contentBounds.removeFromRight(getActionClusterWidth() + slotMetrics.sectionGap);
-    const auto textHeight = slotMetrics.titleHeight + slotMetrics.textStackGap + slotMetrics.hintHeight;
-    const auto y = contentBounds.getCentreY() - textHeight * 0.5f;
-    return {contentBounds.getX(), y, contentBounds.getWidth(), textHeight};
+float SignalSlotComponent::getActionRowHeight() const {
+    return juce::jmax(theme.metrics.slot.actionSize, theme.metrics.slot.swatchSize);
 }
 
-juce::Rectangle<float> SignalSlotComponent::getDragHandleBounds() const {
-    const auto &slotMetrics = theme.metrics.slot;
-    auto contentBounds = getLocalBounds().toFloat().reduced(slotMetrics.cellPaddingX, slotMetrics.cellPaddingY);
-    const auto actionsWidth = getActionClusterWidth();
-    const auto x = contentBounds.getRight() - actionsWidth;
-    const auto y = contentBounds.getCentreY() - slotMetrics.actionSize * 0.5f;
-    return {x, y, slotMetrics.actionSize, slotMetrics.actionSize};
+juce::Rectangle<float> SignalSlotComponent::getModeRowBounds() const {
+    auto modeRowBounds = getControlStackBounds();
+    modeRowBounds.setHeight(theme.metrics.slot.modeDisplayHeight);
+    return modeRowBounds;
 }
 
-juce::Rectangle<float> SignalSlotComponent::getVisibilityBounds() const {
+juce::Rectangle<float> SignalSlotComponent::getActionRowBounds() const {
     const auto &slotMetrics = theme.metrics.slot;
-    auto dragHandleBounds = getDragHandleBounds();
-    const auto x = dragHandleBounds.getRight() + slotMetrics.actionGap;
-    const auto y = dragHandleBounds.getCentreY() - slotMetrics.actionSize * 0.5f;
-    return {x, y, slotMetrics.actionSize, slotMetrics.actionSize};
-}
-
-juce::Rectangle<float> SignalSlotComponent::getFreezeBounds() const {
-    const auto &slotMetrics = theme.metrics.slot;
-    auto visibilityBounds = getVisibilityBounds();
-    const auto x = visibilityBounds.getRight() + slotMetrics.actionGap;
-    return {x, visibilityBounds.getY(), slotMetrics.actionSize, slotMetrics.actionSize};
-}
-
-juce::Rectangle<float> SignalSlotComponent::getRemoveBounds() const {
-    const auto &slotMetrics = theme.metrics.slot;
-    auto freezeBounds = getFreezeBounds();
-    const auto x = freezeBounds.getRight() + slotMetrics.actionGap;
-    return {x, freezeBounds.getY(), slotMetrics.actionSize, slotMetrics.actionSize};
+    auto rowStackBounds = getControlStackBounds();
+    rowStackBounds.removeFromTop(slotMetrics.modeDisplayHeight + slotMetrics.rowGap);
+    rowStackBounds.setHeight(getActionRowHeight());
+    return rowStackBounds;
 }
 
 float SignalSlotComponent::getActionClusterWidth() const {
-    const auto &slotMetrics = theme.metrics.slot;
-    return slotMetrics.actionSize * 4.0f + slotMetrics.actionGap * 3.0f;
-}
-
-SignalSlotHitArea SignalSlotComponent::getHitAreaAt(const juce::Point<float> &position) const {
-    if (getSwatchBounds().contains(position))
-        return SignalSlotHitArea::swatch;
-
-    if (getDragHandleBounds().contains(position))
-        return SignalSlotHitArea::dragHandle;
-
-    if (getVisibilityBounds().contains(position))
-        return SignalSlotHitArea::visibility;
-
-    if (getFreezeBounds().contains(position))
-        return SignalSlotHitArea::freeze;
-
-    if (getRemoveBounds().contains(position))
-        return SignalSlotHitArea::remove;
-
-    if (getLabelBounds().contains(position))
-        return SignalSlotHitArea::label;
-
-    return SignalSlotHitArea::body;
+    return theme.metrics.slot.sourceToggleWidth + theme.metrics.slot.sectionGap
+           + theme.metrics.slot.swatchSize + theme.metrics.slot.actionSize * 3.0f
+           + theme.metrics.slot.actionGap * 3.0f;
 }
 
 bool SignalSlotComponent::isColourAvailable(const int colourIndex) const {
@@ -379,30 +304,15 @@ bool SignalSlotComponent::isSignalAvailable(const Analyzer::SignalSource source,
            == usedSignalConfigs.end();
 }
 
-SignalSlotComponent::OpenPopupMenu SignalSlotComponent::popupMenuForHitArea(const SignalSlotHitArea hitArea) {
-    switch (hitArea) {
-        case SignalSlotHitArea::swatch:
-            return OpenPopupMenu::colour;
-        case SignalSlotHitArea::label:
-        case SignalSlotHitArea::body:
-            return OpenPopupMenu::signal;
-        case SignalSlotHitArea::dragHandle:
-        case SignalSlotHitArea::visibility:
-        case SignalSlotHitArea::freeze:
-        case SignalSlotHitArea::remove:
-            return OpenPopupMenu::none;
-    }
-
-    return OpenPopupMenu::none;
-}
-
 void SignalSlotComponent::dismissOpenMenu() {
     if (openPopupMenu == OpenPopupMenu::none)
         return;
 
     openPopupMenu = OpenPopupMenu::none;
-    if (activeCallout != nullptr)
+    if (activeCallout != nullptr) {
+        activeCallout->setLookAndFeel(nullptr);
         activeCallout->dismiss();
+    }
 
     activeCallout = nullptr;
 }
@@ -419,6 +329,8 @@ void SignalSlotComponent::launchCallout(std::unique_ptr<juce::Component> content
 
     openPopupMenu = kind;
     auto &callout = juce::CallOutBox::launchAsynchronously(std::move(content), anchorBounds, parentComponent);
+    callout.setLookAndFeel(&popupLookAndFeel);
+    callout.lookAndFeelChanged();
     callout.setDismissalMouseClicksAreAlwaysConsumed(false);
     activeCallout = &callout;
 }
@@ -431,17 +343,23 @@ void SignalSlotComponent::showSignalMenu() {
     if (parentComponent == nullptr)
         return;
 
+    dismissOpenMenu();
+
     const auto safeThis = juce::Component::SafePointer<SignalSlotComponent>(this);
     auto content = std::make_unique<SignalSelectionPopupContent>(
         theme,
-        isSidechainRouted,
         settings.configuration.source,
         settings.configuration.mode,
         [safeThis](const Analyzer::SignalSource source, const Analyzer::SignalMode mode) {
-            if (safeThis == nullptr || !safeThis->onSignalSelected)
+            if (safeThis == nullptr)
                 return;
 
-            safeThis->onSignalSelected(safeThis->slotIndex, source, mode);
+            safeThis->settings.configuration.source = source;
+            safeThis->settings.configuration.mode = mode;
+            safeThis->refreshChildState();
+
+            if (safeThis->onSignalSelected)
+                safeThis->onSignalSelected(safeThis->slotIndex, source, mode);
         },
         [safeThis] {
             if (safeThis == nullptr)
@@ -456,9 +374,9 @@ void SignalSlotComponent::showSignalMenu() {
     });
     content->setSize(content->getPreferredWidth(), content->getPreferredHeight());
 
-    auto anchorBounds = parentComponent->getLocalArea(this, getLabelBounds().toNearestInt());
-    anchorBounds = {anchorBounds.getRight(), anchorBounds.getY() - 2, 1, 1};
-    launchCallout(std::move(content), OpenPopupMenu::signal, anchorBounds);
+    auto anchorBounds = parentComponent->getLocalArea(this, modeButton.getBounds());
+    anchorBounds = {anchorBounds.getCentreX(), anchorBounds.getY(), 1, 1};
+    launchCallout(std::move(content), OpenPopupMenu::mode, anchorBounds);
 }
 
 void SignalSlotComponent::showColourMenu() {
@@ -469,14 +387,20 @@ void SignalSlotComponent::showColourMenu() {
     if (parentComponent == nullptr)
         return;
 
+    dismissOpenMenu();
+
     const auto safeThis = juce::Component::SafePointer<SignalSlotComponent>(this);
     auto content = std::make_unique<SignalColourPopupContent>(
         theme,
         [safeThis](const int selectedColourIndex) {
-            if (safeThis == nullptr || !safeThis->onColourSelected)
+            if (safeThis == nullptr)
                 return;
 
-            safeThis->onColourSelected(safeThis->slotIndex, selectedColourIndex);
+            safeThis->settings.colourIndex = selectedColourIndex;
+            safeThis->refreshChildState();
+
+            if (safeThis->onColourSelected)
+                safeThis->onColourSelected(safeThis->slotIndex, selectedColourIndex);
         },
         [safeThis] {
             if (safeThis == nullptr)
@@ -495,37 +419,96 @@ void SignalSlotComponent::showColourMenu() {
 
     content->setSize(content->getPreferredWidth(), content->getPreferredHeight());
 
-    auto anchorBounds = parentComponent->getLocalArea(this, getSwatchBounds().toNearestInt());
+    auto anchorBounds = parentComponent->getLocalArea(this, swatchButton.getBounds());
     anchorBounds = {anchorBounds.getCentreX(), anchorBounds.getY() - 2, 1, 1};
     launchCallout(std::move(content), OpenPopupMenu::colour, anchorBounds);
 }
 
-void SignalSlotComponent::setHoveredHitArea(const std::optional<SignalSlotHitArea> hitArea) {
-    if (hoveredHitArea == hitArea)
+void SignalSlotComponent::handleSourceSelected(const Analyzer::SignalSource source) {
+    if (settings.configuration.source == source)
         return;
 
-    hoveredHitArea = hitArea;
-    repaint();
+    settings.configuration.source = source;
+    refreshChildState();
+
+    if (onSignalSelected)
+        onSignalSelected(slotIndex, settings.configuration.source, settings.configuration.mode);
 }
 
-void SignalSlotComponent::updateCursor(const juce::Point<float> &position) {
-    if (getSwatchBounds().contains(position)) {
-        setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
+void SignalSlotComponent::handleModePressed() {
+    if (openPopupMenu != OpenPopupMenu::mode)
+        return;
+
+    dismissOpenMenu();
+    suppressNextModeButtonClick = true;
+}
+
+void SignalSlotComponent::handleModeClicked() {
+    if (suppressNextModeButtonClick) {
+        suppressNextModeButtonClick = false;
         return;
     }
 
-    if (getDragHandleBounds().contains(position) || isReorderDragging) {
-        setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    showSignalMenu();
+}
+
+void SignalSlotComponent::handleVisibilityClicked() {
+    settings.visible = !settings.visible;
+    refreshChildState();
+
+    if (onVisibilityChanged)
+        onVisibilityChanged(slotIndex, settings.visible);
+}
+
+void SignalSlotComponent::handleFreezeClicked() {
+    settings.frozen = !settings.frozen;
+    refreshChildState();
+
+    if (onFrozenChanged)
+        onFrozenChanged(slotIndex, settings.frozen);
+}
+
+void SignalSlotComponent::handleRemoveClicked() {
+    if (onRemoveClicked)
+        onRemoveClicked(slotIndex);
+}
+
+void SignalSlotComponent::handleSwatchClicked() {
+    if (suppressNextSwatchClick) {
+        suppressNextSwatchClick = false;
         return;
     }
 
-    if (getLabelBounds().contains(position)
-        || getVisibilityBounds().contains(position)
-        || getFreezeBounds().contains(position)
-        || getRemoveBounds().contains(position)) {
-        setMouseCursor(juce::MouseCursor::PointingHandCursor);
-        return;
-    }
+    showColourMenu();
+}
 
-    setMouseCursor(juce::MouseCursor::NormalCursor);
+void SignalSlotComponent::handleOpacityChanged(const float opacity) {
+    settings.opacity = opacity;
+    refreshChildState();
+
+    if (onOpacityChanged)
+        onOpacityChanged(slotIndex, opacity);
+}
+
+void SignalSlotComponent::handleOpacityReset() {
+    settings.opacity = Ui::defaultSignalOpacity;
+    refreshChildState();
+
+    if (onOpacityChanged)
+        onOpacityChanged(slotIndex, settings.opacity);
+}
+
+void SignalSlotComponent::handleReorderDragStarted(const float parentX) {
+    if (onReorderDragStarted)
+        onReorderDragStarted(slotIndex, parentX);
+}
+
+void SignalSlotComponent::handleReorderDragged(const float parentX) {
+    if (onReorderDragged)
+        onReorderDragged(slotIndex, parentX);
+}
+
+void SignalSlotComponent::handleReorderDragEnded(const float parentX) {
+    if (onReorderDragEnded)
+        onReorderDragEnded(slotIndex, parentX);
 }

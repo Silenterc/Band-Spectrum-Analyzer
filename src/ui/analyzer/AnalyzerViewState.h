@@ -1,8 +1,5 @@
 #pragma once
 
-#include <vector>
-
-#include "../../dsp/core/AnalyzerData.h"
 #include "AnalyzerUiConstants.h"
 
 /**
@@ -15,6 +12,4 @@ struct AnalyzerViewState {
     float visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
     // Visible maximum frequency in Hz when zoom is enabled
     float visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
-    // Which traces are enabled for drawing
-    std::vector<Analyzer::TraceKind> enabledTraces;
 };

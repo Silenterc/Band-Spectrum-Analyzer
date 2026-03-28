@@ -6,6 +6,7 @@
 
 #include "../../../dsp/core/AnalyzerData.h"
 #include "../AnalyzerRenderData.h"
+#include "../model/AnalyzerMeterTuning.h"
 
 /**
  * Converts raw engine measurements into display-rate RMS, peak, and hold values
@@ -71,11 +72,6 @@ private:
     static float getPeakDb(const Analyzer::BandMeasurements &measurements, float floorDb);
     static float getMeanPower(const Analyzer::BandMeasurements &measurements);
     static float pushMeanPower(RmsWindowState &windowState, float meanPower, float dtSeconds);
-
-    static constexpr float rmsWindowMs = 180.0f;
-    static constexpr float rmsDecayDbPerSecond = 15.0f;
-    static constexpr float peakDecayDbPerSecond = 15.0f;
-    static constexpr float holdDecayDbPerSecond = 12.0f;
 
     std::vector<TraceState> traceStates;
     Analyzer::RenderData renderData;

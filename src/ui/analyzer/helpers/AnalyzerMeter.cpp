@@ -5,10 +5,6 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
-namespace {
-    constexpr float holdResetToleranceDb = 1.5f;
-}
-
 void AnalyzerMeter::reset() {
     traceStates.clear();
     renderData.bandInfo.clear();
@@ -38,18 +34,21 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
             // RMS stays in the power domain until after the rectangular average
             const auto averagedPower = pushMeanPower(traceState.rmsWindows[bandIndex], meanPower, dtSeconds);
             const auto rmsInputDb = juce::Decibels::gainToDecibels(std::sqrt(averagedPower), floorDb);
-            traceState.rmsDb[bandIndex] = std::max(traceState.rmsDb[bandIndex] - rmsDecayDbPerSecond * dtSeconds,
+            traceState.rmsDb[bandIndex] = std::max(
+                traceState.rmsDb[bandIndex] - Ui::analyzerMeterTuning.rmsDecayDbPerSecond * dtSeconds,
                                                    rmsInputDb);
 
             // Peak jumps up immediately and only falls by a linear dB per second rate
-            traceState.peakDb[bandIndex] = std::max(traceState.peakDb[bandIndex] - peakDecayDbPerSecond * dtSeconds,
-                                                    peakInputDb);
+            traceState.peakDb[bandIndex] = std::max(
+                traceState.peakDb[bandIndex] - Ui::analyzerMeterTuning.peakDecayDbPerSecond * dtSeconds,
+                peakInputDb);
 
             if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex]) {
                 traceState.holdDb[bandIndex] = traceState.peakDb[bandIndex];
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
             } else if (traceState.peakDb[bandIndex] > floorDb
-                       && traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex] - holdResetToleranceDb) {
+                       && traceState.peakDb[bandIndex]
+                              >= traceState.holdDb[bandIndex] - Ui::analyzerMeterTuning.holdResetToleranceDb) {
                 // Peaks within the tolerance keep the hold alive without lowering the held value.
                 traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
             } else if (traceState.holdTimeRemainingMs[bandIndex] > 0.0f) {
@@ -58,8 +57,9 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                     std::max(0.0f, traceState.holdTimeRemainingMs[bandIndex] - dtSeconds * 1000.0f);
             } else {
                 // After the hold time expires it falls with its own linear dB per second rate
-                traceState.holdDb[bandIndex] =
-                    std::max(traceState.peakDb[bandIndex], traceState.holdDb[bandIndex] - holdDecayDbPerSecond * dtSeconds);
+                traceState.holdDb[bandIndex] = std::max(
+                    traceState.peakDb[bandIndex],
+                    traceState.holdDb[bandIndex] - Ui::analyzerMeterTuning.holdDecayDbPerSecond * dtSeconds);
             }
 
             renderTrace.frame.rmsDb[bandIndex] = meterSettings.showRms ? traceState.rmsDb[bandIndex] : floorDb;
@@ -76,21 +76,19 @@ const Analyzer::RenderData &AnalyzerMeter::getRenderData() const {
 }
 
 bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
-    constexpr float settleToleranceDb = 0.1f;
-
     for (const auto &trace: renderData.traces) {
         for (const auto value: trace.frame.rmsDb) {
-            if (value > floorDb + settleToleranceDb)
+            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
 
         for (const auto value: trace.frame.peakDb) {
-            if (value > floorDb + settleToleranceDb)
+            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
 
         for (const auto value: trace.frame.holdDb) {
-            if (value > floorDb + settleToleranceDb)
+            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
     }
@@ -150,7 +148,7 @@ float AnalyzerMeter::pushMeanPower(RmsWindowState &windowState, const float mean
     windowState.weightedPowerSum += static_cast<double>(meanPower) * static_cast<double>(dtSeconds);
     windowState.totalDurationSeconds += dtSeconds;
 
-    constexpr double rmsWindowSeconds = static_cast<double>(rmsWindowMs) * 0.001;
+    constexpr double rmsWindowSeconds = static_cast<double>(Ui::analyzerMeterTuning.rmsWindowMs) * 0.001;
 
     while (windowState.totalDurationSeconds > rmsWindowSeconds && !windowState.history.empty()) {
         auto &oldestEntry = windowState.history.front();

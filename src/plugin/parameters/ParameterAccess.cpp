@@ -135,7 +135,7 @@ namespace PluginParameters {
 
     void Access::writeSlotOpacity(const size_t slotIndex, const float opacity) {
         writeFloat(Schema::slotParameterId(Schema::SlotField::opacity, slotIndex),
-                   juce::jlimit(0.15f, 1.0f, opacity));
+                   juce::jlimit(Defaults::signalOpacityMin, Defaults::signalOpacityMax, opacity));
     }
 
     void Access::writeShowPeak(const bool value) {

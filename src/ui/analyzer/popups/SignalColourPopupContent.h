@@ -17,6 +17,7 @@ public:
 
     void addColourButton(juce::Colour colour, bool selected, bool enabled, int colourIndex);
 
+    void paint(juce::Graphics &g) override;
     void resized() override;
 
     int getPreferredWidth() const;

@@ -5,24 +5,14 @@
 #include <vector>
 
 #include "../../../dsp/core/AnalyzerData.h"
-#include "../../AnalyzerDataSource.h"
-#include "../../SignalSlotUiState.h"
+#include "../../AnalyzerRenderSource.h"
 #include "../AnalyzerUiConstants.h"
+#include "AnalyzerUiSnapshot.h"
 #include "../helpers/AnalyzerMeter.h"
 
 namespace Ui {
-    struct AnalyzerUiSnapshot {
-        std::array<Ui::SignalSlotState, Shared::maxSignalSlots> signalSlots{};
-        Shared::SignalSlotOrder signalSlotOrder{};
-        Analyzer::MeterSettings meterSettings;
-        float gridMinDb = 0.0f;
-        float gridMaxDb = 0.0f;
-        float gridStepDb = 0.0f;
-    };
-
     struct AnalyzerRefreshDecision {
         float dtSeconds = 0.0f;
-        bool uiSnapshotChanged = false;
         bool bandLayoutChanged = false;
         bool frozen = false;
         bool shouldAdvanceDisplay = false;
@@ -33,19 +23,16 @@ namespace Ui {
 
     class AnalyzerRefreshModel final {
     public:
-        void prime(const AnalyzerDataSource &dataSource);
+        void prime(const AnalyzerUiSnapshot &snapshot);
 
-        bool refreshUiSnapshot(const AnalyzerDataSource &dataSource, AnalyzerUiSnapshot &snapshot) const;
-
-        bool syncFreezeEdge(const AnalyzerDataSource &dataSource,
+        bool syncFreezeEdge(const AnalyzerUiSnapshot &snapshot,
                             Analyzer::RenderData &renderData,
                             const Analyzer::RenderData &lastPaintedRenderData);
 
-        AnalyzerRefreshDecision makeTimerDecision(const AnalyzerDataSource &dataSource,
+        AnalyzerRefreshDecision makeTimerDecision(const AnalyzerRenderSource &renderSource,
                                                   const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &currentBandInfo,
                                                   const AnalyzerMeter &displayMeter,
-                                                  float gridMinDb,
-                                                  AnalyzerUiSnapshot &snapshot);
+                                                  const AnalyzerUiSnapshot &snapshot);
 
     private:
         double lastPollTimeMs = 0.0;

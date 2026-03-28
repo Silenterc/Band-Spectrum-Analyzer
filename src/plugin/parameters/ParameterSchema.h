@@ -115,19 +115,19 @@ namespace PluginParameters::Schema {
     }
 
     inline auto holdMsRange() {
-        return juce::NormalisableRange<float>(0.0f, 2000.0f, 1.0f);
+        return juce::NormalisableRange<float>(Defaults::holdMsMin, Defaults::holdMsMax, Defaults::holdMsStep);
     }
 
     inline auto gridMinDbRange() {
-        return juce::NormalisableRange<float>(-120.0f, -12.0f, 1.0f);
+        return juce::NormalisableRange<float>(Defaults::gridMinDbMin, Defaults::gridMinDbMax, Defaults::gridMinDbStep);
     }
 
     inline auto gridMaxDbRange() {
-        return juce::NormalisableRange<float>(-24.0f, 24.0f, 1.0f);
+        return juce::NormalisableRange<float>(Defaults::gridMaxDbMin, Defaults::gridMaxDbMax, Defaults::gridMaxDbStep);
     }
 
     inline auto gridStepDbRange() {
-        return juce::NormalisableRange<float>(1.0f, 24.0f, 1.0f);
+        return juce::NormalisableRange<float>(Defaults::gridStepDbMin, Defaults::gridStepDbMax, Defaults::gridStepDbStep);
     }
 
     inline juce::String slotParameterId(const SlotField field, const size_t slotIndex) {
@@ -215,7 +215,9 @@ namespace PluginParameters::Schema {
                 return std::make_unique<juce::AudioParameterFloat>(
                     makeParameterID(slotParameterId(field, slotIndex)),
                     slotParameterName(field, slotIndex),
-                    juce::NormalisableRange<float>(0.15f, 1.0f, 0.01f),
+                    juce::NormalisableRange<float>(Defaults::signalOpacityMin,
+                                                   Defaults::signalOpacityMax,
+                                                   Defaults::signalOpacityStep),
                     Defaults::signalOpacity);
         }
 
