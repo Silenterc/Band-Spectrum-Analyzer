@@ -60,15 +60,19 @@ namespace {
         return meterSettings;
     }
 
-    void prepareEngine(Analyzer::Engine &engine, const TestParameters &parameters) {
-        engine.prepare(sampleRate, blockSize);
+    void prepareEngine(Analyzer::Engine &engine,
+                       const TestParameters &parameters,
+                       const double sampleRateToUse = sampleRate) {
+        engine.prepare(sampleRateToUse, blockSize);
         engine.setParameters(parameters.engineParameters);
     }
 
-    std::vector<TestTone> makeTestTones(const std::vector<float> &frequenciesHz, const std::vector<float> &polarities) {
+    std::vector<TestTone> makeTestTones(const std::vector<float> &frequenciesHz,
+                                        const std::vector<float> &polarities,
+                                        const double sampleRateToUse = sampleRate) {
         std::vector<TestTone> tones(frequenciesHz.size());
         juce::dsp::ProcessSpec processSpec{};
-        processSpec.sampleRate = sampleRate;
+        processSpec.sampleRate = sampleRateToUse;
         processSpec.maximumBlockSize = static_cast<juce::uint32>(blockSize);
         // Each TestTone owns one oscillator, so each one is prepared as mono
         processSpec.numChannels = 1;
@@ -96,10 +100,14 @@ namespace {
         }
     }
 
-    void processSineBlocks(Analyzer::Engine &engine, int channels, const std::vector<float> &frequenciesHz,
-                           const std::vector<float> &polarities, int numBlocks = settleBlocks) {
+    void processSineBlocks(Analyzer::Engine &engine,
+                           int channels,
+                           const std::vector<float> &frequenciesHz,
+                           const std::vector<float> &polarities,
+                           int numBlocks = settleBlocks,
+                           const double sampleRateToUse = sampleRate) {
         juce::AudioBuffer<float> buffer(channels, blockSize);
-        auto tones = makeTestTones(frequenciesHz, polarities);
+        auto tones = makeTestTones(frequenciesHz, polarities, sampleRateToUse);
 
         for (int blockIndex = 0; blockIndex < numBlocks; ++blockIndex) {
             renderSineBlock(buffer, tones, testAmplitude);
@@ -109,10 +117,12 @@ namespace {
 
     void processSidechainSineBlocks(Analyzer::Engine &engine, int mainChannels, int sidechainChannels,
                                     const std::vector<float> &frequenciesHz,
-                                    const std::vector<float> &polarities, int numBlocks = settleBlocks) {
+                                    const std::vector<float> &polarities,
+                                    int numBlocks = settleBlocks,
+                                    const double sampleRateToUse = sampleRate) {
         juce::AudioBuffer<float> mainBuffer(mainChannels, blockSize);
         juce::AudioBuffer<float> sidechainBuffer(sidechainChannels, blockSize);
-        auto tones = makeTestTones(frequenciesHz, polarities);
+        auto tones = makeTestTones(frequenciesHz, polarities, sampleRateToUse);
         mainBuffer.clear();
 
         for (int blockIndex = 0; blockIndex < numBlocks; ++blockIndex) {
@@ -132,6 +142,15 @@ namespace {
     int getStrongestBandIndex(const std::vector<float> &values) {
         const auto strongest = std::max_element(values.begin(), values.end());
         return static_cast<int>(std::distance(values.begin(), strongest));
+    }
+
+    int getStrongestMeasurementBandIndex(const std::vector<Analyzer::BandMeasurements> &measurements) {
+        const auto strongest = std::max_element(measurements.begin(), measurements.end(),
+                                                [](const Analyzer::BandMeasurements &lhs,
+                                                   const Analyzer::BandMeasurements &rhs) {
+                                                    return lhs.peakPower < rhs.peakPower;
+                                                });
+        return static_cast<int>(std::distance(measurements.begin(), strongest));
     }
 
     int getNearestBandIndex(const std::vector<Analyzer::BandInfo> &bandInfo, float frequencyHz) {
@@ -371,6 +390,113 @@ TEST_CASE("AnalyzerEngine clears sidechain traces when sidechain input disappear
         REQUIRE(std::abs(measurement.sumPower) < powerTolerance);
         REQUIRE(measurement.numSamples == 0);
     }
+}
+
+TEST_CASE("AnalyzerEngine raw filterbank peaks on the exact band center frequency") {
+    Analyzer::Engine engine;
+    auto parameters = makeDefaultParameters();
+
+    SECTION("30 bands") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
+    }
+
+    SECTION("45 bands") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::bands45;
+    }
+
+    SECTION("60 bands") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    }
+
+    prepareEngine(engine, parameters);
+
+    const auto bandInfo = engine.getBandInfo();
+    REQUIRE(bandInfo != nullptr);
+    REQUIRE(bandInfo->size() > 6);
+
+    const std::array<size_t, 3> bandIndicesToTest{
+        bandInfo->size() / 4,
+        bandInfo->size() / 2,
+        (bandInfo->size() * 3) / 4
+    };
+
+    for (const auto bandIndex: bandIndicesToTest) {
+        DYNAMIC_SECTION("band index " << bandIndex) {
+            engine.reset();
+
+            const auto frequencyHz = (*bandInfo)[bandIndex].centerHz;
+            processSineBlocks(engine, 2, {frequencyHz, frequencyHz}, {1.0f, 1.0f});
+
+            const auto traces = engine.getTraces();
+            REQUIRE(traces.size() == 1);
+            REQUIRE(traces.front().measurements.size() == bandInfo->size());
+
+            const auto strongestBandIndex = getStrongestMeasurementBandIndex(traces.front().measurements);
+            REQUIRE(strongestBandIndex == static_cast<int>(bandIndex));
+
+            const auto centerPeakPower = traces.front().measurements[bandIndex].peakPower;
+            REQUIRE(centerPeakPower > 0.0f);
+
+            if (bandIndex > 0)
+                REQUIRE(centerPeakPower >= traces.front().measurements[bandIndex - 1].peakPower);
+
+            if (bandIndex + 1 < traces.front().measurements.size())
+                REQUIRE(centerPeakPower >= traces.front().measurements[bandIndex + 1].peakPower);
+        }
+    }
+}
+
+TEST_CASE("AnalyzerEngine 44.1 kHz 60-band centers keep consistent raw peak level within 0.5 dB") {
+    constexpr double sampleRate44100 = 44100.0;
+    constexpr float floorDb = -200.0f;
+    constexpr float allowedSpreadDb = 0.5f;
+    constexpr int consistencySettleBlocks = 96;
+
+    Analyzer::Engine engine;
+    auto parameters = makeDefaultParameters();
+    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+
+    prepareEngine(engine, parameters, sampleRate44100);
+
+    const auto bandInfo = engine.getBandInfo();
+    REQUIRE(bandInfo != nullptr);
+    REQUIRE(bandInfo->size() == 60);
+
+    std::vector<float> centerPeakDb;
+    centerPeakDb.reserve(bandInfo->size());
+
+    for (size_t bandIndex = 0; bandIndex < bandInfo->size(); ++bandIndex) {
+        engine.reset();
+
+        const auto frequencyHz = (*bandInfo)[bandIndex].centerHz;
+        processSineBlocks(engine, 2, {frequencyHz, frequencyHz}, {1.0f, 1.0f}, consistencySettleBlocks, sampleRate44100);
+
+        const auto traces = engine.getTraces();
+        REQUIRE(traces.size() == 1);
+        REQUIRE(traces.front().measurements.size() == bandInfo->size());
+
+        const auto strongestBandIndex = getStrongestMeasurementBandIndex(traces.front().measurements);
+        CAPTURE(bandIndex, frequencyHz, strongestBandIndex);
+        REQUIRE(strongestBandIndex == static_cast<int>(bandIndex));
+
+        const auto &measurement = traces.front().measurements[bandIndex];
+        REQUIRE(measurement.numSamples > 0);
+
+        centerPeakDb.push_back(juce::Decibels::gainToDecibels(std::sqrt(measurement.peakPower), floorDb));
+    }
+
+    const auto [minPeakIt, maxPeakIt] = std::minmax_element(centerPeakDb.begin(), centerPeakDb.end());
+    const auto peakSpreadDb = *maxPeakIt - *minPeakIt;
+    const auto minPeakIndex = static_cast<size_t>(std::distance(centerPeakDb.begin(), minPeakIt));
+    const auto maxPeakIndex = static_cast<size_t>(std::distance(centerPeakDb.begin(), maxPeakIt));
+
+    CAPTURE(peakSpreadDb,
+            minPeakIndex,
+            maxPeakIndex,
+            (*bandInfo)[minPeakIndex].centerHz,
+            (*bandInfo)[maxPeakIndex].centerHz);
+
+    REQUIRE(peakSpreadDb <= allowedSpreadDb);
 }
 
 TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
