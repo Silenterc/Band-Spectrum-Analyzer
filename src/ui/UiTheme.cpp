@@ -37,4 +37,11 @@ namespace Ui {
     juce::String getSignalPresetName(const int colourIndex) {
         return getSignalPreset(colourIndex).name;
     }
+
+    juce::Colour makeHoldIndicatorColour(const juce::Colour baseColour, const Theme &theme) {
+        const auto &plotMetrics = theme.metrics.analyzerPlot;
+        return baseColour.withAlpha(1.0f)
+            .interpolatedWith(juce::Colours::white, plotMetrics.holdIndicatorWhiteness)
+            .withAlpha(plotMetrics.holdIndicatorAlpha);
+    }
 }

@@ -126,7 +126,7 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
     for (const auto &traceVisual: viewModel.getTraceVisuals()) {
         const auto peakColour = traceVisual.colour;
         const auto rmsColour = peakColour.withMultipliedAlpha(0.45f);
-        const auto lineColour = peakColour.brighter(0.25f);
+        const auto lineColour = Ui::makeHoldIndicatorColour(peakColour, theme);
 
         g.setColour(peakColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {

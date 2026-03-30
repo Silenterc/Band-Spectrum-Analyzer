@@ -59,6 +59,8 @@ namespace Ui {
         float gradientTopBrightness = 0.08f;
         float gradientBottomDarkness = 0.18f;
         float gradientMidPoint = 0.52f;
+        float holdIndicatorWhiteness = 0.84f;
+        float holdIndicatorAlpha = 0.96f;
         float maxUiFrequencyHz = 20000.0f;
         std::array<float, 10> frequencyScaleLabelsHz{
             20.0f, 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f, 20000.0f
@@ -70,6 +72,7 @@ namespace Ui {
         float height = 72.0f;
         float offsetX = 12.0f;
         float offsetY = 10.0f;
+        float cursorReferenceOffsetY = 4.0f;
         float edgeInset = 8.0f;
         float cornerRadius = 8.0f;
         int textPaddingX = 10;
@@ -224,4 +227,5 @@ namespace Ui {
     const Shared::SignalPresetSpec &getSignalPreset(int colourIndex);
     juce::Colour getSignalPresetColour(int colourIndex);
     juce::String getSignalPresetName(int colourIndex);
+    juce::Colour makeHoldIndicatorColour(juce::Colour baseColour, const Theme &theme);
 }

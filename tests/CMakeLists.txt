@@ -18,7 +18,12 @@ add_executable(band-spectrum-analyzer-tests
     ../src/dsp/planning/AnalysisPlanBuilder.cpp
     ../src/dsp/processing/AnalysisGroupProcessor.cpp
     ../src/dsp/sources/AnalysisSourceBuilder.cpp
-    ../src/ui/analyzer/helpers/AnalyzerMeter.cpp)
+    ../src/ui/UiTheme.cpp
+    ../src/ui/analyzer/helpers/AnalyzerGeometry.cpp
+    ../src/ui/analyzer/helpers/AnalyzerHoverModel.cpp
+    ../src/ui/analyzer/helpers/AnalyzerMeter.cpp
+    ../src/ui/analyzer/helpers/FrequencyFormatter.cpp
+    ../src/ui/analyzer/helpers/MusicTheory.cpp)
 
 target_include_directories(band-spectrum-analyzer-tests
     PRIVATE

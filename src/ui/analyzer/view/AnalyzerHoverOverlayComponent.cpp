@@ -100,7 +100,7 @@ void AnalyzerHoverOverlayComponent::rebuildHoveredTraceBars(const std::vector<An
         HoverTraceBarVisual traceBar;
         traceBar.peakColour = traceVisual.colour.brighter(0.18f);
         traceBar.rmsColour = traceBar.peakColour.withMultipliedAlpha(0.45f);
-        traceBar.lineColour = traceBar.peakColour.brighter(0.1f);
+        traceBar.lineColour = Ui::makeHoldIndicatorColour(traceBar.peakColour, theme);
         traceBar.bar = traceVisual.bars[hoverInfo->bandIndex];
         hoveredTraceBars.push_back(std::move(traceBar));
     }
