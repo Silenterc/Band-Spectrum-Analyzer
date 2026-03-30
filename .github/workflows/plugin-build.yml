@@ -1,11 +1,22 @@
-name: Plugin Build
+name: Plugin Release
 
 on:
-  push:
-  pull_request:
-  schedule:
-    - cron: "0 3 * * *"
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: Build target selection
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - macos
+          - windows
+          - linux
+
+permissions:
+  contents: write
+  id-token: write
 
 jobs:
   plugin-build:
@@ -14,29 +25,88 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            generator: Ninja
-            build_type: Release
-            multi_config: false
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU
-          - os: ubuntu-latest
-            generator: Ninja
-            build_type: Release
-            multi_config: false
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
-          - os: windows-latest
-            generator: Visual Studio 17 2022
-            build_type: Release
-            multi_config: true
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
+        include: ${{ fromJson(
+          inputs.platforms == 'macos' &&
+          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"}]' ||
+          inputs.platforms == 'windows' &&
+          '[{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
+          inputs.platforms == 'linux' &&
+          '[{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
+          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"},{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"},{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]'
+          ) }}
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
       - uses: lukka/get-cmake@latest
+
+      - name: Restore UIKit assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gcs_path="$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("ci/uikit.lock.json").read_text())
+          print(data.get("gcs_path", ""))
+          PY
+          )"
+
+          expected_sha="$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("ci/uikit.lock.json").read_text())
+          print(data.get("sha256", ""))
+          PY
+          )"
+
+          if [[ -z "$gcs_path" || -z "$expected_sha" ]]; then
+            echo "ci/uikit.lock.json is empty. Upload UIKit with scripts/uikit/push.sh first."
+            exit 1
+          fi
+
+          archive_name="$(basename "$gcs_path")"
+          gcloud storage cp "$gcs_path" "$archive_name"
+
+          python - "$archive_name" "$expected_sha" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+
+          archive_path = pathlib.Path(sys.argv[1])
+          expected_sha = sys.argv[2]
+          actual_sha = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+
+          if actual_sha != expected_sha:
+              raise SystemExit(
+                  f"SHA-256 mismatch for {archive_path.name}: expected {expected_sha}, got {actual_sha}"
+              )
+          PY
+
+          rm -rf src/ui/assets/uikit
+          mkdir -p src/ui/assets
+          tar -xzf "$archive_name" -C src/ui/assets
+
+          if [[ ! -d src/ui/assets/uikit ]]; then
+            echo "UIKit archive did not restore src/ui/assets/uikit"
+            exit 1
+          fi
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -135,3 +205,4 @@ jobs:
           name: plugin-${{ runner.os }}-${{ matrix.build_type }}
           path: build-plugin/ci-artifacts/${{ runner.os }}-${{ matrix.build_type }}
           if-no-files-found: error
+          retention-days: 30
