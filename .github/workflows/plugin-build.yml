@@ -21,27 +21,19 @@ permissions:
 jobs:
   plugin-build:
     name: Plugin Build (${{ matrix.os }})
-    if: ${{ inputs.platforms == 'all' || (inputs.platforms == 'macos' && matrix.os == 'macos-latest') || (inputs.platforms == 'windows' && matrix.os == 'windows-latest') || (inputs.platforms == 'linux' && matrix.os == 'ubuntu-latest') }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            generator: Ninja
-            build_type: Release
-            multi_config: false
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU
-          - os: ubuntu-latest
-            generator: Ninja
-            build_type: Release
-            multi_config: false
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
-          - os: windows-latest
-            generator: Visual Studio 17 2022
-            build_type: Release
-            multi_config: true
-            plugin_targets: band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3
+        include: ${{ fromJson(
+          inputs.platforms == 'macos' &&
+          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"}]' ||
+          inputs.platforms == 'windows' &&
+          '[{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
+          inputs.platforms == 'linux' &&
+          '[{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
+          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"},{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"},{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]'
+          ) }}
 
     steps:
       - uses: actions/checkout@v4
