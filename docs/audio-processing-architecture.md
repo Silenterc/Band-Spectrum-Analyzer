@@ -258,6 +258,7 @@ flowchart TD
 ## Triple Buffer Boundary
 
 - The engine’s triple buffer remains the DSP-to-UI transport for raw analyzer traces only.
+- The UI-level global hold overlay is derived after display composition in the analyzer UI model layer and is not part of the DSP publish path.
 - Immutable UI snapshots do not carry trace payloads and do not replace the triple buffer.
 
 ## Guiding Rule

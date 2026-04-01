@@ -106,6 +106,7 @@ Rules:
 - `AnalyzerUiSnapshot`
 - snapshot selectors
 - option metadata
+- global hold overlay logic
 - refresh cadence decisions
 - axis/frequency policy
 - meter tuning
@@ -161,7 +162,10 @@ flowchart TD
     RenderSource --> Meter[AnalyzerMeter]
     Snapshot --> Meter
     Meter --> RenderData[Analyzer::RenderData]
+    RenderData --> Hold[AnalyzerGlobalHoldModel]
+    Snapshot --> Hold
     RenderData --> ViewModel[AnalyzerViewModel]
+    Hold --> ViewModel
     Snapshot --> ViewModel
     ViewModel --> Overlay[AnalyzerHoverOverlayComponent]
     ViewModel --> Paint[AnalyzerComponent paint]
@@ -172,6 +176,8 @@ Important behavior:
 - the analyzer plot reads traces and band metadata from the render source
 - the analyzer plot reads visibility, freeze, grid, and meter settings from the immutable snapshot
 - slot-frozen display traces are a UI concern layered on top of live render data
+- one global hold overlay is derived after display composition from the traces that are currently drawn
+- owner tint for that hold overlay is latched in analyzer model logic, not DSP or snapshot state
 - idle polling remains a display concern only
 
 ## Signal Metadata
@@ -198,6 +204,7 @@ Examples:
 - visible trace kinds are derived from `signalSlots`
 - popup row counts are derived from signal metadata
 - slot ordering for drawing is derived from `slotOrder` plus selectors
+- global hold is derived from the display-composed traces, not stored in the snapshot or DSP transport
 
 ## Triple Buffer Boundary
 

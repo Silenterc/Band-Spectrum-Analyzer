@@ -9,7 +9,7 @@
 #include "../model/AnalyzerMeterTuning.h"
 
 /**
- * Converts raw engine measurements into display-rate RMS, peak, and hold values
+ * Converts raw engine measurements into display-rate RMS and peak values
  */
 class AnalyzerMeter final {
 public:
@@ -59,10 +59,6 @@ private:
         std::vector<float> rmsDb;
         // Displayed peak values after linear dB/s decay
         std::vector<float> peakDb;
-        // Displayed hold values
-        std::vector<float> holdDb;
-        // Hold timers in milliseconds
-        std::vector<float> holdTimeRemainingMs;
         // Rectangular RMS averaging state per band
         std::vector<RmsWindowState> rmsWindows;
     };

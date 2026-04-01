@@ -58,14 +58,6 @@ void AnalyzerHoverOverlayComponent::drawHoveredBars(juce::Graphics &g) const {
                 g.fillRect(rmsBounds);
         }
 
-        if (bar.holdDb > gridMinDb) {
-            g.setColour(traceBar.lineColour);
-            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), bar.holdY - 1.0f,
-                                                           bar.bandBounds.getWidth(), 2.0f)
-                                        .getSmallestIntegerContainer();
-            if (!lineBounds.isEmpty())
-                g.fillRect(lineBounds);
-        }
     }
 }
 
@@ -100,7 +92,6 @@ void AnalyzerHoverOverlayComponent::rebuildHoveredTraceBars(const std::vector<An
         HoverTraceBarVisual traceBar;
         traceBar.peakColour = traceVisual.colour.brighter(0.18f);
         traceBar.rmsColour = traceBar.peakColour.withMultipliedAlpha(0.45f);
-        traceBar.lineColour = Ui::makeHoldIndicatorColour(traceBar.peakColour, theme);
         traceBar.bar = traceVisual.bars[hoverInfo->bandIndex];
         hoveredTraceBars.push_back(std::move(traceBar));
     }

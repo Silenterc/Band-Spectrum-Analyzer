@@ -13,8 +13,6 @@ namespace Analyzer {
         std::vector<float> rmsDb;
         // Peak level per band in dB
         std::vector<float> peakDb;
-        // Peak hold level per band in dB
-        std::vector<float> holdDb;
     };
 
     /**
@@ -45,9 +43,9 @@ namespace Analyzer {
         bool showRms = true;
         // Whether peak caps should be shown
         bool showPeak = true;
-        // Whether hold markers should be shown
+        // Whether the global hold overlay should be shown
         bool showHold = false;
-        // How long hold markers stay pinned before they start falling
+        // How long the global hold overlay stays pinned before it starts falling
         float holdMs = 0.0f;
     };
 }

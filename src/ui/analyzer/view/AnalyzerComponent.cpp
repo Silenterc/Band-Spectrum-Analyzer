@@ -37,9 +37,14 @@ AnalyzerComponent::AnalyzerComponent(AnalyzerRenderSource &renderSourceToUse,
     snapshotSource.addAnalyzerUiSnapshotListener(*this);
     bandInfo = renderSource.getBandInfo();
     rawTraces = renderSource.getRawTraces();
-    // Prime the meter so the first paint already has render-ready values
+    // Prime the meter so the first paint already has render-ready peak and RMS values.
     displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, Ui::AnalyzerConstants::meterPollIntervalSeconds);
     renderData = composeDisplayRenderData(displayMeter.getRenderData());
+    globalHoldModel.tick(renderData,
+                         uiSnapshot.signalSlots,
+                         uiSnapshot.meterSettings,
+                         uiSnapshot.gridMinDb,
+                         Ui::AnalyzerConstants::meterPollIntervalSeconds);
     lastPaintedRenderData = renderData;
     refreshModel.prime(uiSnapshot);
     rebuildViewModels();
@@ -52,12 +57,14 @@ AnalyzerComponent::~AnalyzerComponent() {
 
 void AnalyzerComponent::paint(juce::Graphics &g) {
     if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData)) {
+        globalHoldModel.tick(renderData, uiSnapshot.signalSlots, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, 0.0f);
         rebuildViewModels();
     }
 
     ensureStaticLayer();
     g.drawImageAt(staticLayer, 0, 0);
     drawBars(g);
+    drawGlobalHold(g);
 
     lastPaintedRenderData = renderData;
 }
@@ -126,7 +133,6 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
     for (const auto &traceVisual: viewModel.getTraceVisuals()) {
         const auto peakColour = traceVisual.colour;
         const auto rmsColour = peakColour.withMultipliedAlpha(0.45f);
-        const auto lineColour = Ui::makeHoldIndicatorColour(peakColour, theme);
 
         g.setColour(peakColour);
         for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
@@ -149,22 +155,50 @@ void AnalyzerComponent::drawBars(juce::Graphics &g) const {
             if (!rmsBounds.isEmpty())
                 g.fillRect(rmsBounds);
         }
+    }
+}
 
-        g.setColour(lineColour);
-        for (size_t bandIndex = 0; bandIndex < traceVisual.bars.size(); ++bandIndex) {
-            const auto &bar = traceVisual.bars[bandIndex];
-            if (!bar.bandBounds.intersects(clipBounds))
-                continue;
+void AnalyzerComponent::drawGlobalHold(juce::Graphics &g) const {
+    const auto clipBounds = g.getClipBounds().toFloat();
+    const auto globalHoldFrame = globalHoldModel.getFrame();
+    if (!globalHoldFrame.has_value())
+        return;
 
-            if (bar.holdDb <= viewModel.getGridMinDb())
-                continue;
+    const auto plotBounds = viewModel.getPlotBounds();
+    const AnalyzerGeometry geometry(theme);
 
-            const auto lineBounds = juce::Rectangle<float>(bar.bandBounds.getX(), bar.holdY - 1.0f,
-                                                           bar.bandBounds.getWidth(), 2.0f).getSmallestIntegerContainer();
-            if (!lineBounds.isEmpty())
-                g.fillRect(lineBounds);
+    for (size_t bandIndex = 0; bandIndex < globalHoldFrame->holdDb.size(); ++bandIndex) {
+        const auto bandBounds = viewModel.getBandBounds(bandIndex);
+        if (!bandBounds.has_value())
+            continue;
+
+        const auto holdDb = globalHoldFrame->holdDb[bandIndex];
+        if (!bandBounds->intersects(clipBounds) || holdDb <= viewModel.getGridMinDb())
+            continue;
+
+        const auto holdY = geometry.yForDb(holdDb, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, plotBounds);
+        const auto lineBounds = juce::Rectangle<float>(bandBounds->getX(), holdY - 1.0f,
+                                                       bandBounds->getWidth(), 2.0f).getSmallestIntegerContainer();
+        if (!lineBounds.isEmpty())
+            g.setColour(getGlobalHoldColour(bandIndex < globalHoldFrame->ownerKinds.size()
+                                                ? globalHoldFrame->ownerKinds[bandIndex]
+                                                : std::nullopt));
+        if (!lineBounds.isEmpty())
+            g.fillRect(lineBounds);
+    }
+}
+
+juce::Colour AnalyzerComponent::getGlobalHoldColour(const std::optional<Analyzer::TraceKind> &ownerKind) const {
+    juce::Colour baseColour = juce::Colours::white;
+
+    if (ownerKind.has_value()) {
+        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(*ownerKind); slotIndex.has_value()) {
+            const auto &slot = uiSnapshot.signalSlots[*slotIndex];
+            baseColour = Ui::getSignalPresetColour(slot.colourIndex).withAlpha(slot.opacity);
         }
     }
+
+    return Ui::makeHoldIndicatorColour(baseColour, theme);
 }
 
 void AnalyzerComponent::syncFrozenSlotCache(
@@ -262,8 +296,7 @@ std::optional<Analyzer::RenderTrace> AnalyzerComponent::findTrace(const Analyzer
 
 bool AnalyzerComponent::isTraceCompatible(const Analyzer::RenderTrace &trace, const size_t bandCount) {
     return trace.frame.rmsDb.size() == bandCount
-           && trace.frame.peakDb.size() == bandCount
-           && trace.frame.holdDb.size() == bandCount;
+           && trace.frame.peakDb.size() == bandCount;
 }
 
 void AnalyzerComponent::rebuildViewModels() {
@@ -349,9 +382,11 @@ void AnalyzerComponent::ensureStaticLayer() {
 void AnalyzerComponent::timerCallback() {
     processPendingHoverUpdate();
 
-    const auto refreshDecision = refreshModel.makeTimerDecision(renderSource, bandInfo, displayMeter, uiSnapshot);
-    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData))
+    const auto refreshDecision = refreshModel.makeTimerDecision(renderSource, bandInfo, displayMeter, globalHoldModel, uiSnapshot);
+    if (refreshModel.syncFreezeEdge(uiSnapshot, renderData, lastPaintedRenderData)) {
+        globalHoldModel.tick(renderData, uiSnapshot.signalSlots, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, 0.0f);
         rebuildViewModels();
+    }
     if (refreshDecision.pollingIntervalChanged)
         startTimer(refreshDecision.pollIntervalMs);
 
@@ -364,11 +399,16 @@ void AnalyzerComponent::timerCallback() {
 
         if (refreshDecision.shouldAdvanceDisplay || refreshDecision.bandLayoutChanged) {
             rawTraces = renderSource.getRawTraces();
-            // Raw DSP measurements become render-ready RMS, peak, and hold values here
+            // Raw DSP measurements become render-ready RMS and peak values here.
             displayMeter.tick(bandInfo, rawTraces, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, refreshDecision.dtSeconds);
         }
 
         renderData = composeDisplayRenderData(displayMeter.getRenderData());
+        globalHoldModel.tick(renderData,
+                             uiSnapshot.signalSlots,
+                             uiSnapshot.meterSettings,
+                             uiSnapshot.gridMinDb,
+                             refreshDecision.dtSeconds);
     } else {
         bandInfo = refreshDecision.nextBandInfo;
     }
@@ -400,6 +440,7 @@ void AnalyzerComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &
         renderData = composeDisplayRenderData(displayMeter.getRenderData());
     }
 
+    globalHoldModel.tick(renderData, uiSnapshot.signalSlots, uiSnapshot.meterSettings, uiSnapshot.gridMinDb, 0.0f);
     rebuildViewModels();
     repaint();
 }

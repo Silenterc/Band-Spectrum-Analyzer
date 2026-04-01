@@ -9,6 +9,7 @@
 #include "../AnalyzerUiConstants.h"
 #include "AnalyzerUiSnapshot.h"
 #include "../helpers/AnalyzerMeter.h"
+#include "AnalyzerGlobalHoldModel.h"
 
 namespace Ui {
     struct AnalyzerRefreshDecision {
@@ -32,6 +33,7 @@ namespace Ui {
         AnalyzerRefreshDecision makeTimerDecision(const AnalyzerRenderSource &renderSource,
                                                   const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &currentBandInfo,
                                                   const AnalyzerMeter &displayMeter,
+                                                  const AnalyzerGlobalHoldModel &globalHoldModel,
                                                   const AnalyzerUiSnapshot &snapshot);
 
     private:

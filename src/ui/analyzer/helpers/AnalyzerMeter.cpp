@@ -25,7 +25,6 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
         renderTrace.kind = trace.kind;
         renderTrace.frame.rmsDb.resize(renderData.bandInfo.size());
         renderTrace.frame.peakDb.resize(renderData.bandInfo.size());
-        renderTrace.frame.holdDb.resize(renderData.bandInfo.size());
 
         for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
             const auto &measurements = trace.measurements[bandIndex];
@@ -43,28 +42,8 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                 traceState.peakDb[bandIndex] - Ui::analyzerMeterTuning.peakDecayDbPerSecond * dtSeconds,
                 peakInputDb);
 
-            if (traceState.peakDb[bandIndex] >= traceState.holdDb[bandIndex]) {
-                traceState.holdDb[bandIndex] = traceState.peakDb[bandIndex];
-                traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
-            } else if (traceState.peakDb[bandIndex] > floorDb
-                       && traceState.peakDb[bandIndex]
-                              >= traceState.holdDb[bandIndex] - Ui::analyzerMeterTuning.holdResetToleranceDb) {
-                // Peaks within the tolerance keep the hold alive without lowering the held value.
-                traceState.holdTimeRemainingMs[bandIndex] = meterSettings.holdMs;
-            } else if (traceState.holdTimeRemainingMs[bandIndex] > 0.0f) {
-                // Hold stays pinned until its timer runs out
-                traceState.holdTimeRemainingMs[bandIndex] =
-                    std::max(0.0f, traceState.holdTimeRemainingMs[bandIndex] - dtSeconds * 1000.0f);
-            } else {
-                // After the hold time expires it falls with its own linear dB per second rate
-                traceState.holdDb[bandIndex] = std::max(
-                    traceState.peakDb[bandIndex],
-                    traceState.holdDb[bandIndex] - Ui::analyzerMeterTuning.holdDecayDbPerSecond * dtSeconds);
-            }
-
             renderTrace.frame.rmsDb[bandIndex] = meterSettings.showRms ? traceState.rmsDb[bandIndex] : floorDb;
             renderTrace.frame.peakDb[bandIndex] = meterSettings.showPeak ? traceState.peakDb[bandIndex] : floorDb;
-            renderTrace.frame.holdDb[bandIndex] = meterSettings.showHold ? traceState.holdDb[bandIndex] : floorDb;
         }
 
         renderData.traces.push_back(std::move(renderTrace));
@@ -83,11 +62,6 @@ bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
         }
 
         for (const auto value: trace.frame.peakDb) {
-            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
-                return false;
-        }
-
-        for (const auto value: trace.frame.holdDb) {
             if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
@@ -114,8 +88,6 @@ void AnalyzerMeter::ensureTraceState(Analyzer::TraceKind kind, size_t bandCount,
 
     traceState.rmsDb.assign(bandCount, floorDb);
     traceState.peakDb.assign(bandCount, floorDb);
-    traceState.holdDb.assign(bandCount, floorDb);
-    traceState.holdTimeRemainingMs.assign(bandCount, 0.0f);
     traceState.rmsWindows.assign(bandCount, {});
 }
 

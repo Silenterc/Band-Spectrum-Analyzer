@@ -190,28 +190,6 @@ namespace {
         REQUIRE(std::abs(strongestBandIndex - nearestBandIndex) <= 2);
     }
 
-    void requireHeldPeakStaysPinnedForOneSilentBlock(AnalyzerMeter &displayMeter, Analyzer::Engine &engine,
-                                                     const TestParameters &parameters, int channels,
-                                                     float frequencyHz) {
-        const auto meterDataBeforeSilence = buildMeterData(displayMeter, engine, parameters);
-        const auto &bandInfo = meterDataBeforeSilence.bandInfo;
-        const auto &heldFrameBeforeSilence = meterDataBeforeSilence.traces.front().frame;
-        const auto strongestHoldBandIndex = getStrongestBandIndex(heldFrameBeforeSilence.holdDb);
-        const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
-        const auto heldPeakBeforeSilence = heldFrameBeforeSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)];
-
-        REQUIRE(std::abs(strongestHoldBandIndex - nearestBandIndex) <= 2);
-        REQUIRE(heldPeakBeforeSilence > parameters.gridMinDb + 1.0f);
-
-        processSilenceBlocks(engine, channels, 1);
-
-        const auto meterDataAfterSilence = buildMeterData(displayMeter, engine, parameters,
-                                                              static_cast<float>(blockSize) / static_cast<float>(sampleRate));
-        const auto &heldFrameAfterSilence = meterDataAfterSilence.traces.front().frame;
-        constexpr float tolerance = 0.0001f;
-        REQUIRE(std::abs(heldFrameAfterSilence.holdDb[static_cast<size_t>(strongestHoldBandIndex)] - heldPeakBeforeSilence) < tolerance);
-    }
-
     Analyzer::RenderData tickMeter(AnalyzerMeter &displayMeter,
                                    const std::vector<Analyzer::BandInfo> &bandInfo,
                                    const std::vector<Analyzer::RawTrace> &traces,
@@ -236,7 +214,6 @@ TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
     REQUIRE(meterData.bandInfo.size() == 60);
     REQUIRE(meterData.traces.front().frame.rmsDb.size() == 60);
     REQUIRE(meterData.traces.front().frame.peakDb.size() == 60);
-    REQUIRE(meterData.traces.front().frame.holdDb.size() == 60);
 }
 
 TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
@@ -497,32 +474,6 @@ TEST_CASE("AnalyzerEngine 44.1 kHz 60-band centers keep consistent raw peak leve
             (*bandInfo)[maxPeakIndex].centerHz);
 
     REQUIRE(peakSpreadDb <= allowedSpreadDb);
-}
-
-TEST_CASE("AnalyzerEngine hold keeps a low sine wave pinned after it stops") {
-    Analyzer::Engine engine;
-    AnalyzerMeter displayMeter;
-    auto parameters = makeDefaultParameters();
-    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
-    parameters.showHold = true;
-
-    prepareEngine(engine, parameters);
-    processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
-
-    requireHeldPeakStaysPinnedForOneSilentBlock(displayMeter, engine, parameters, 1, lowSineHz);
-}
-
-TEST_CASE("AnalyzerEngine hold keeps a high sine wave pinned after it stops") {
-    Analyzer::Engine engine;
-    AnalyzerMeter displayMeter;
-    auto parameters = makeDefaultParameters();
-    setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
-    parameters.showHold = true;
-
-    prepareEngine(engine, parameters);
-    processSineBlocks(engine, 1, {highSineHz}, {1.0f});
-
-    requireHeldPeakStaysPinnedForOneSilentBlock(displayMeter, engine, parameters, 1, highSineHz);
 }
 
 TEST_CASE("AnalyzerMeter RMS release stays aligned with peak decay") {

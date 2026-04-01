@@ -25,6 +25,7 @@ namespace Ui {
         const AnalyzerRenderSource &renderSource,
         const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &currentBandInfo,
         const AnalyzerMeter &displayMeter,
+        const AnalyzerGlobalHoldModel &globalHoldModel,
         const AnalyzerUiSnapshot &snapshot) {
         AnalyzerRefreshDecision decision;
         const auto currentPollTimeMs = juce::Time::getMillisecondCounterHiRes();
@@ -42,7 +43,9 @@ namespace Ui {
             return decision;
         }
 
-        decision.shouldAdvanceDisplay = renderSource.hasRecentSignal() || !displayMeter.isSettledAtFloor(snapshot.gridMinDb);
+        decision.shouldAdvanceDisplay = renderSource.hasRecentSignal()
+                                        || !displayMeter.isSettledAtFloor(snapshot.gridMinDb)
+                                        || !globalHoldModel.isSettledAtFloor(snapshot.gridMinDb);
         const auto shouldUseIdlePolling = !decision.shouldAdvanceDisplay;
         if (isIdlePolling != shouldUseIdlePolling) {
             isIdlePolling = shouldUseIdlePolling;

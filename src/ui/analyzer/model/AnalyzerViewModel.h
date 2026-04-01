@@ -50,14 +50,10 @@ struct AnalyzerBarModel {
     juce::Rectangle<float> rmsBounds;
     // Y position for the peak cap
     float peakY = 0.0f;
-    // Y position for the hold line when hold is enabled
-    float holdY = 0.0f;
     // Current RMS level for that bar
     float rmsDb = 0.0f;
     // Current peak level for that bar
     float peakDb = 0.0f;
-    // Current hold level for that bar
-    float holdDb = 0.0f;
 };
 
 /**
@@ -143,7 +139,6 @@ private:
     void updateBandBounds(size_t bandCount);
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
-    static float getHoldDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     void updateVisibleFrequencyRange(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState);
 
     const Ui::Theme &theme;

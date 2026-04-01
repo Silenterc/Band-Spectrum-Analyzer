@@ -61,9 +61,7 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
             barModel.bandBounds = bandBounds[bandIndex];
             barModel.rmsDb = getRmsDb(bandIndex, trace->frame, gridMinDb);
             barModel.peakDb = getPeakDb(bandIndex, trace->frame, gridMinDb);
-            barModel.holdDb = getHoldDb(bandIndex, trace->frame, gridMinDb);
             barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
-            barModel.holdY = geometry.yForDb(barModel.holdDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.peakBounds = {barModel.bandBounds.getX(), barModel.peakY,
                                    barModel.bandBounds.getWidth(), plotBottom - barModel.peakY};
             const auto rmsY = geometry.yForDb(barModel.rmsDb, gridMinDb, gridMaxDb, plotBounds);
@@ -171,13 +169,6 @@ float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::RenderFrame
         return gridMinDb;
 
     return renderFrame.peakDb[bandIndex];
-}
-
-float AnalyzerViewModel::getHoldDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
-    if (bandIndex >= renderFrame.holdDb.size())
-        return gridMinDb;
-
-    return renderFrame.holdDb[bandIndex];
 }
 
 void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &renderData,

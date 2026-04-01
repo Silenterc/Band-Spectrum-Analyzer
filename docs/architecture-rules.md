@@ -31,6 +31,7 @@
 - Do not introduce parallel snapshot structs for the same state.
 - Views may cache the latest published snapshot for rendering, but may not keep competing writable business-state copies.
 - If state can be derived from the snapshot, do not store it as separate mutable state.
+- Cross-trace analyzer overlays derived from what is currently drawn must live in analyzer model/view-model logic, not in the snapshot.
 
 ## UI Structure
 
@@ -58,6 +59,7 @@
 - Popup, tooltip, axis, button, slot, and divider geometry/styling must come from owned config/theme tokens.
 - Analyzer-specific presentation config must live under analyzer-owned modules or analyzer-owned theme sections, not generic shared UI buckets.
 - Shared UI modules must not accumulate analyzer-only policy.
+- Do not model analyzer overlays such as global hold as fake traces just to reuse slot/trace plumbing.
 
 ## Action Rules
 

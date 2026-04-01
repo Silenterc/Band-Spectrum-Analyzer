@@ -64,6 +64,7 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/view/SignalSlotSwatchButton.cpp
         ui/analyzer/popups/SignalColourPopupContent.cpp
         ui/analyzer/popups/SignalSelectionPopupContent.cpp
+        ui/analyzer/model/AnalyzerGlobalHoldModel.cpp
         ui/analyzer/model/AnalyzerRefreshModel.cpp
         ui/analyzer/model/AnalyzerViewModel.cpp
         ui/analyzer/model/SignalSlotOrderModel.cpp

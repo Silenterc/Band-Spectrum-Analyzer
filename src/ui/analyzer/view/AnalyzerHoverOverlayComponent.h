@@ -23,7 +23,6 @@ private:
     struct HoverTraceBarVisual {
         juce::Colour peakColour;
         juce::Colour rmsColour;
-        juce::Colour lineColour;
         AnalyzerBarModel bar;
     };
 

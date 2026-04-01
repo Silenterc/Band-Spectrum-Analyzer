@@ -14,6 +14,7 @@
 #include "../AnalyzerRenderData.h"
 #include "../AnalyzerViewState.h"
 #include "../helpers/AnalyzerMeter.h"
+#include "../model/AnalyzerGlobalHoldModel.h"
 #include "../model/AnalyzerRefreshModel.h"
 #include "../model/AnalyzerViewModel.h"
 #include "AnalyzerHoverOverlayComponent.h"
@@ -65,6 +66,12 @@ private:
      */
     void drawBars(juce::Graphics &g) const;
 
+    /**
+     * Draws the one global hold overlay derived from the currently drawn traces
+     */
+    void drawGlobalHold(juce::Graphics &g) const;
+    juce::Colour getGlobalHoldColour(const std::optional<Analyzer::TraceKind> &ownerKind) const;
+
     void syncFrozenSlotCache(const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &previousSignalSlots);
     Analyzer::RenderData composeDisplayRenderData(const Analyzer::RenderData &liveRenderData);
     void captureFrozenTrace(size_t slotIndex, const Analyzer::RenderData &sourceRenderData);
@@ -114,6 +121,8 @@ private:
     std::vector<Analyzer::RawTrace> rawTraces;
     // Display-rate meter processor
     AnalyzerMeter displayMeter;
+    // One global hold overlay derived from the display-composed traces
+    AnalyzerGlobalHoldModel globalHoldModel;
     // Latest meter-processed data
     Analyzer::RenderData renderData;
     // Last render data that was actually painted to screen
