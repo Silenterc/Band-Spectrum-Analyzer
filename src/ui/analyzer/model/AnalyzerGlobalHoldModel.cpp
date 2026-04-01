@@ -72,8 +72,11 @@ void AnalyzerGlobalHoldModel::tick(const Analyzer::RenderData &renderData,
             heldDb = decayedDb;
         }
 
-        if (heldDb <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb && !strongestOwnerKind.has_value())
+        if (heldDb <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb && !strongestOwnerKind.has_value()) {
+            heldDb = floorDb;
+            holdTimeMs = 0.0f;
             ownerKind.reset();
+        }
     }
 }
 

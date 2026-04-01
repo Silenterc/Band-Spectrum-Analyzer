@@ -282,3 +282,31 @@ TEST_CASE("Global hold decays after hold time elapses", "[ui][global-hold]") {
             == Catch::Approx(-0.250f * Ui::analyzerMeterTuning.holdDecayDbPerSecond));
     REQUIRE(holdModel.getFrame()->ownerKinds[0] == Analyzer::TraceKind::slot1);
 }
+
+TEST_CASE("Global hold snaps exactly to the floor once it settles", "[ui][global-hold]") {
+    AnalyzerGlobalHoldModel holdModel;
+    Analyzer::MeterSettings meterSettings;
+    meterSettings.showHold = true;
+    meterSettings.holdMs = 0.0f;
+
+    const auto signalSlots = makeVisibleSignalSlots();
+    const auto floorDb = -50.0f;
+
+    holdModel.tick(makeRenderData({{Analyzer::TraceKind::slot1, -49.95f}}),
+                   signalSlots,
+                   meterSettings,
+                   floorDb,
+                   0.016f);
+    REQUIRE(holdModel.getFrame().has_value());
+    REQUIRE(holdModel.getFrame()->holdDb[0] == Catch::Approx(-49.95f));
+
+    holdModel.tick(makeRenderData({}),
+                   signalSlots,
+                   meterSettings,
+                   floorDb,
+                   0.250f);
+
+    REQUIRE(holdModel.getFrame()->holdDb[0] == Catch::Approx(floorDb));
+    REQUIRE_FALSE(holdModel.getFrame()->ownerKinds[0].has_value());
+    REQUIRE(holdModel.isSettledAtFloor(floorDb));
+}
