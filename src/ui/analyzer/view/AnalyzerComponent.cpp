@@ -166,22 +166,22 @@ void AnalyzerComponent::drawGlobalHold(juce::Graphics &g) const {
 
     const auto plotBounds = viewModel.getPlotBounds();
     const AnalyzerGeometry geometry(theme);
+    const auto &visibleBands = viewModel.getVisibleBands();
 
-    for (size_t bandIndex = 0; bandIndex < globalHoldFrame->holdDb.size(); ++bandIndex) {
-        const auto bandBounds = viewModel.getBandBounds(bandIndex);
-        if (!bandBounds.has_value())
+    for (const auto &visibleBand: visibleBands) {
+        if (visibleBand.sourceBandIndex >= globalHoldFrame->holdDb.size())
             continue;
 
-        const auto holdDb = globalHoldFrame->holdDb[bandIndex];
-        if (!bandBounds->intersects(clipBounds) || holdDb <= viewModel.getGridMinDb())
+        const auto holdDb = globalHoldFrame->holdDb[visibleBand.sourceBandIndex];
+        if (!visibleBand.drawBounds.intersects(clipBounds) || holdDb <= viewModel.getGridMinDb())
             continue;
 
         const auto holdY = geometry.yForDb(holdDb, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, plotBounds);
-        const auto lineBounds = juce::Rectangle<float>(bandBounds->getX(), holdY - 1.0f,
-                                                       bandBounds->getWidth(), 2.0f).getSmallestIntegerContainer();
+        const auto lineBounds = juce::Rectangle<float>(visibleBand.drawBounds.getX(), holdY - 1.0f,
+                                                       visibleBand.drawBounds.getWidth(), 2.0f).getSmallestIntegerContainer();
         if (!lineBounds.isEmpty())
-            g.setColour(getGlobalHoldColour(bandIndex < globalHoldFrame->ownerKinds.size()
-                                                ? globalHoldFrame->ownerKinds[bandIndex]
+            g.setColour(getGlobalHoldColour(visibleBand.sourceBandIndex < globalHoldFrame->ownerKinds.size()
+                                                ? globalHoldFrame->ownerKinds[visibleBand.sourceBandIndex]
                                                 : std::nullopt));
         if (!lineBounds.isEmpty())
             g.fillRect(lineBounds);
@@ -336,10 +336,13 @@ void AnalyzerComponent::rebuildDynamicViewModel() {
 }
 
 void AnalyzerComponent::updateHoverState() {
-    viewModel.updateHover(renderData, uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, getLocalBounds().toFloat(), hoverPosition);
+    viewModel.updateHover(uiSnapshot.gridMinDb, uiSnapshot.gridMaxDb, getLocalBounds().toFloat(), hoverPosition);
     std::optional<juce::Rectangle<float>> hoveredBandBounds;
-    if (const auto &hoverInfo = viewModel.getHoverInfo(); hoverInfo.has_value())
-        hoveredBandBounds = viewModel.getBandBounds(hoverInfo->bandIndex);
+    if (const auto &hoverInfo = viewModel.getHoverInfo(); hoverInfo.has_value()) {
+        const auto &visibleBands = viewModel.getVisibleBands();
+        if (hoverInfo->bandIndex < visibleBands.size())
+            hoveredBandBounds = visibleBands[hoverInfo->bandIndex].drawBounds;
+    }
 
     hoverOverlay.updateState(viewModel.getHoverInfo(),
                              viewModel.getTraceVisuals(),

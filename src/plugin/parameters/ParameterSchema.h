@@ -49,10 +49,11 @@ namespace PluginParameters::Schema {
     inline constexpr auto gridMaxDbId = "gridMaxDb";
     inline constexpr auto gridStepDbId = "gridStepDb";
 
-    inline constexpr std::array<EnumChoice<Analyzer::BandMode>, 3> bandModeChoices{{
-        {Analyzer::BandMode::bands30, "30 Bands"},
-        {Analyzer::BandMode::bands45, "45 Bands"},
-        {Analyzer::BandMode::bands60, "60 Bands"}
+    inline constexpr std::array<EnumChoice<Analyzer::BandMode>, 4> bandModeChoices{{
+        {Analyzer::BandMode::octaveThird, "1/3 Oct"},
+        {Analyzer::BandMode::octaveQuarter, "1/4 Oct"},
+        {Analyzer::BandMode::octaveSixth, "1/6 Oct"},
+        {Analyzer::BandMode::octaveTwelfth, "1/12 Oct"}
     }};
 
     inline constexpr std::array<EnumChoice<Analyzer::SignalSource>, 2> signalSourceChoices{{

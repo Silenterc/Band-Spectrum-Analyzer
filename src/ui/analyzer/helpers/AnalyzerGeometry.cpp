@@ -60,65 +60,25 @@ float AnalyzerGeometry::dbForY(float y, float minDb, float maxDb,
     return juce::jmap(normalised, 0.0f, 1.0f, minDb, maxDb);
 }
 
-juce::Rectangle<float> AnalyzerGeometry::getBandDrawBounds(const size_t bandIndex,
-                                                           const size_t bandCount,
-                                                           const juce::Rectangle<float> &plotBounds) const {
-    if (bandCount == 0 || bandIndex >= bandCount)
-        return {};
-
-    const auto plotBoundsInt = plotBounds.getSmallestIntegerContainer();
-    const auto interBandGapPixels = theme.metrics.analyzerPlot.interBandGapPixels;
-    const auto totalGapWidth = juce::jmax(0, static_cast<int>(bandCount - 1)) * interBandGapPixels;
-    const auto availableBarWidth = juce::jmax(0, plotBoundsInt.getWidth() - totalGapWidth);
-    const auto bandCountInt = static_cast<int>(bandCount);
-    const auto leftEdge = (static_cast<int>(bandIndex) * availableBarWidth) / bandCountInt;
-    const auto rightEdge = (static_cast<int>(bandIndex + 1) * availableBarWidth) / bandCountInt;
-    const auto x = plotBoundsInt.getX() + leftEdge + static_cast<int>(bandIndex) * interBandGapPixels;
-    const auto width = juce::jmax(0, rightEdge - leftEdge);
-    return juce::Rectangle<int>(x, plotBoundsInt.getY(), width, plotBoundsInt.getHeight()).toFloat();
-}
-
-juce::Rectangle<float> AnalyzerGeometry::getBandHitBounds(const size_t bandIndex,
-                                                          const size_t bandCount,
+juce::Rectangle<float> AnalyzerGeometry::getBandHitBounds(const float lowFrequencyHz,
+                                                          const float highFrequencyHz,
+                                                          const float visibleMinFrequencyHz,
+                                                          const float visibleMaxFrequencyHz,
                                                           const juce::Rectangle<float> &plotBounds) const {
-    if (bandCount == 0 || bandIndex >= bandCount)
+    if (visibleMinFrequencyHz <= 0.0f || visibleMaxFrequencyHz <= visibleMinFrequencyHz)
         return {};
 
-    const auto plotBoundsInt = plotBounds.getSmallestIntegerContainer();
-    const auto bandCountInt = static_cast<int>(bandCount);
-    const auto leftEdge = (static_cast<int>(bandIndex) * plotBoundsInt.getWidth()) / bandCountInt;
-    const auto rightEdge = (static_cast<int>(bandIndex + 1) * plotBoundsInt.getWidth()) / bandCountInt;
-    const auto width = juce::jmax(0, rightEdge - leftEdge);
-    return juce::Rectangle<int>(plotBoundsInt.getX() + leftEdge,
-                                plotBoundsInt.getY(),
-                                width,
-                                plotBoundsInt.getHeight()).toFloat();
-}
-
-std::optional<size_t> AnalyzerGeometry::bandIndexAt(juce::Point<float> position, size_t bandCount,
-                                                    const juce::Rectangle<float> &plotBounds) const {
-    if (bandCount == 0 || !plotBounds.contains(position))
-        return std::nullopt;
-
-    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
-        if (getBandHitBounds(bandIndex, bandCount, plotBounds).contains(position))
-            return bandIndex;
-    }
-
-    return std::nullopt;
-}
-
-juce::Rectangle<float> AnalyzerGeometry::getBarBounds(size_t bandIndex, size_t bandCount, float displayedDb, float minDb,
-                                                      float maxDb, const juce::Rectangle<float> &plotBounds) const {
-    if (bandCount == 0)
+    const auto clampedLowHz = juce::jlimit(visibleMinFrequencyHz, visibleMaxFrequencyHz, lowFrequencyHz);
+    const auto clampedHighHz = juce::jlimit(visibleMinFrequencyHz, visibleMaxFrequencyHz, highFrequencyHz);
+    if (clampedHighHz <= clampedLowHz)
         return {};
 
-    const auto bandDrawBounds = getBandDrawBounds(bandIndex, bandCount, plotBounds);
-    if (bandDrawBounds.isEmpty())
+    const auto leftX = xForFrequency(clampedLowHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
+    const auto rightX = xForFrequency(clampedHighHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
+    if (rightX <= leftX)
         return {};
 
-    const auto y = yForDb(displayedDb, minDb, maxDb, plotBounds);
-    return {bandDrawBounds.getX(), y, bandDrawBounds.getWidth(), plotBounds.getBottom() - y};
+    return {leftX, plotBounds.getY(), rightX - leftX, plotBounds.getHeight()};
 }
 
 juce::Rectangle<float> AnalyzerGeometry::getTooltipBounds(juce::Point<float> hoverPosition,

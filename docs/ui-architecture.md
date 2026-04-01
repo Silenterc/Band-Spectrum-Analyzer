@@ -48,6 +48,7 @@ Rules:
 - it stays pull-based
 - it stays separate from UI snapshot publication
 - the triple buffer remains the transport for raw traces from DSP to UI
+- band layout remains DSP-owned; the UI consumes the published `bandInfo` as-is, including its dynamic count for the active fractional-octave mode, note anchor, and sample-rate span
 
 ### 2. UI Snapshot Channel
 

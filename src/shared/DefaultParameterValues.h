@@ -5,7 +5,7 @@
 
 namespace Defaults {
     // Global analyzer parameter defaults
-    inline constexpr Analyzer::BandMode bandMode = Analyzer::BandMode::bands45;
+    inline constexpr Analyzer::BandMode bandMode = Analyzer::BandMode::octaveSixth;
 
     inline constexpr bool showRms = false;
     inline constexpr bool showPeak = true;

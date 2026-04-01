@@ -202,6 +202,7 @@ flowchart LR
 ## 9. FilterBank Notes
 
 - Coefficients are derived from the current `BandInfo` layout using cookbook band-pass equations.
+- `BandInfo` is rebuilt from the active sample-rate span using the selected classical fractional-octave mode (`1/3`, `1/4`, `1/6`, or `1/12` octave), anchored to the equal-tempered note `E0 = 20.601722307 Hz`, and only full bands inside the active span are emitted.
 - One `SIMDBPFilter` instance owns one SIMD group's worth of independent filter lanes and runs two identical biquad stages in series internally.
 - `singleLane` mode uses only `primaryFilters`.
 - `stereoAverage` mode runs matching primary and secondary filter banks and stores averaged stereo power.
@@ -243,6 +244,7 @@ flowchart TD
 - `mid`, `side`, and `stereo` are implemented for both main input and sidechain input.
 - Sidechain bus support is implemented in the processor and source builder.
 - DSP publishes fixed-size analyzer frames (`2048` samples) with a `1024`-sample hop, not one snapshot per host block.
+- Analyzer resolution is selected as a classical fractional-octave mode anchored to `E0`, and the total band count is derived from the active frequency span instead of fixed `30 / 45 / 60` counts.
 - The analyzer UI supports up to `4` signal slots, each with:
   - enabled state
   - visibility

@@ -5,6 +5,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "dsp/core/AnalyzerConstants.h"
 #include "dsp/core/AnalyzerEngine.h"
 #include "shared/DefaultParameterValues.h"
 #include "ui/analyzer/AnalyzerUiConstants.h"
@@ -36,11 +37,82 @@ namespace {
 
     TestParameters makeDefaultParameters() {
         TestParameters parameters;
-        parameters.engineParameters.bandMode = Analyzer::BandMode::bands45;
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
         parameters.engineParameters.signalSlots[0].enabled = true;
         parameters.engineParameters.signalSlots[0].source = Analyzer::SignalSource::main;
         parameters.engineParameters.signalSlots[0].mode = Analyzer::SignalMode::mid;
         return parameters;
+    }
+
+    int getBandsPerOctave(const Analyzer::BandMode bandMode) {
+        switch (bandMode) {
+            case Analyzer::BandMode::octaveThird:
+                return 3;
+            case Analyzer::BandMode::octaveQuarter:
+                return 4;
+            case Analyzer::BandMode::octaveSixth:
+                return 6;
+            case Analyzer::BandMode::octaveTwelfth:
+                return 12;
+        }
+
+        return 6;
+    }
+
+    double getMaxAnalysisFrequencyHz(const double sampleRateToUse) {
+        return std::max(sampleRateToUse * 0.5 * static_cast<double>(Analyzer::Constants::maxAnalysisFractionOfNyquist),
+                        static_cast<double>(Analyzer::Constants::minFrequencyHz * 2.0f));
+    }
+
+    size_t getExpectedBandCount(const double sampleRateToUse, const Analyzer::BandMode bandMode) {
+        const auto centerRatio = std::pow(2.0, 1.0 / static_cast<double>(getBandsPerOctave(bandMode)));
+        const auto edgeRatio = std::sqrt(centerRatio);
+        auto centerHz = Analyzer::Constants::equalTemperedAnchorHz;
+        const auto maxAnalysisFrequencyHz = getMaxAnalysisFrequencyHz(sampleRateToUse);
+
+        while (centerHz / edgeRatio < static_cast<double>(Analyzer::Constants::minFrequencyHz))
+            centerHz *= centerRatio;
+
+        while (true) {
+            const auto previousCenterHz = centerHz / centerRatio;
+            const auto previousLowHz = previousCenterHz / edgeRatio;
+            if (previousLowHz < static_cast<double>(Analyzer::Constants::minFrequencyHz))
+                break;
+
+            centerHz = previousCenterHz;
+        }
+
+        size_t bandCount = 0;
+        while (true) {
+            const auto highHz = centerHz * edgeRatio;
+            if (highHz > maxAnalysisFrequencyHz)
+                break;
+
+            ++bandCount;
+            centerHz *= centerRatio;
+        }
+
+        return bandCount;
+    }
+
+    double getExpectedFirstCenterHz(const Analyzer::BandMode bandMode) {
+        const auto centerRatio = std::pow(2.0, 1.0 / static_cast<double>(getBandsPerOctave(bandMode)));
+        const auto edgeRatio = std::sqrt(centerRatio);
+        auto centerHz = Analyzer::Constants::equalTemperedAnchorHz;
+
+        while (centerHz / edgeRatio < static_cast<double>(Analyzer::Constants::minFrequencyHz))
+            centerHz *= centerRatio;
+
+        while (true) {
+            const auto previousCenterHz = centerHz / centerRatio;
+            const auto previousLowHz = previousCenterHz / edgeRatio;
+            if (previousLowHz < static_cast<double>(Analyzer::Constants::minFrequencyHz))
+                break;
+
+            centerHz = previousCenterHz;
+        }
+
+        return centerHz;
     }
 
     void setPrimarySignal(TestParameters &parameters,
@@ -206,28 +278,63 @@ TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+
+    SECTION("1/3 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveThird;
+    }
+
+    SECTION("1/4 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveQuarter;
+    }
+
+    SECTION("1/6 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
+    }
+
+    SECTION("1/12 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveTwelfth;
+    }
 
     prepareEngine(engine, parameters);
 
     const auto meterData = buildMeterData(displayMeter, engine, parameters);
-    REQUIRE(meterData.bandInfo.size() == 60);
-    REQUIRE(meterData.traces.front().frame.rmsDb.size() == 60);
-    REQUIRE(meterData.traces.front().frame.peakDb.size() == 60);
+    const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
+    REQUIRE(meterData.bandInfo.size() == expectedBandCount);
+    REQUIRE(meterData.traces.front().frame.rmsDb.size() == expectedBandCount);
+    REQUIRE(meterData.traces.front().frame.peakDb.size() == expectedBandCount);
 }
 
 TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
     Analyzer::Engine engine;
-    const auto parameters = makeDefaultParameters();
+    auto parameters = makeDefaultParameters();
+
+    SECTION("1/3 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveThird;
+    }
+
+    SECTION("1/4 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveQuarter;
+    }
+
+    SECTION("1/6 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
+    }
+
+    SECTION("1/12 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveTwelfth;
+    }
 
     prepareEngine(engine, parameters);
 
     const auto bandInfo = engine.getBandInfo();
     constexpr float tolerance = 0.0001f;
+    const auto expectedRatio = std::pow(2.0f, 1.0f / static_cast<float>(getBandsPerOctave(parameters.engineParameters.bandMode)));
 
     REQUIRE(bandInfo->size() > 2);
-
-    const auto expectedRatio = (*bandInfo)[1].lowHz / (*bandInfo)[0].lowHz;
+    REQUIRE((*bandInfo).front().lowHz >= Analyzer::Constants::minFrequencyHz);
+    REQUIRE((*bandInfo).back().highHz <= getMaxAnalysisFrequencyHz(sampleRate) + tolerance);
+    REQUIRE(std::abs((*bandInfo).front().centerHz
+                     - static_cast<float>(getExpectedFirstCenterHz(parameters.engineParameters.bandMode))) < tolerance);
 
     for (size_t bandIndex = 0; bandIndex < bandInfo->size(); ++bandIndex) {
         const auto &band = (*bandInfo)[bandIndex];
@@ -238,9 +345,11 @@ TEST_CASE("AnalyzerEngine band layout is geometrically spaced") {
 
         if (bandIndex > 0) {
             const auto lowRatio = band.lowHz / (*bandInfo)[bandIndex - 1].lowHz;
+            const auto centerRatio = band.centerHz / (*bandInfo)[bandIndex - 1].centerHz;
             const auto highRatio = band.highHz / (*bandInfo)[bandIndex - 1].highHz;
 
             REQUIRE(std::abs(lowRatio - expectedRatio) < tolerance);
+            REQUIRE(std::abs(centerRatio - expectedRatio) < tolerance);
             REQUIRE(std::abs(highRatio - expectedRatio) < tolerance);
         }
     }
@@ -373,16 +482,20 @@ TEST_CASE("AnalyzerEngine raw filterbank peaks on the exact band center frequenc
     Analyzer::Engine engine;
     auto parameters = makeDefaultParameters();
 
-    SECTION("30 bands") {
-        parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
+    SECTION("1/3 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveThird;
     }
 
-    SECTION("45 bands") {
-        parameters.engineParameters.bandMode = Analyzer::BandMode::bands45;
+    SECTION("1/4 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveQuarter;
     }
 
-    SECTION("60 bands") {
-        parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    SECTION("1/6 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
+    }
+
+    SECTION("1/12 octave") {
+        parameters.engineParameters.bandMode = Analyzer::BandMode::octaveTwelfth;
     }
 
     prepareEngine(engine, parameters);
@@ -423,7 +536,7 @@ TEST_CASE("AnalyzerEngine raw filterbank peaks on the exact band center frequenc
     }
 }
 
-TEST_CASE("AnalyzerEngine 44.1 kHz 60-band centers keep consistent raw peak level within 0.5 dB") {
+TEST_CASE("AnalyzerEngine 44.1 kHz 1/6-octave centers keep consistent raw peak level within 0.5 dB") {
     constexpr double sampleRate44100 = 44100.0;
     constexpr float floorDb = -200.0f;
     constexpr float allowedSpreadDb = 0.5f;
@@ -431,13 +544,13 @@ TEST_CASE("AnalyzerEngine 44.1 kHz 60-band centers keep consistent raw peak leve
 
     Analyzer::Engine engine;
     auto parameters = makeDefaultParameters();
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
 
     prepareEngine(engine, parameters, sampleRate44100);
 
     const auto bandInfo = engine.getBandInfo();
     REQUIRE(bandInfo != nullptr);
-    REQUIRE(bandInfo->size() == 60);
+    REQUIRE(bandInfo->size() == getExpectedBandCount(sampleRate44100, parameters.engineParameters.bandMode));
 
     std::vector<float> centerPeakDb;
     centerPeakDb.reserve(bandInfo->size());
@@ -521,20 +634,21 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::octaveThird;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
     engine.setParameters(parameters.engineParameters);
     processSineBlocks(engine, 1, {highSineHz}, {1.0f});
 
     const auto reconfiguredSnapshot = buildMeterData(displayMeter, engine, parameters);
-    REQUIRE(reconfiguredSnapshot.bandInfo.size() == 60);
-    REQUIRE(reconfiguredSnapshot.traces.front().frame.peakDb.size() == 60);
+    const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
+    REQUIRE(reconfiguredSnapshot.bandInfo.size() == expectedBandCount);
+    REQUIRE(reconfiguredSnapshot.traces.front().frame.peakDb.size() == expectedBandCount);
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }
 
@@ -543,23 +657,24 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
     setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::mid);
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands30;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::octaveThird;
 
     prepareEngine(engine, parameters);
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
     const auto initialSnapshot = buildMeterData(displayMeter, engine, parameters);
-    REQUIRE(initialSnapshot.bandInfo.size() == 30);
+    REQUIRE(initialSnapshot.bandInfo.size() == getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode));
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 
     setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
-    parameters.engineParameters.bandMode = Analyzer::BandMode::bands60;
+    parameters.engineParameters.bandMode = Analyzer::BandMode::octaveSixth;
     engine.setParameters(parameters.engineParameters);
 
     processSineBlocks(engine, 2, {highSineHz, highSineHz}, {1.0f, -1.0f});
 
     const auto updatedSnapshot = buildMeterData(displayMeter, engine, parameters);
-    REQUIRE(updatedSnapshot.bandInfo.size() == 60);
-    REQUIRE(updatedSnapshot.traces.front().frame.peakDb.size() == 60);
+    const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
+    REQUIRE(updatedSnapshot.bandInfo.size() == expectedBandCount);
+    REQUIRE(updatedSnapshot.traces.front().frame.peakDb.size() == expectedBandCount);
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }

@@ -74,7 +74,7 @@ namespace Analyzer {
         static SourceSet sliceSourceSet(const SourceSet &sourceSet, size_t offset, size_t numSamples);
 
         /**
-         * Rebuilds the log-spaced band layout
+         * Rebuilds the fractional-octave band layout
          */
         void rebuildBands();
 
@@ -84,9 +84,9 @@ namespace Analyzer {
         void rebuildProcessors();
 
         /**
-         * Returns how many bands the current mode should use
+         * Returns how many bands per octave the current mode should use
          */
-        int getBandCount() const;
+        int getBandsPerOctave() const;
 
         /**
          * Publishes one accumulated analysis frame, optionally after resetting processor state.

@@ -12,12 +12,20 @@ AnalyzerHoverModel::AnalyzerHoverModel(const AnalyzerGeometry &geometryToUse, co
 
 std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle<float> &localBounds,
                                                            const juce::Rectangle<float> &plotBounds,
-                                                           const std::vector<Analyzer::BandInfo> &bandInfo,
+                                                           const std::vector<AnalyzerVisibleBandLayout> &visibleBands,
                                                            const float gridMinDb,
                                                            const float gridMaxDb,
                                                            float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
                                                            juce::Point<float> hoverPosition) const {
-    const auto bandIndex = geometry.bandIndexAt(hoverPosition, bandInfo.size(), plotBounds);
+    std::optional<size_t> bandIndex;
+    if (plotBounds.contains(hoverPosition)) {
+        for (size_t visibleBandIndex = 0; visibleBandIndex < visibleBands.size(); ++visibleBandIndex) {
+            if (visibleBands[visibleBandIndex].hitBounds.contains(hoverPosition)) {
+                bandIndex = visibleBandIndex;
+                break;
+            }
+        }
+    }
 
     if (!bandIndex.has_value())
         return std::nullopt;

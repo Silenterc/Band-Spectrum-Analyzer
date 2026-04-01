@@ -1,6 +1,7 @@
 #include "AnalyzerViewModel.h"
 
 #include <algorithm>
+#include <cmath>
 
 AnalyzerViewModel::AnalyzerViewModel(const Ui::Theme &themeToUse)
     : theme(themeToUse),
@@ -14,8 +15,8 @@ void AnalyzerViewModel::updateStaticLayout(const Analyzer::RenderData &renderDat
     currentGridMinDb = gridMinDb;
     plotBounds = geometry.getPlotBounds(localBounds);
     updateVisibleFrequencyRange(renderData, viewState);
+    updateVisibleBands(renderData.bandInfo);
     updateGrid(gridMinDb, gridMaxDb, gridStepDb);
-    updateBandBounds(renderData.bandInfo.size());
 }
 
 void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderData, const AnalyzerViewState & /*viewState*/,
@@ -54,28 +55,28 @@ void AnalyzerViewModel::updateTraceVisuals(const Analyzer::RenderData &renderDat
         } else {
             traceVisual.colour = juce::Colours::white;
         }
-        traceVisual.bars.resize(renderData.bandInfo.size());
+        traceVisual.bars.resize(visibleBands.size());
 
-        for (size_t bandIndex = 0; bandIndex < renderData.bandInfo.size(); ++bandIndex) {
+        for (size_t visibleBandIndex = 0; visibleBandIndex < visibleBands.size(); ++visibleBandIndex) {
+            const auto &visibleBand = visibleBands[visibleBandIndex];
             AnalyzerBarModel barModel;
-            barModel.bandBounds = bandBounds[bandIndex];
-            barModel.rmsDb = getRmsDb(bandIndex, trace->frame, gridMinDb);
-            barModel.peakDb = getPeakDb(bandIndex, trace->frame, gridMinDb);
+            barModel.bandBounds = visibleBand.drawBounds;
+            barModel.rmsDb = getRmsDb(visibleBand.sourceBandIndex, trace->frame, gridMinDb);
+            barModel.peakDb = getPeakDb(visibleBand.sourceBandIndex, trace->frame, gridMinDb);
             barModel.peakY = geometry.yForDb(barModel.peakDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.peakBounds = {barModel.bandBounds.getX(), barModel.peakY,
                                    barModel.bandBounds.getWidth(), plotBottom - barModel.peakY};
             const auto rmsY = geometry.yForDb(barModel.rmsDb, gridMinDb, gridMaxDb, plotBounds);
             barModel.rmsBounds = {barModel.bandBounds.getX(), rmsY,
                                   barModel.bandBounds.getWidth(), plotBottom - rmsY};
-            traceVisual.bars[bandIndex] = barModel;
+            traceVisual.bars[visibleBandIndex] = barModel;
         }
 
         traceVisuals.push_back(std::move(traceVisual));
     }
 }
 
-void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData,
-                                    const float gridMinDb,
+void AnalyzerViewModel::updateHover(const float gridMinDb,
                                     const float gridMaxDb,
                                     const juce::Rectangle<float> &localBounds,
                                     const std::optional<juce::Point<float>> &hoverPositionToUse) {
@@ -84,12 +85,12 @@ void AnalyzerViewModel::updateHover(const Analyzer::RenderData &renderData,
         return;
     }
 
-    if (renderData.bandInfo.empty()) {
+    if (visibleBands.empty()) {
         hoverInfo.reset();
         return;
     }
 
-    hoverInfo = hoverModel.build(localBounds, plotBounds, renderData.bandInfo, gridMinDb, gridMaxDb,
+    hoverInfo = hoverModel.build(localBounds, plotBounds, visibleBands, gridMinDb, gridMaxDb,
                                  visibleMinFrequencyHz, visibleMaxFrequencyHz,
                                  *hoverPositionToUse);
 }
@@ -118,11 +119,8 @@ float AnalyzerViewModel::getGridMinDb() const {
     return currentGridMinDb;
 }
 
-std::optional<juce::Rectangle<float>> AnalyzerViewModel::getBandBounds(const size_t bandIndex) const {
-    if (bandIndex >= bandBounds.size())
-        return std::nullopt;
-
-    return bandBounds[bandIndex];
+const std::vector<AnalyzerVisibleBandLayout> &AnalyzerViewModel::getVisibleBands() const {
+    return visibleBands;
 }
 
 void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb) {
@@ -139,6 +137,10 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     }
 
     for (auto frequencyHz: theme.metrics.analyzerPlot.frequencyScaleLabelsHz) {
+        if (usingCustomFrequencyRange
+            && (frequencyHz < visibleMinFrequencyHz || frequencyHz > visibleMaxFrequencyHz))
+            continue;
+
         AnalyzerFrequencyMarker frequencyMarker;
         frequencyMarker.x = geometry.xForFrequency(frequencyHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
         frequencyMarker.label = formatter.formatScaleFrequency(frequencyHz);
@@ -146,15 +148,48 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     }
 }
 
-void AnalyzerViewModel::updateBandBounds(const size_t bandCount) {
-    bandBounds.clear();
-    bandBounds.reserve(bandCount);
+void AnalyzerViewModel::updateVisibleBands(const std::vector<Analyzer::BandInfo> &bandInfo) {
+    visibleBands.clear();
+    visibleBands.reserve(bandInfo.size());
 
-    if (bandCount == 0)
+    if (bandInfo.empty())
         return;
 
-    for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex)
-        bandBounds.push_back(geometry.getBandDrawBounds(bandIndex, bandCount, plotBounds));
+    const auto interBandGapPixels = theme.metrics.analyzerPlot.interBandGapPixels;
+
+    std::vector<size_t> sourceBandIndices;
+    sourceBandIndices.reserve(bandInfo.size());
+
+    for (size_t bandIndex = 0; bandIndex < bandInfo.size(); ++bandIndex) {
+        const auto &band = bandInfo[bandIndex];
+        if (band.highHz < visibleMinFrequencyHz || band.lowHz > visibleMaxFrequencyHz)
+            continue;
+
+        sourceBandIndices.push_back(bandIndex);
+    }
+
+    visibleBands.reserve(sourceBandIndices.size());
+    for (size_t visibleBandIndex = 0; visibleBandIndex < sourceBandIndices.size(); ++visibleBandIndex) {
+        const auto sourceBandIndex = sourceBandIndices[visibleBandIndex];
+        const auto &band = bandInfo[sourceBandIndex];
+
+        AnalyzerVisibleBandLayout visibleBand;
+        visibleBand.sourceBandIndex = sourceBandIndex;
+        visibleBand.hitBounds = geometry.getBandHitBounds(band.lowHz, band.highHz,
+                                                          visibleMinFrequencyHz, visibleMaxFrequencyHz,
+                                                          plotBounds);
+        const auto drawLeft = static_cast<int>(std::round(visibleBand.hitBounds.getX()));
+        auto drawRight = static_cast<int>(std::round(visibleBand.hitBounds.getRight()));
+        if (visibleBandIndex + 1 != sourceBandIndices.size())
+            drawRight -= interBandGapPixels;
+
+        const auto drawWidth = juce::jmax(0, drawRight - drawLeft);
+        visibleBand.drawBounds = juce::Rectangle<int>(drawLeft,
+                                                      static_cast<int>(std::round(visibleBand.hitBounds.getY())),
+                                                      drawWidth,
+                                                      static_cast<int>(std::round(visibleBand.hitBounds.getHeight()))).toFloat();
+        visibleBands.push_back(visibleBand);
+    }
 }
 
 float AnalyzerViewModel::getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb) {
@@ -173,6 +208,8 @@ float AnalyzerViewModel::getPeakDb(size_t bandIndex, const Analyzer::RenderFrame
 
 void AnalyzerViewModel::updateVisibleFrequencyRange(const Analyzer::RenderData &renderData,
                                                     const AnalyzerViewState &viewState) {
+    usingCustomFrequencyRange = viewState.useCustomFrequencyRange;
+
     if (renderData.bandInfo.empty()) {
         visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
         visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;

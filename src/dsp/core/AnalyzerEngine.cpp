@@ -50,11 +50,12 @@ namespace Analyzer {
     }
 
     void Engine::setParameters(const EngineParameterState &parameters) {
-        const auto previousBandCount = getBandCount();
+        const auto didBandModeChange = currentParameters.bandMode != parameters.bandMode;
         currentParameters = parameters;
 
-        // Band count changes mean we need a whole new bank layout
-        if (getBandCount() != previousBandCount)
+        // Fractional-octave mode changes mean we need a whole new band layout,
+        // even if two modes would ever produce the same total count.
+        if (didBandModeChange)
             rebuildBands();
 
         rebuildProcessors();
@@ -148,33 +149,39 @@ namespace Analyzer {
     }
 
     void Engine::rebuildBands() {
-        const auto bandCount = static_cast<size_t>(getBandCount());
-        const auto maxAnalysisFrequencyHz = std::max(
-            static_cast<float>(currentSampleRate * 0.5 * Constants::maxAnalysisFractionOfNyquist),
-            Constants::minFrequencyHz * 2.0f);
-        // This is the ratio we spread evenly in log space
-        const auto frequencyRatio = maxAnalysisFrequencyHz / Constants::minFrequencyHz;
-        const auto normalisedStep = 1.0f / static_cast<float>(bandCount);
-
         auto newBandInfo = std::make_shared<std::vector<BandInfo> >();
-        newBandInfo->resize(bandCount);
+        const auto maxAnalysisFrequencyHz = std::max(
+            currentSampleRate * 0.5 * static_cast<double>(Constants::maxAnalysisFractionOfNyquist),
+            static_cast<double>(Constants::minFrequencyHz * 2.0f));
+        const auto centerRatio = std::pow(2.0, 1.0 / static_cast<double>(getBandsPerOctave()));
+        const auto edgeRatio = std::sqrt(centerRatio);
+        auto centerHz = Constants::equalTemperedAnchorHz;
 
-        auto lowNormalised = 0.0f;
-        for (size_t bandIndex = 0; bandIndex < bandCount; ++bandIndex) {
-            // We step evenly in log space, not linearly in Hz
-            const auto highNormalised = lowNormalised + normalisedStep;
-            const auto lowHz = Constants::minFrequencyHz * std::pow(frequencyRatio, lowNormalised);
-            const auto highHz = Constants::minFrequencyHz * std::pow(frequencyRatio, highNormalised);
-            // Geometric mean is the natural center for a log-spaced band
-            const auto centerHz = std::sqrt(lowHz * highHz);
+        while (centerHz / edgeRatio < static_cast<double>(Constants::minFrequencyHz))
+            centerHz *= centerRatio;
+
+        while (true) {
+            const auto previousCenterHz = centerHz / centerRatio;
+            const auto previousLowHz = previousCenterHz / edgeRatio;
+            if (previousLowHz < static_cast<double>(Constants::minFrequencyHz))
+                break;
+
+            centerHz = previousCenterHz;
+        }
+
+        while (true) {
+            const auto lowHz = centerHz / edgeRatio;
+            const auto highHz = centerHz * edgeRatio;
+            if (highHz > maxAnalysisFrequencyHz)
+                break;
 
             BandInfo info{};
-            info.lowHz = lowHz;
-            info.centerHz = centerHz;
-            info.highHz = highHz;
+            info.lowHz = static_cast<float>(lowHz);
+            info.centerHz = static_cast<float>(centerHz);
+            info.highHz = static_cast<float>(highHz);
+            newBandInfo->push_back(info);
 
-            (*newBandInfo)[bandIndex] = info;
-            lowNormalised = highNormalised;
+            centerHz *= centerRatio;
         }
 
         std::atomic_store(&bandInfo, newBandInfo);
@@ -198,17 +205,19 @@ namespace Analyzer {
         }
     }
 
-    int Engine::getBandCount() const {
+    int Engine::getBandsPerOctave() const {
         switch (currentParameters.bandMode) {
-            case BandMode::bands30:
-                return 30;
-            case BandMode::bands45:
-                return 45;
-            case BandMode::bands60:
-                return 60;
+            case BandMode::octaveThird:
+                return 3;
+            case BandMode::octaveQuarter:
+                return 4;
+            case BandMode::octaveSixth:
+                return 6;
+            case BandMode::octaveTwelfth:
+                return 12;
         }
 
-        return 45;
+        return 6;
     }
 
     void Engine::publishProcessorState(const bool resetProcessors, const size_t frameSlotIndex) {

@@ -15,6 +15,7 @@
 #include "../helpers/AnalyzerHoverModel.h"
 #include "../helpers/FrequencyFormatter.h"
 #include "../helpers/MusicTheory.h"
+#include "AnalyzerVisibleBandLayout.h"
 #include "AnalyzerUiSelectors.h"
 #include "SignalSlotOrderModel.h"
 
@@ -93,8 +94,7 @@ public:
     /**
      * Updates hover-only state without rebuilding static or dynamic bar geometry
      */
-    void updateHover(const Analyzer::RenderData &renderData,
-                     float gridMinDb,
+    void updateHover(float gridMinDb,
                      float gridMaxDb,
                      const juce::Rectangle<float> &localBounds,
                      const std::optional<juce::Point<float>> &hoverPosition);
@@ -130,13 +130,13 @@ public:
     float getGridMinDb() const;
 
     /**
-     * Returns repaint bounds for one analyzer band column
+     * Returns the current visible analyzer band layout
      */
-    std::optional<juce::Rectangle<float>> getBandBounds(size_t bandIndex) const;
+    const std::vector<AnalyzerVisibleBandLayout> &getVisibleBands() const;
 
 private:
     void updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb);
-    void updateBandBounds(size_t bandCount);
+    void updateVisibleBands(const std::vector<Analyzer::BandInfo> &bandInfo);
     static float getRmsDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     static float getPeakDb(size_t bandIndex, const Analyzer::RenderFrame &renderFrame, float gridMinDb);
     void updateVisibleFrequencyRange(const Analyzer::RenderData &renderData, const AnalyzerViewState &viewState);
@@ -151,10 +151,11 @@ private:
     juce::Rectangle<float> plotBounds;
     std::vector<AnalyzerGridLine> gridLines;
     std::vector<AnalyzerFrequencyMarker> frequencyMarkers;
-    std::vector<juce::Rectangle<float>> bandBounds;
+    std::vector<AnalyzerVisibleBandLayout> visibleBands;
     std::vector<AnalyzerTraceVisual> traceVisuals;
     std::optional<AnalyzerHoverInfo> hoverInfo;
     float currentGridMinDb = 0.0f;
+    bool usingCustomFrequencyRange = false;
     float visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
     float visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
 };

@@ -45,29 +45,13 @@ public:
     float dbForY(float y, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds) const;
 
     /**
-     * Returns the visible draw bounds for one analyzer band using stable pixel partitioning
-     * plus the configured inter-band gap.
+     * Returns the continuous hit bounds for one analyzer band mapped onto the visible frequency span.
      */
-    juce::Rectangle<float> getBandDrawBounds(size_t bandIndex, size_t bandCount,
-                                             const juce::Rectangle<float> &plotBounds) const;
-
-    /**
-     * Returns the continuous hit bounds for one analyzer band with no dead gap between bands.
-     */
-    juce::Rectangle<float> getBandHitBounds(size_t bandIndex, size_t bandCount,
+    juce::Rectangle<float> getBandHitBounds(float lowFrequencyHz,
+                                            float highFrequencyHz,
+                                            float visibleMinFrequencyHz,
+                                            float visibleMaxFrequencyHz,
                                             const juce::Rectangle<float> &plotBounds) const;
-
-    /**
-     * Returns the hovered band index using continuous hit regions across the full plot width.
-     */
-    std::optional<size_t> bandIndexAt(juce::Point<float> position, size_t bandCount,
-                                      const juce::Rectangle<float> &plotBounds) const;
-
-    /**
-     * Returns the draw bounds for one analyzer bar
-     */
-    juce::Rectangle<float> getBarBounds(size_t bandIndex, size_t bandCount, float displayedDb, float minDb, float maxDb,
-                                        const juce::Rectangle<float> &plotBounds) const;
 
     /**
      * Returns the tooltip bounds clamped to the component area

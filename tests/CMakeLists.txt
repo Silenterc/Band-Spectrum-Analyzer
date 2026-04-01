@@ -24,7 +24,9 @@ add_executable(band-spectrum-analyzer-tests
     ../src/ui/analyzer/helpers/AnalyzerMeter.cpp
     ../src/ui/analyzer/helpers/FrequencyFormatter.cpp
     ../src/ui/analyzer/helpers/MusicTheory.cpp
-    ../src/ui/analyzer/model/AnalyzerGlobalHoldModel.cpp)
+    ../src/ui/analyzer/model/AnalyzerGlobalHoldModel.cpp
+    ../src/ui/analyzer/model/AnalyzerViewModel.cpp
+    ../src/ui/analyzer/model/SignalSlotOrderModel.cpp)
 
 target_include_directories(band-spectrum-analyzer-tests
     PRIVATE

@@ -2,12 +2,14 @@
 #include <catch2/catch_approx.hpp>
 
 #include "../../src/ui/UiTheme.h"
+#include "../../src/ui/analyzer/AnalyzerViewState.h"
 #include "../../src/ui/analyzer/helpers/AnalyzerGeometry.h"
 #include "../../src/ui/analyzer/helpers/AnalyzerHoverModel.h"
 #include "../../src/ui/analyzer/model/AnalyzerGlobalHoldModel.h"
 #include "../../src/ui/analyzer/model/AnalyzerMeterTuning.h"
 #include "../../src/ui/analyzer/model/AnalyzerUiSelectors.h"
 #include "../../src/ui/analyzer/model/AnalyzerUiSnapshot.h"
+#include "../../src/ui/analyzer/model/AnalyzerViewModel.h"
 #include "../../src/ui/analyzer/model/SignalRackModel.h"
 #include "../../src/ui/analyzer/model/SignalSlotOptions.h"
 
@@ -25,6 +27,27 @@ namespace {
         }
 
         return renderData;
+    }
+
+    Analyzer::RenderData makeZoomRenderData() {
+        Analyzer::RenderData renderData;
+        renderData.bandInfo = {
+            {.lowHz = 20.0f, .centerHz = 28.284271f, .highHz = 40.0f},
+            {.lowHz = 40.0f, .centerHz = 56.568542f, .highHz = 80.0f},
+            {.lowHz = 80.0f, .centerHz = 113.137085f, .highHz = 160.0f},
+            {.lowHz = 160.0f, .centerHz = 226.27417f, .highHz = 320.0f}
+        };
+
+        Analyzer::RenderTrace trace;
+        trace.kind = Analyzer::TraceKind::slot1;
+        trace.frame.rmsDb = {-24.0f, -18.0f, -12.0f, -6.0f};
+        trace.frame.peakDb = {-22.0f, -16.0f, -10.0f, -4.0f};
+        renderData.traces.push_back(std::move(trace));
+        return renderData;
+    }
+
+    Shared::SignalSlotOrder makeDefaultSignalSlotOrder() {
+        return {0, 1, 2, 3};
     }
 
     std::array<Ui::SignalSlotState, Shared::maxSignalSlots> makeVisibleSignalSlots() {
@@ -97,18 +120,80 @@ TEST_CASE("Hover readout matches the top-of-cursor visual reference", "[ui][hove
 
     const juce::Rectangle<float> localBounds(0.0f, 0.0f, 1000.0f, 600.0f);
     const auto plotBounds = geometry.getPlotBounds(localBounds);
-    const std::vector<Analyzer::BandInfo> bandInfo{
-        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f}
+    const std::vector<AnalyzerVisibleBandLayout> visibleBands{
+        {.sourceBandIndex = 0,
+         .hitBounds = geometry.getBandHitBounds(80.0f, 125.0f, 20.0f, 20000.0f, plotBounds),
+         .drawBounds = geometry.getBandHitBounds(80.0f, 125.0f, 20.0f, 20000.0f, plotBounds)}
     };
 
     const auto hoverY = geometry.yForDb(-35.0f, -50.0f, 3.0f, plotBounds);
-    const juce::Point<float> hoverPosition(plotBounds.getCentreX(), hoverY + 4.0f);
-    const auto hoverInfo = hoverModel.build(localBounds, plotBounds, bandInfo,
+    const juce::Point<float> hoverPosition(visibleBands.front().hitBounds.getCentreX(), hoverY + 4.0f);
+    const auto hoverInfo = hoverModel.build(localBounds, plotBounds, visibleBands,
                                             -50.0f, 3.0f, 20.0f, 20000.0f, hoverPosition);
 
     REQUIRE(hoverInfo.has_value());
     REQUIRE(hoverInfo->lineCount >= 1);
     REQUIRE(hoverInfo->lines[0] == "Volume: -35.0 dB");
+}
+
+TEST_CASE("Analyzer view model keeps full-range bar layout unchanged", "[ui][view-model]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    const auto renderData = makeZoomRenderData();
+    AnalyzerViewState viewState;
+
+    viewModel.updateStaticLayout(renderData, viewState, -50.0f, 3.0f, 6.0f, {0.0f, 0.0f, 1000.0f, 600.0f});
+    viewModel.updateTraceVisuals(renderData, viewState, makeVisibleSignalSlots(), makeDefaultSignalSlotOrder(), -50.0f, 3.0f);
+
+    const auto &visibleBands = viewModel.getVisibleBands();
+    REQUIRE(visibleBands.size() == renderData.bandInfo.size());
+    REQUIRE(visibleBands.front().sourceBandIndex == 0);
+    REQUIRE(visibleBands.back().sourceBandIndex == renderData.bandInfo.size() - 1);
+    REQUIRE(viewModel.getTraceVisuals().size() == 1);
+    REQUIRE(viewModel.getTraceVisuals().front().bars.size() == renderData.bandInfo.size());
+
+    const auto &frequencyMarkers = viewModel.getFrequencyMarkers();
+    REQUIRE_FALSE(frequencyMarkers.empty());
+    REQUIRE(frequencyMarkers.front().label == "20");
+    REQUIRE(frequencyMarkers.back().label.contains("20"));
+    REQUIRE(frequencyMarkers.back().label.contains("k"));
+}
+
+TEST_CASE("Analyzer view model reflows visible bands and hover with custom frequency range", "[ui][view-model][hover]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    const auto renderData = makeZoomRenderData();
+    AnalyzerViewState viewState;
+    viewState.useCustomFrequencyRange = true;
+    viewState.visibleMinFrequencyHz = 45.0f;
+    viewState.visibleMaxFrequencyHz = 210.0f;
+
+    viewModel.updateStaticLayout(renderData, viewState, -50.0f, 3.0f, 6.0f, {0.0f, 0.0f, 1000.0f, 600.0f});
+    viewModel.updateTraceVisuals(renderData, viewState, makeVisibleSignalSlots(), makeDefaultSignalSlotOrder(), -50.0f, 3.0f);
+
+    const auto &visibleBands = viewModel.getVisibleBands();
+    REQUIRE(visibleBands.size() == 3);
+    REQUIRE(visibleBands[0].sourceBandIndex == 1);
+    REQUIRE(visibleBands[1].sourceBandIndex == 2);
+    REQUIRE(visibleBands[2].sourceBandIndex == 3);
+    REQUIRE(viewModel.getTraceVisuals().size() == 1);
+    REQUIRE(viewModel.getTraceVisuals().front().bars.size() == 3);
+
+    const auto plotBounds = viewModel.getPlotBounds();
+    REQUIRE(visibleBands[0].drawBounds.getX() == Catch::Approx(plotBounds.getX()));
+    REQUIRE(visibleBands[2].drawBounds.getRight() == Catch::Approx(plotBounds.getRight()));
+
+    const juce::Point<float> hoverPosition(visibleBands[1].drawBounds.getCentreX(), plotBounds.getCentreY());
+    viewModel.updateHover(-50.0f, 3.0f, {0.0f, 0.0f, 1000.0f, 600.0f}, hoverPosition);
+
+    REQUIRE(viewModel.getHoverInfo().has_value());
+    REQUIRE(viewModel.getHoverInfo()->bandIndex == 1);
+    REQUIRE(visibleBands[viewModel.getHoverInfo()->bandIndex].sourceBandIndex == 2);
+
+    const auto &frequencyMarkers = viewModel.getFrequencyMarkers();
+    REQUIRE_FALSE(frequencyMarkers.empty());
+    REQUIRE(frequencyMarkers.front().label == "50");
+    REQUIRE(frequencyMarkers.back().label == "200");
 }
 
 TEST_CASE("Global hold takes the maximum of currently visible traces", "[ui][global-hold]") {

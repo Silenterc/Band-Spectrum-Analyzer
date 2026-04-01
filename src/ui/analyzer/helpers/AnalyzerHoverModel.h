@@ -7,6 +7,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../../../dsp/core/AnalyzerData.h"
+#include "../model/AnalyzerVisibleBandLayout.h"
 #include "AnalyzerGeometry.h"
 #include "FrequencyFormatter.h"
 #include "MusicTheory.h"
@@ -38,7 +39,7 @@ public:
      */
     [[nodiscard]] std::optional<AnalyzerHoverInfo> build(const juce::Rectangle<float> &localBounds,
                                                          const juce::Rectangle<float> &plotBounds,
-                                                         const std::vector<Analyzer::BandInfo> &bandInfo,
+                                                         const std::vector<AnalyzerVisibleBandLayout> &visibleBands,
                                                          float gridMinDb,
                                                          float gridMaxDb,
                                                          float visibleMinFrequencyHz, float visibleMaxFrequencyHz,
