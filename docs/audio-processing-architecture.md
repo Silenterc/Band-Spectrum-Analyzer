@@ -1,27 +1,44 @@
 # Audio Processing Architecture
 
-This document describes the current backend and analyzer data flow from `SpectrumAnalyzerAudioProcessor` down into the analyzer DSP engine and back up into the UI.
+This document describes the current backend and analyzer data flow from `SpectrumAnalyzerAudioProcessor` into the analyzer DSP engine, through the display worker, and up into the UI.
 
-## 1. Audio Callback Flow
+## 1. End-To-End Flow
 
 ```mermaid
 flowchart TD
     Host[Host audio block] --> Processor[SpectrumAnalyzerAudioProcessor]
     Processor --> Params[PluginParameters::Access]
-    Params --> Engine[Analyzer::Engine]
+    Params --> EngineParams[EngineParameterState]
+    EngineParams --> Engine[Analyzer::Engine]
+
     Processor -->|main buffer| Engine
     Processor -->|optional sidechain buffer| Engine
+
     Engine --> Activity[InputActivityDetector]
-    Activity --> Gate{process analyzer?}
-    Gate -->|yes| SourceBuilder[AnalysisSourceBuilder]
-    SourceBuilder --> Slice[fixed-size analysis frame slicer]
-    Gate -->|no| Silence[publish cleared trace snapshot once]
+    Engine --> SourceBuilder[AnalysisSourceBuilder]
     Engine --> PlanBuilder[AnalysisPlanBuilder]
-    PlanBuilder --> Processors[AnalysisGroupProcessor list]
-    Slice --> Processors
-    Processors --> Published[TripleBuffer vector RawTrace]
-    Silence --> Published
+    Engine --> GroupProcessors[AnalysisGroupProcessor list]
+    GroupProcessors --> RawPublish[TripleBuffer vector RawTrace]
+
+    Processor --> RawTraceSource[AnalyzerRawTraceSource]
+    RawTraceSource --> DisplayWorker[AnalyzerDisplayWorker]
+    DisplayWorker --> Meter[AnalyzerMeter]
+    Meter --> FrameModel[AnalyzerDisplayFrameModel]
+    FrameModel --> Hold[AnalyzerGlobalHoldModel]
+    Hold --> DisplayPublish[TripleBuffer AnalyzerDisplayFrame]
+
+    DisplayPublish --> AnalyzerComponent
+    Processor --> SnapshotSource[AnalyzerUiSnapshotSource]
+    SnapshotSource --> AnalyzerComponent
+    SnapshotSource --> Rack[Signal rack UI]
+    SnapshotSource --> Controls[Meter controls UI]
 ```
+
+The important split is:
+
+- DSP publishes raw analyzer measurements
+- display worker turns them into semantic display state
+- UI consumes immutable frames and paints them
 
 ## 2. Processor Responsibilities
 
@@ -31,7 +48,7 @@ flowchart TD
     Processor --> ParamSchema[ParameterSchema]
     Processor --> ParamAccess[ParameterAccess]
     Processor --> Engine[Analyzer::Engine]
-    Processor --> RenderSource[AnalyzerRenderSource]
+    Processor --> RawTraceSource[AnalyzerRawTraceSource]
     Processor --> SnapshotSource[AnalyzerUiSnapshotSource]
     Processor --> Settings[AnalyzerSettingsActions]
     Processor --> SlotOrderState[SignalSlotOrderState]
@@ -42,37 +59,50 @@ flowchart TD
     ParamAccess --> UiSlots[Ui::SignalSlotState array]
     ParamAccess --> Meter[MeterSettings]
     ParamAccess --> Freeze[freeze state]
+    ParamAccess --> Grid[grid settings]
 ```
 
-- `ParameterSchema` is the single source of truth for parameter ids, labels, choices, ranges, and APVTS layout construction.
-- `ParameterAccess` caches APVTS parameter pointers and exposes typed reads/writes for engine state, UI slot state, and meter/grid state.
-- The processor reads only `EngineParameterState` on the audio thread.
-- The UI reads analyzer traces and band metadata through `AnalyzerRenderSource`.
-- The UI reads slot presentation state, freeze state, grid settings, and meter settings through `AnalyzerUiSnapshotSource`.
-- The processor also exposes UI write actions through `AnalyzerSettingsActions`, including semantic slot operations used by the rack UI.
-- APVTS state plus persistent UI-only slot order are serialized in `getStateInformation()` / `setStateInformation()`.
+`SpectrumAnalyzerAudioProcessor` is still the composition root.
 
-## 3. Engine Internals
+It owns:
 
-```mermaid
-flowchart TD
-    Engine[Analyzer::Engine] --> Bands[shared band layout]
-    Engine --> Activity[InputActivityDetector]
-    Engine --> SourceBuilder[AnalysisSourceBuilder]
-    Engine --> PlanBuilder[AnalysisPlanBuilder]
-    Engine --> Processors[vector AnalysisGroupProcessor]
-    Engine --> Published[TripleBuffer vector RawTrace]
+- APVTS
+- parameter schema and typed parameter access
+- persistent slot order state
+- analyzer engine
+- UI snapshot publication
+- UI action handling
 
-    SourceBuilder --> MainViews[mainLeft / mainRight]
-    SourceBuilder --> MainDerived[mainMid / mainSide]
-    SourceBuilder --> SideViews[sidechainLeft / sidechainRight]
-    SourceBuilder --> SideDerived[sidechainMid / sidechainSide]
+It now also implements `AnalyzerRawTraceSource`, which exposes:
 
-    PlanBuilder --> Specs[one AnalysisGroupSpec per enabled slot]
-    Specs --> Processors
-```
+- `getBandInfo()`
+- `readPublishedTraces()`
+- `hasRecentSignal()`
 
-## 4. Engine Internals As A Tree
+The processor does not own the display worker. The worker is editor-side and is owned by `AnalyzerComponent`.
+
+## 3. DSP Engine Responsibilities
+
+`Analyzer::Engine` remains audio-thread-only.
+
+It owns:
+
+- band layout generation
+- input-activity detection
+- source-view building
+- analyzer plan building
+- active analysis processors
+- raw trace publication
+
+It does not own:
+
+- display-rate meter decay
+- slot freeze latching
+- hold state
+- slot order
+- colour or opacity
+
+## 4. Engine Internals
 
 ```text
 SpectrumAnalyzerAudioProcessor
@@ -80,37 +110,41 @@ SpectrumAnalyzerAudioProcessor
     ├── shared_ptr<vector<BandInfo>> bandInfo
     ├── InputActivityDetector inputActivityDetector
     ├── AnalysisSourceBuilder sourceBuilder
-    │   ├── SourceSet
-    │   │   ├── mainLeft / mainRight
-    │   │   ├── mainMid / mainSide
-    │   │   └── sidechainLeft / sidechainRight / sidechainMid / sidechainSide
-    │   └── engine-owned derived buffers
-    │       ├── mainMidBuffer / mainSideBuffer
-    │       └── sidechainMidBuffer / sidechainSideBuffer
     ├── AnalysisPlanBuilder planBuilder
     ├── vector<AnalysisGroupProcessor> processors
-    │   └── each AnalysisGroupProcessor owns:
-    │       ├── AnalysisGroupSpec
-    │       │   ├── TraceKind
-    │       │   ├── SourceFamily
-    │       │   ├── primary DerivedSignal
-    │       │   └── optional secondary DerivedSignal
-    │       ├── FilterBank
-    │       │   ├── vector<SIMDBPFilter> primaryFilters
-    │       │   ├── vector<SIMDBPFilter> secondaryFilters (stereo mode only)
-    │       │   ├── vector<SIMDRegister<float>> sumPowers
-    │       │   └── vector<SIMDRegister<float>> peakPowers
-    │       ├── vector<BandMeasurements> outputMeasurements (slice scratch)
-    │       ├── array<vector<BandMeasurements>, 2> accumulatedMeasurements (overlapping frame slots)
-    │       └── no separate per-band filter objects
     ├── array<FrameSlotState, 2> frameSlots
     ├── size_t nextFrameSlotToStart
     ├── size_t samplesUntilNextFrameStart
     ├── size_t publishedTraceCount
-    └── TripleBuffer<vector<RawTrace>> traces
+    ├── TripleBuffer<vector<RawTrace>> traces
+    ├── atomic<bool> recentSignalActive
+    └── bool hasPublishedSilenceWhileInactive
 ```
 
-## 5. Slot-Based Signal Model
+## 5. Audio Callback Flow
+
+```mermaid
+flowchart TD
+    Host[Host audio block] --> Processor[SpectrumAnalyzerAudioProcessor]
+    Processor --> Engine[Analyzer::Engine]
+    Engine --> Activity[InputActivityDetector]
+    Activity --> Gate{process analyzer?}
+    Gate -->|yes| SourceBuilder[AnalysisSourceBuilder]
+    SourceBuilder --> Slice[fixed-size analysis frame slicer]
+    Slice --> GroupProcessors[AnalysisGroupProcessor list]
+    GroupProcessors --> Publish[write raw traces into triple buffer]
+    Gate -->|no| Silence[publish cleared trace snapshot once]
+    Silence --> Publish
+```
+
+Important behavior:
+
+- the engine slices host blocks into fixed analyzer frames
+- adjacent frames overlap by 50%
+- publish cadence is independent from host block size
+- silence publication happens once per inactive period
+
+## 6. Slot-Based Signal Model
 
 ```mermaid
 flowchart LR
@@ -126,67 +160,13 @@ flowchart LR
     UiState --> Opacity[opacity]
 ```
 
-- The engine uses `SignalSlotConfiguration` only.
-- The UI uses `Ui::SignalSlotState`, which wraps slot configuration plus presentation data.
-- Up to `4` slots are supported through `Shared::maxSignalSlots`.
-- Each enabled slot becomes one published trace identity: `TraceKind::slot1` through `TraceKind::slot4`.
+Rules:
 
-## 6. Analysis Plan Model
+- DSP consumes `SignalSlotConfiguration` only
+- UI consumes `Ui::SignalSlotState`
+- display worker consumes a reduced semantic state derived from UI state
 
-```mermaid
-flowchart LR
-    EngineParams[EngineParameterState] --> PlanBuilder[AnalysisPlanBuilder]
-    PlanBuilder --> GroupSpecs[vector AnalysisGroupSpec]
-    GroupSpecs --> Group[one spec per enabled slot]
-    Group --> TraceKind
-    Group --> SourceFamily
-    Group --> Primary[primary DerivedSignal]
-    Group --> Secondary[optional secondary DerivedSignal]
-```
-
-Current planning rules:
-
-- `Mid`
-  - primary signal: `DerivedSignal::mid`
-  - no secondary signal
-- `Side`
-  - primary signal: `DerivedSignal::side`
-  - no secondary signal
-- `Stereo`
-  - primary signal: `DerivedSignal::left`
-  - secondary signal: `DerivedSignal::right`
-  - output trace is averaged stereo power
-
-## 7. SourceSet To AnalysisGroupProcessor To RawTrace
-
-```mermaid
-flowchart LR
-    SourceSet[SourceSet\nblock-local signal views] --> Slice[Engine slices exact analysis-frame segments]
-    Slice --> Select[AnalysisGroupProcessor selects lane sources]
-    Select --> Filter[band filters process selected lane or lane pair]
-    Filter --> Mix[optional stereo average]
-    Mix --> SliceMeasurements[slice measurements]
-    SliceMeasurements --> Accumulate[accumulate into active overlapping analysis frames]
-    Accumulate --> RawTrace[writeRawTraces writes completed frame into published RawTrace slots]
-```
-
-Plainly:
-
-- `SourceSet` says where the samples for this host block live.
-- `AnalysisGroupProcessor` reads one `AnalysisGroupSpec` and drives one `FilterBank`.
-- `FilterBank` packs as many adjacent logical bands as fit in the current compiled SIMD width so one broadcast input sample updates a whole SIMD group at once.
-- The engine slices host blocks into exact fixed-size analyzer frames (`2048` samples currently) with a `1024`-sample hop, so publish cadence is independent from host block size and adjacent frames overlap by 50%.
-- `RawTrace` is the published per-band result for one completed analysis frame of one slot trace.
-- `InputActivityDetector` decides whether recent input energy still justifies running the analyzer DSP.
-- If a configured source is unavailable, the processor clears that trace instead of reusing stale measurements.
-
-Examples:
-
-- In `mid` mode, `mainMid` or `sidechainMid` feeds one lane and produces one slot trace.
-- In `side` mode, `mainSide` or `sidechainSide` feeds one lane and produces one slot trace.
-- In `stereo` mode, `left` and `right` feed two lanes and produce one slot trace by averaged power.
-
-## 8. Publish Path
+## 7. DSP Publish Path
 
 ```mermaid
 flowchart LR
@@ -195,82 +175,140 @@ flowchart LR
     Writer --> Publish[traces.publish]
 ```
 
-- The engine writes completed fixed-size analysis frames directly into pre-sized triple-buffer writer storage.
-- There is no temporary per-publish `traceScratch` vector in the publish path.
-- When recent input falls below the activity threshold, the engine publishes one cleared snapshot and then skips analyzer processing until signal returns.
+The DSP triple buffer now feeds the display worker, not the UI directly.
 
-## 9. FilterBank Notes
+This path carries:
 
-- Coefficients are derived from the current `BandInfo` layout using cookbook band-pass equations.
-- `BandInfo` is rebuilt from the active sample-rate span using the selected classical fractional-octave mode (`1/3`, `1/4`, `1/6`, or `1/12` octave), anchored to the equal-tempered note `E0 = 20.601722307 Hz`, and only full bands inside the active span are emitted.
-- One `SIMDBPFilter` instance owns one SIMD group's worth of independent filter lanes and runs two identical biquad stages in series internally.
-- `singleLane` mode uses only `primaryFilters`.
-- `stereoAverage` mode runs matching primary and secondary filter banks and stores averaged stereo power.
-- Measurement accumulation stays in SIMD form until the current slice ends, then lane values are copied into scalar `BandMeasurements` and accumulated into whichever overlapping frame slots are active for that slice.
+- `vector<RawTrace>`
+- one writer: audio thread
+- one reader: display worker
 
-## 10. UI Data Flow
+It does not carry:
+
+- UI snapshots
+- hold overlays
+- paint-ready geometry
+
+## 8. Display Worker Stage
+
+This is the new middle layer between DSP and UI.
 
 ```mermaid
 flowchart TD
-    Engine[Analyzer::Engine] --> BandInfo[shared_ptr vector BandInfo]
-    Engine --> RawTraces[vector RawTrace]
-    Engine --> ActivityState[recent signal active]
-
-    Processor[SpectrumAnalyzerAudioProcessor] --> Slots[Ui::SignalSlotState array]
-    Processor --> Freeze[freeze]
-    Processor --> Meter[MeterSettings]
-    Processor --> Grid[grid settings]
-    Processor --> Sidechain[sidechain availability]
-
-    BandInfo --> RenderSource[AnalyzerRenderSource]
-    RawTraces --> RenderSource
-    ActivityState --> RenderSource
-
-    Slots --> SnapshotSource[AnalyzerUiSnapshotSource]
-    Freeze --> SnapshotSource
-    Meter --> SnapshotSource
-    Grid --> SnapshotSource
-    Sidechain --> SnapshotSource
-
-    RenderSource --> AnalyzerComponent
-    SnapshotSource --> AnalyzerComponent
-    SnapshotSource --> SignalRack[signal rack UI]
-    SnapshotSource --> MeterControls[meter toggle UI]
+    RawTraceSource[AnalyzerRawTraceSource] --> Worker[AnalyzerDisplayWorker]
+    Worker --> Meter[AnalyzerMeter]
+    Meter --> MeterData[Analyzer::MeterData]
+    MeterData --> FrameModel[AnalyzerDisplayFrameModel]
+    FrameModel --> PeakSummary[AnalyzerContributingPeakSummary]
+    PeakSummary --> Hold[AnalyzerGlobalHoldModel]
+    Hold --> DisplayFrame[AnalyzerDisplayFrame]
+    DisplayFrame --> Publish[TripleBuffer AnalyzerDisplayFrame]
 ```
 
-## 11. Current State
+The worker owns:
 
-- The backend is slot-based, not single-mode based.
-- `mid`, `side`, and `stereo` are implemented for both main input and sidechain input.
-- Sidechain bus support is implemented in the processor and source builder.
-- DSP publishes fixed-size analyzer frames (`2048` samples) with a `1024`-sample hop, not one snapshot per host block.
-- Analyzer resolution is selected as a classical fractional-octave mode anchored to `E0`, and the total band count is derived from the active frequency span instead of fixed `30 / 45 / 60` counts.
-- The analyzer UI supports up to `4` signal slots, each with:
-  - enabled state
-  - visibility
-  - frozen state
-  - source
-  - mode
-  - color
-  - opacity
-- Global freeze exists as a UI-facing parameter/state, and each slot now also has an independent UI-facing frozen state.
-- Meter visibility toggles (`Peak`, `RMS`, `Hold`) are UI-controlled existing parameters.
-- Recent-signal activity is runtime engine state exposed through `AnalyzerRenderSource`, not serialized UI state.
+- display-rate metering
+- per-slot frozen-frame capture
+- per-slot semantic frame publication
+- contributing-peak reduction for hold semantics
+- global hold timing and decay
+- active vs idle wake cadence
 
-## Triple Buffer Boundary
+The worker does not own:
 
-- The engine’s triple buffer remains the DSP-to-UI transport for raw analyzer traces only.
-- The UI-level global hold overlay is derived after display composition in the analyzer UI model layer and is not part of the DSP publish path.
-- Immutable UI snapshots do not carry trace payloads and do not replace the triple buffer.
+- slot order
+- colours
+- opacity
+- hover
+- JUCE geometry
+
+## 9. Display Control State
+
+The worker consumes `AnalyzerDisplayControlState`, derived from `Ui::AnalyzerUiSnapshot`.
+
+It contains:
+
+- `meterSettings`
+- `floorDb`
+- `globalFrozen`
+- `slotFrozen`
+- `slotContributing`
+
+`slotContributing` is intentionally semantic, not visual. It defines which slot frames participate in:
+
+- hold ownership
+- hold level reduction
+
+That is what makes future solo support fit without redesigning the pipeline.
+
+## 10. Display Publish Path
+
+```mermaid
+flowchart LR
+    WorkerState[worker-computed display frame] --> Writer[TripleBuffer writer storage]
+    Writer --> Publish[frameBuffer.publish]
+    Publish --> UI[AnalyzerComponent async consumption]
+```
+
+The display triple buffer carries:
+
+- `AnalyzerDisplayFrame`
+- one writer: display worker
+- one reader: message thread
+
+The display frame contains:
+
+- shared `bandInfo`
+- one slot-keyed frame per logical slot
+- optional global hold frame
+- revision counter
+
+The frame is keyed by slot index, not by UI order.
+
+## 11. Band Layout Ownership
+
+Band layout remains DSP-owned.
+
+`Analyzer::Engine` rebuilds `bandInfo` when:
+
+- sample rate changes
+- analyzer band mode changes
+
+That `bandInfo` pointer is then:
+
+- read by the display worker
+- republished in `AnalyzerDisplayFrame`
+- consumed by the UI for static layout
+
+This keeps one source of truth for frequency layout.
+
+## 12. Current State
+
+- backend is slot-based, not single-mode based
+- `mid`, `side`, and `stereo` are implemented for main and sidechain sources
+- sidechain bus support is implemented in processor and source builder
+- DSP publishes raw traces only
+- display worker owns meter, freeze, and hold semantics
+- UI consumes immutable display frames and immutable UI snapshots
+- global hold is no longer computed on the message thread
+- raw trace transport and UI snapshot transport remain separate
 
 ## Guiding Rule
 
 The host owns the incoming `AudioBuffer`.
-The engine owns derived per-block buffers and processor state.
-`SourceSet` is only a set of lightweight views for the current block.
-The processor bridges APVTS-backed settings into:
 
-- engine-facing slot configuration for audio-thread processing
-- UI-facing slot presentation and analyzer display state for the editor
+The engine owns:
 
-That APVTS bridge is centralized through `src/plugin/parameters/ParameterSchema.h` and `src/plugin/parameters/ParameterAccess.*`, while UI-only slot order persistence lives in `src/plugin/state/SignalSlotOrderState.*`.
+- derived per-block buffers
+- filter-bank state
+- raw measurements
+
+The display layer owns:
+
+- time-evolving display semantics
+
+The UI owns:
+
+- presentation only
+
+The processor bridges APVTS-backed state into those layers, but should not become the home of analyzer business logic that belongs in `dsp`, `display`, or `ui`.

@@ -7,9 +7,9 @@
 
 #include "dsp/core/AnalyzerConstants.h"
 #include "dsp/core/AnalyzerEngine.h"
+#include "display/analyzer/logic/AnalyzerMeter.h"
 #include "shared/DefaultParameterValues.h"
-#include "ui/analyzer/AnalyzerUiConstants.h"
-#include "ui/analyzer/helpers/AnalyzerMeter.h"
+#include "ui/analyzer/plot/data/AnalyzerUiConstants.h"
 
 namespace {
     constexpr double sampleRate = 48000.0;
@@ -239,17 +239,22 @@ namespace {
         return static_cast<int>(std::distance(bandInfo.begin(), nearest));
     }
 
-    Analyzer::RenderData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
-                                        const TestParameters &parameters,
-                                        float dtSeconds = Ui::AnalyzerConstants::meterPollIntervalSeconds) {
-        displayMeter.tick(engine.getBandInfo(), engine.getTraces(), makeMeterSettings(parameters), parameters.gridMinDb, dtSeconds);
-        return displayMeter.getRenderData();
+    Analyzer::MeterData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
+                                       const TestParameters &parameters,
+                                       float dtSeconds = Ui::AnalyzerConstants::meterPollIntervalSeconds) {
+        displayMeter.tick(engine.getBandInfo(),
+                          engine.readPublishedTraces().getTraces(),
+                          makeMeterSettings(parameters),
+                          parameters.gridMinDb,
+                          dtSeconds);
+        return displayMeter.getMeterData();
     }
 
     void requireStrongestBandNearFrequency(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                            const TestParameters &parameters, float frequencyHz) {
         const auto meterData = buildMeterData(displayMeter, engine, parameters);
-        const auto &bandInfo = meterData.bandInfo;
+        REQUIRE(meterData.bandInfo != nullptr);
+        const auto &bandInfo = *meterData.bandInfo;
         const auto &frame = meterData.traces.front().frame;
         const auto strongestBandIndex = getStrongestBandIndex(frame.peakDb);
         const auto nearestBandIndex = getNearestBandIndex(bandInfo, frequencyHz);
@@ -262,15 +267,15 @@ namespace {
         REQUIRE(std::abs(strongestBandIndex - nearestBandIndex) <= 2);
     }
 
-    Analyzer::RenderData tickMeter(AnalyzerMeter &displayMeter,
-                                   const std::vector<Analyzer::BandInfo> &bandInfo,
-                                   const std::vector<Analyzer::RawTrace> &traces,
-                                   const Analyzer::MeterSettings &meterSettings,
-                                   const float floorDb,
-                                   const float dtSeconds) {
+    Analyzer::MeterData tickMeter(AnalyzerMeter &displayMeter,
+                                  const std::vector<Analyzer::BandInfo> &bandInfo,
+                                  const std::vector<Analyzer::RawTrace> &traces,
+                                  const Analyzer::MeterSettings &meterSettings,
+                                  const float floorDb,
+                                  const float dtSeconds) {
         const auto sharedBandInfo = std::make_shared<const std::vector<Analyzer::BandInfo>>(bandInfo);
         displayMeter.tick(sharedBandInfo, traces, meterSettings, floorDb, dtSeconds);
-        return displayMeter.getRenderData();
+        return displayMeter.getMeterData();
     }
 }
 
@@ -299,7 +304,8 @@ TEST_CASE("AnalyzerEngine prepare sizes match selected band mode") {
 
     const auto meterData = buildMeterData(displayMeter, engine, parameters);
     const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
-    REQUIRE(meterData.bandInfo.size() == expectedBandCount);
+    REQUIRE(meterData.bandInfo != nullptr);
+    REQUIRE(meterData.bandInfo->size() == expectedBandCount);
     REQUIRE(meterData.traces.front().frame.rmsDb.size() == expectedBandCount);
     REQUIRE(meterData.traces.front().frame.peakDb.size() == expectedBandCount);
 }
@@ -467,7 +473,7 @@ TEST_CASE("AnalyzerEngine clears sidechain traces when sidechain input disappear
 
     processSilenceBlocks(engine, 2, 1);
 
-    const auto traces = engine.getTraces();
+    const auto &traces = engine.readPublishedTraces().getTraces();
     REQUIRE(traces.size() == 1);
     constexpr float powerTolerance = 0.000001f;
 
@@ -517,7 +523,7 @@ TEST_CASE("AnalyzerEngine raw filterbank peaks on the exact band center frequenc
             const auto frequencyHz = (*bandInfo)[bandIndex].centerHz;
             processSineBlocks(engine, 2, {frequencyHz, frequencyHz}, {1.0f, 1.0f});
 
-            const auto traces = engine.getTraces();
+            const auto &traces = engine.readPublishedTraces().getTraces();
             REQUIRE(traces.size() == 1);
             REQUIRE(traces.front().measurements.size() == bandInfo->size());
 
@@ -561,7 +567,7 @@ TEST_CASE("AnalyzerEngine 44.1 kHz 1/6-octave centers keep consistent raw peak l
         const auto frequencyHz = (*bandInfo)[bandIndex].centerHz;
         processSineBlocks(engine, 2, {frequencyHz, frequencyHz}, {1.0f, 1.0f}, consistencySettleBlocks, sampleRate44100);
 
-        const auto traces = engine.getTraces();
+        const auto &traces = engine.readPublishedTraces().getTraces();
         REQUIRE(traces.size() == 1);
         REQUIRE(traces.front().measurements.size() == bandInfo->size());
 
@@ -647,7 +653,8 @@ TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfigurati
 
     const auto reconfiguredSnapshot = buildMeterData(displayMeter, engine, parameters);
     const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
-    REQUIRE(reconfiguredSnapshot.bandInfo.size() == expectedBandCount);
+    REQUIRE(reconfiguredSnapshot.bandInfo != nullptr);
+    REQUIRE(reconfiguredSnapshot.bandInfo->size() == expectedBandCount);
     REQUIRE(reconfiguredSnapshot.traces.front().frame.peakDb.size() == expectedBandCount);
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }
@@ -663,7 +670,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
     processSineBlocks(engine, 1, {lowSineHz}, {1.0f});
 
     const auto initialSnapshot = buildMeterData(displayMeter, engine, parameters);
-    REQUIRE(initialSnapshot.bandInfo.size() == getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode));
+    REQUIRE(initialSnapshot.bandInfo != nullptr);
+    REQUIRE(initialSnapshot.bandInfo->size() == getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode));
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 
     setPrimarySignal(parameters, Analyzer::SignalSource::main, Analyzer::SignalMode::stereo);
@@ -674,7 +682,8 @@ TEST_CASE("AnalyzerEngine keeps working after parameter changes") {
 
     const auto updatedSnapshot = buildMeterData(displayMeter, engine, parameters);
     const auto expectedBandCount = getExpectedBandCount(sampleRate, parameters.engineParameters.bandMode);
-    REQUIRE(updatedSnapshot.bandInfo.size() == expectedBandCount);
+    REQUIRE(updatedSnapshot.bandInfo != nullptr);
+    REQUIRE(updatedSnapshot.bandInfo->size() == expectedBandCount);
     REQUIRE(updatedSnapshot.traces.front().frame.peakDb.size() == expectedBandCount);
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, highSineHz);
 }

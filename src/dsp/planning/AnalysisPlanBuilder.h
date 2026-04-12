@@ -29,6 +29,7 @@ namespace Analyzer {
         TraceKind kind = TraceKind::slot1;
         SourceFamily sourceFamily = SourceFamily::mainInput;
         DerivedSignal primarySignal = DerivedSignal::mid;
+        // Used for stereo (left + right)
         std::optional<DerivedSignal> secondarySignal;
     };
 

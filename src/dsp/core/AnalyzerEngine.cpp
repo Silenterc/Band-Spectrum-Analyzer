@@ -101,6 +101,7 @@ namespace Analyzer {
 
             for (auto &processor: processors) {
                 processor.process(slicedSources);
+                // Accumulate this slice into every overlapping analysis frame that is currently active
                 for (size_t frameSlotIndex = 0; frameSlotIndex < frameSlots.size(); ++frameSlotIndex) {
                     if (frameSlots[frameSlotIndex].active)
                         processor.accumulateCurrentSlice(frameSlotIndex);
@@ -116,8 +117,10 @@ namespace Analyzer {
             samplesUntilNextFrameStart -= sliceSamples;
 
             if (samplesUntilNextFrameStart == 0) {
+                // Reuse the next rotating frame slot at each hop boundary.
                 const auto slotToRestart = nextFrameSlotToStart;
 
+                // Publish and clear the completed frame before reusing this slot.
                 if (frameSlots[slotToRestart].active
                     && frameSlots[slotToRestart].fillSamples == Constants::analysisFrameSamples) {
                     publishProcessorState(false, slotToRestart);
@@ -125,9 +128,12 @@ namespace Analyzer {
                         processor.clearAccumulatedFrame(slotToRestart);
                 }
 
+                // Start a fresh overlapping frame in this slot.
                 frameSlots[slotToRestart].active = true;
                 frameSlots[slotToRestart].fillSamples = 0;
+                // Advance to the other slot for the next hop.
                 nextFrameSlotToStart = (nextFrameSlotToStart + 1) % frameSlots.size();
+                // Reset the countdown until the next hop boundary.
                 samplesUntilNextFrameStart = Constants::analysisHopSamples;
             }
         }
@@ -137,11 +143,9 @@ namespace Analyzer {
         return std::atomic_load(&bandInfo);
     }
 
-    std::vector<RawTrace> Engine::getTraces() const {
-        // TripleBuffer gives us the latest published raw traces without touching the live write side
+    AnalyzerPublishedTracesView Engine::readPublishedTraces() const {
         const auto [publishedTraces, hasUpdate] = traces.get_for_reader();
-        juce::ignoreUnused(hasUpdate);
-        return *publishedTraces;
+        return {.traces = publishedTraces, .hasUpdate = hasUpdate};
     }
 
     bool Engine::hasRecentSignal() const {

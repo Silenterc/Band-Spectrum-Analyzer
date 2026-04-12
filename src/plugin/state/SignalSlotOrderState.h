@@ -9,7 +9,7 @@ public:
     class Listener {
     public:
         virtual ~Listener() = default;
-        virtual void signalSlotOrderChanged(const Shared::SignalSlotOrder &slotOrder) = 0;
+        virtual void signalSlotOrderChanged() = 0;
     };
 
     SignalSlotOrderState();

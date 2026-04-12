@@ -84,7 +84,7 @@ juce::Identifier SignalSlotOrderState::getPropertyId(const size_t orderIndex) {
 }
 
 void SignalSlotOrderState::notifyListeners() {
-    listeners.call([this](Listener &listener) {
-        listener.signalSlotOrderChanged(slotOrder);
+    listeners.call([](Listener &listener) {
+        listener.signalSlotOrderChanged();
     });
 }

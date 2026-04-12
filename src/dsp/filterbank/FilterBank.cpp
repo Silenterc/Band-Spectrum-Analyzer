@@ -197,7 +197,7 @@ namespace Analyzer {
 
     void FilterBank::writeMeasurements(const size_t bandAmount,
                                        const size_t numSamples,
-                                       std::vector<BandMeasurements>& outputMeasurements) {
+                                       std::vector<BandMeasurements>& outputMeasurements) const {
         for (size_t filterIndex = 0; filterIndex < primaryFilters.size(); ++filterIndex) {
             alignas(sizeof(SimdFloat)) std::array<float, groupWidth> summedPowers{};
             alignas(sizeof(SimdFloat)) std::array<float, groupWidth> peakPowerValues{};

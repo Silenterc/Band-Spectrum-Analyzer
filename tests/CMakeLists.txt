@@ -18,15 +18,18 @@ add_executable(band-spectrum-analyzer-tests
     ../src/dsp/planning/AnalysisPlanBuilder.cpp
     ../src/dsp/processing/AnalysisGroupProcessor.cpp
     ../src/dsp/sources/AnalysisSourceBuilder.cpp
-    ../src/ui/UiTheme.cpp
-    ../src/ui/analyzer/helpers/AnalyzerGeometry.cpp
-    ../src/ui/analyzer/helpers/AnalyzerHoverModel.cpp
-    ../src/ui/analyzer/helpers/AnalyzerMeter.cpp
-    ../src/ui/analyzer/helpers/FrequencyFormatter.cpp
-    ../src/ui/analyzer/helpers/MusicTheory.cpp
-    ../src/ui/analyzer/model/AnalyzerGlobalHoldModel.cpp
-    ../src/ui/analyzer/model/AnalyzerViewModel.cpp
-    ../src/ui/analyzer/model/SignalSlotOrderModel.cpp)
+    ../src/display/analyzer/logic/AnalyzerDisplayFrameModel.cpp
+    ../src/display/analyzer/logic/AnalyzerGlobalHoldModel.cpp
+    ../src/display/analyzer/logic/AnalyzerMeter.cpp
+    ../src/ui/theme/UiTheme.cpp
+    ../src/ui/analyzer/plot/logic/AnalyzerGeometry.cpp
+    ../src/ui/analyzer/plot/logic/AnalyzerHoverModel.cpp
+    ../src/ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.cpp
+    ../src/ui/analyzer/plot/logic/FrequencyFormatter.cpp
+    ../src/ui/analyzer/plot/logic/MusicTheory.cpp
+    ../src/ui/analyzer/plot/logic/AnalyzerViewModel.cpp
+    ../src/ui/analyzer/rack/model/SignalSlotOrderModel.cpp
+    ../src/plugin/state/SignalSlotOrderState.cpp)
 
 target_include_directories(band-spectrum-analyzer-tests
     PRIVATE

@@ -44,42 +44,49 @@ target_sources(${PROJECT_NAME}
         dsp/planning/AnalysisPlanBuilder.cpp
         dsp/processing/AnalysisGroupProcessor.cpp
         dsp/sources/AnalysisSourceBuilder.cpp
-        ui/UiIcons.cpp
-        ui/UiRasterAssets.cpp
-        ui/PadButton.cpp
-        ui/SectionDividerComponent.cpp
-        ui/UiTheme.cpp
-        ui/EditorBackgroundComponent.cpp
-        ui/analyzer/view/MainLayoutComponent.cpp
-        ui/analyzer/view/AnalyzerSectionComponent.cpp
-        ui/analyzer/view/AnalyzerComponent.cpp
-        ui/analyzer/view/AnalyzerHoverOverlayComponent.cpp
-        ui/analyzer/view/AnalyzerMeterControlsComponent.cpp
-        ui/analyzer/view/SignalRackComponent.cpp
-        ui/analyzer/view/SignalSlotActionButton.cpp
-        ui/analyzer/view/SignalSlotComponent.cpp
-        ui/analyzer/view/SignalSlotDragHandle.cpp
-        ui/analyzer/view/SignalSlotModeButton.cpp
-        ui/analyzer/view/SignalSlotSourceToggle.cpp
-        ui/analyzer/view/SignalSlotSwatchButton.cpp
-        ui/analyzer/popups/SignalColourPopupContent.cpp
-        ui/analyzer/popups/SignalSelectionPopupContent.cpp
-        ui/analyzer/model/AnalyzerGlobalHoldModel.cpp
-        ui/analyzer/model/AnalyzerRefreshModel.cpp
-        ui/analyzer/model/AnalyzerViewModel.cpp
-        ui/analyzer/model/SignalSlotOrderModel.cpp
-        ui/analyzer/helpers/AnalyzerMeter.cpp
-        ui/analyzer/helpers/AnalyzerGeometry.cpp
-        ui/analyzer/helpers/AnalyzerHoverModel.cpp
-        ui/analyzer/helpers/SignalRackDragSession.cpp
-        ui/analyzer/helpers/SignalRackLayoutEngine.cpp
-        ui/analyzer/helpers/FrequencyFormatter.cpp
-        ui/analyzer/helpers/MusicTheory.cpp
-        ui/PluginEditor.cpp
+        display/analyzer/logic/AnalyzerDisplayFrameModel.cpp
+        display/analyzer/logic/AnalyzerGlobalHoldModel.cpp
+        display/analyzer/logic/AnalyzerMeter.cpp
+        display/analyzer/thread/AnalyzerDisplayWorker.cpp
+        ui/theme/UiIcons.cpp
+        ui/theme/UiRasterAssets.cpp
+        ui/widgets/PadButton.cpp
+        ui/widgets/SectionDividerComponent.cpp
+        ui/theme/UiTheme.cpp
+        ui/editor/EditorBackgroundComponent.cpp
+        ui/analyzer/layout/MainLayoutComponent.cpp
+        ui/analyzer/plot/view/AnalyzerSectionComponent.cpp
+        ui/analyzer/plot/view/AnalyzerComponent.cpp
+        ui/analyzer/plot/view/AnalyzerHoverOverlayRenderer.cpp
+        ui/analyzer/controls/AnalyzerMeterControlsComponent.cpp
+        ui/analyzer/rack/view/SignalRackComponent.cpp
+        ui/analyzer/rack/view/SignalSlotActionButton.cpp
+        ui/analyzer/rack/view/SignalSlotComponent.cpp
+        ui/analyzer/rack/view/SignalSlotDragHandle.cpp
+        ui/analyzer/rack/view/SignalSlotModeButton.cpp
+        ui/analyzer/rack/view/SignalSlotSourceToggle.cpp
+        ui/analyzer/rack/view/SignalSlotSwatchButton.cpp
+        ui/analyzer/rack/popups/SignalColourPopupContent.cpp
+        ui/analyzer/rack/popups/SignalModeSelectionPopupContent.cpp
+        ui/analyzer/plot/logic/AnalyzerViewModel.cpp
+        ui/analyzer/rack/model/SignalSlotOrderModel.cpp
+        ui/analyzer/plot/logic/AnalyzerGeometry.cpp
+        ui/analyzer/plot/logic/AnalyzerHoverModel.cpp
+        ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.cpp
+        ui/analyzer/rack/interaction/SignalRackDragSession.cpp
+        ui/analyzer/rack/interaction/SignalRackLayoutEngine.cpp
+        ui/analyzer/plot/logic/FrequencyFormatter.cpp
+        ui/analyzer/plot/logic/MusicTheory.cpp
+        ui/editor/PluginEditor.cpp
         plugin/parameters/ParameterAccess.cpp
+        plugin/ProcessorChangeTracker.cpp
         plugin/PluginProcessor.cpp
         plugin/state/SignalSlotOrderState.cpp)
 
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC

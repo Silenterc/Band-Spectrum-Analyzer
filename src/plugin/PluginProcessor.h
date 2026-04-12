@@ -6,28 +6,27 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "../display/analyzer/contracts/AnalyzerRawTraceSource.h"
 #include "../dsp/core/EngineParameterState.h"
-#include "../ui/AnalyzerRenderSource.h"
-#include "../ui/AnalyzerSettingsActions.h"
-#include "../ui/AnalyzerUiSnapshotSource.h"
+#include "../ui/contracts/AnalyzerSettingsActions.h"
+#include "../ui/contracts/AnalyzerUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
+#include "ProcessorChangeTracker.h"
 #include "parameters/ParameterAccess.h"
 #include "parameters/ParameterSchema.h"
 #include "state/SignalSlotOrderState.h"
 
 //==============================================================================
 class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
-                                             public AnalyzerRenderSource,
+                                             public AnalyzerRawTraceSource,
                                              public AnalyzerSettingsActions,
                                              public AnalyzerUiSnapshotSource,
-                                             private juce::ValueTree::Listener,
-                                             private SignalSlotOrderState::Listener,
-                                             private juce::AsyncUpdater {
+                                             private ProcessorChangeTracker::Listener {
 public:
     //==============================================================================
     SpectrumAnalyzerAudioProcessor();
 
-    ~SpectrumAnalyzerAudioProcessor() override;
+    ~SpectrumAnalyzerAudioProcessor() override = default;
 
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -82,22 +81,23 @@ public:
         return parameters;
     }
 
+    // AnalyzerUiSnapshotSource
     Ui::AnalyzerUiSnapshot getAnalyzerUiSnapshot() const override;
     void addAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
     void removeAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
 
+    // AnalyzerRawTraceSource
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
-    std::vector<Analyzer::RawTrace> getRawTraces() const override;
+    AnalyzerPublishedTracesView readPublishedTraces() const override;
     bool hasRecentSignal() const override;
 
+    // AnalyzerSettingsActions
     void setFreezeEnabled(bool isFrozen) override;
     void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
     void setSignalSlotVisible(size_t slotIndex, bool isVisible) override;
     void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) override;
     void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) override;
     void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) override;
-    void setSignalSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode) override;
-    void applySignalSlotState(size_t slotIndex, const Ui::SignalSlotState &state) override;
     void removeSignalSlot(size_t slotIndex) override;
     void addSignalSlot(size_t slotIndex,
                        const Ui::SignalSlotState &state,
@@ -123,27 +123,14 @@ private:
     juce::AudioProcessorValueTreeState parameters;
     PluginParameters::Access parameterAccess;
     SignalSlotOrderState signalSlotOrderState;
+    std::unique_ptr<ProcessorChangeTracker> changeTracker;
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
     std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
     juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    void registerUiStateParameterListeners();
-    void unregisterUiStateParameterListeners();
-    void triggerUiStateUpdate();
-    void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
-                                  const juce::Identifier &property) override;
-    void valueTreeChildAdded(juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) override;
-    void valueTreeChildRemoved(juce::ValueTree &parentTree,
-                               juce::ValueTree &childWhichHasBeenRemoved,
-                               int indexFromWhichChildWasRemoved) override;
-    void valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
-                                    int oldIndex,
-                                    int newIndex) override;
-    void valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) override;
-    void signalSlotOrderChanged(const Shared::SignalSlotOrder &slotOrder) override;
-    void handleAsyncUpdate() override;
+    void processorUiRefreshRequested() override;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerAudioProcessor)

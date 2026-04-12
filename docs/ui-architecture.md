@@ -1,8 +1,9 @@
 # UI Architecture
 
-This document describes the current UI architecture after the analyzer state split into:
+This document describes the current UI architecture after the analyzer split into:
 
-- a high-frequency render channel
+- a DSP raw-trace channel
+- a worker-thread display channel
 - a low-frequency immutable UI snapshot channel
 - a write-only action channel
 
@@ -13,11 +14,11 @@ flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Theme[Ui::Theme]
     Editor --> Layout[MainLayoutComponent]
 
-    Processor[SpectrumAnalyzerAudioProcessor] --> Render[AnalyzerRenderSource]
+    Processor[SpectrumAnalyzerAudioProcessor] --> RawSource[AnalyzerRawTraceSource]
     Processor --> Snapshot[AnalyzerUiSnapshotSource]
     Processor --> Actions[AnalyzerSettingsActions]
 
-    Render --> AnalyzerSection[AnalyzerSectionComponent]
+    RawSource --> AnalyzerSection[AnalyzerSectionComponent]
     Snapshot --> AnalyzerSection
     Snapshot --> Rack[SignalRackComponent]
     Snapshot --> Strip[AnalyzerMeterControlsComponent]
@@ -25,39 +26,64 @@ flowchart TD
     Actions --> Strip
 ```
 
-- The processor is the composition root.
-- The editor owns the theme and top-level layout only.
-- Read responsibilities are split:
-  - `AnalyzerRenderSource` for analyzer traces, band metadata, and recent-signal activity
-  - `AnalyzerUiSnapshotSource` for immutable UI/control state
-- Writes go through `AnalyzerSettingsActions` only.
+The editor still owns:
 
-## Channel Split
+- theme
+- top-level layout
 
-### 1. Render Channel
+The processor still owns:
 
-`AnalyzerRenderSource` owns:
+- contracts
+- snapshot publication
+- action handling
+
+The analyzer plot now owns a display worker internally and no longer runs analyzer semantics on the message thread.
+
+## Read / Write Channels
+
+### 1. Raw Trace Channel
+
+`AnalyzerRawTraceSource` owns:
 
 - `getBandInfo()`
-- `getRawTraces()`
+- `readPublishedTraces()`
 - `hasRecentSignal()`
 
 Rules:
 
-- this is the high-frequency analyzer render path
-- it stays pull-based
-- it stays separate from UI snapshot publication
-- the triple buffer remains the transport for raw traces from DSP to UI
-- band layout remains DSP-owned; the UI consumes the published `bandInfo` as-is, including its dynamic count for the active fractional-octave mode, note anchor, and sample-rate span
+- this is not a UI snapshot channel
+- this is not paint-ready data
+- the message thread should not consume raw traces directly
+- this contract primarily feeds the display worker
 
-### 2. UI Snapshot Channel
+### 2. Display Frame Channel
+
+This channel is internal to the analyzer section:
+
+- producer: `AnalyzerDisplayWorker`
+- consumer: `AnalyzerComponent`
+
+Transport:
+
+- `AnalyzerDisplayFrameBuffer`
+- `TripleBuffer<AnalyzerDisplayFrame>`
+
+Rules:
+
+- published frames are immutable
+- frames are semantic display state, not JUCE geometry
+- frames are keyed by slot index, not visual order
+
+### 3. UI Snapshot Channel
 
 `AnalyzerUiSnapshotSource` owns:
 
 - `getAnalyzerUiSnapshot()`
 - snapshot listener registration
 
-`Ui::AnalyzerUiSnapshot` is the single source of truth for low-frequency analyzer UI state:
+`Ui::AnalyzerUiSnapshot` remains the only low-frequency analyzer UI snapshot type.
+
+It contains:
 
 - `signalSlots`
 - `slotOrder`
@@ -68,151 +94,261 @@ Rules:
 - `gridMaxDb`
 - `gridStepDb`
 
-Rules:
+### 4. Action Channel
 
-- views render from this snapshot
-- views do not keep competing writable copies of this state
-- derived state is computed from selectors, not stored independently
-
-### 3. Action Channel
-
-`AnalyzerSettingsActions` is the only UI write path.
+`AnalyzerSettingsActions` is still the only UI write path.
 
 Rules:
 
 - views dispatch intents only
-- views do not know parameter ids
-- the processor owns the bridge from intents to APVTS/state updates
+- views must not know parameter ids
+- views must not talk to APVTS directly
 
 ## Folder Responsibilities
 
-### `src/plugin/`
-
-- composition root
-- owns APVTS, serialization, and listener wiring
-- publishes render data and UI snapshots
-- consumes UI intents
-
 ### `src/ui/`
 
-- shared UI primitives only
-- shared theme tokens
-- shared popup shell
-- shared popup chrome helpers
-- shared icons and shared assets
-- no analyzer-specific policy
+- shared UI primitives
+- theme tokens
+- popup chrome
+- icons and assets
+- no analyzer-specific worker logic
 
-### `src/ui/analyzer/model/`
+### `src/ui/analyzer/controls/`
 
-- `AnalyzerUiSnapshot`
-- snapshot selectors
-- option metadata
-- global hold overlay logic
-- refresh cadence decisions
-- axis/frequency policy
-- meter tuning
-- view-model derivation
+- analyzer control strip components only
+- snapshot-driven
+- action-dispatching
 
-### `src/ui/analyzer/view/`
+### `src/ui/analyzer/layout/`
+
+- top-level analyzer area composition only
+
+### `src/ui/analyzer/plot/view/`
 
 - JUCE `Component` classes only
-- render from `Ui::Theme`, `AnalyzerUiSnapshot`, and analyzer render data
-- dispatch intents through `AnalyzerSettingsActions`
-- no APVTS access
-- no duplicated business state
+- analyzer section container
+- analyzer plot component
+- hover overlay
 
-### `src/ui/analyzer/popups/`
+### `src/ui/analyzer/plot/logic/`
 
-- popup content components only
-- consume centralized popup tokens, popup chrome helpers, and signal metadata
+Now message-thread-only and presentation-only:
 
-### `src/ui/analyzer/helpers/`
+- `AnalyzerViewModel`
+  - static layout
+  - visible band layout
+  - grid lines
+  - frequency markers
+  - hover lookup
+- `AnalyzerRenderBatchBuilder`
+  - direct paint-batch generation from immutable display frames
+- `AnalyzerGeometry`
+  - domain-to-screen mapping
+- formatting and hover helpers
 
-- low-level math, geometry, formatting, and render utilities only
-- no ownership of product state or duplicated UI policy
+This folder no longer owns:
 
-## Theme And Config Ownership
+- meter decay
+- display composition
+- global hold evolution
+- refresh cadence
 
-`Ui::Theme` now owns shared UI tokens plus named analyzer presentation tokens.
+Those moved to `src/display/analyzer/`.
 
-Important groups:
+### `src/ui/analyzer/rack/`
 
-- `metrics.editor`
-  - initial editor size
-- `metrics.popup`
-  - popup shell, row, and swatch styling
-- `metrics.analyzerPlot`
-  - plot margins, frame styling, axis label geometry, frequency-scale policy
-- `metrics.tooltip`
-  - tooltip size, offsets, padding, font, and chrome styling
-- `metrics.slot`
-  - slot/button/source-toggle interaction metrics
-- `metrics.sectionDivider`
-  - divider thickness and gradient stops
+- rack interaction
+- rack layout
+- rack popups
+- slot controls and slot visuals
 
-Rule:
+### `src/ui/analyzer/state/`
 
-- if a UI literal affects appearance, geometry, or repeated interaction behavior, it belongs in owned config/theme, not in a view file
+- immutable analyzer UI snapshot types only
 
-## Analyzer Rendering Flow
+## Analyzer Plot Flow
 
 ```mermaid
 flowchart TD
-    Timer[UI timer] --> RenderSource[AnalyzerRenderSource]
     SnapshotEvents[AnalyzerUiSnapshotSource listener] --> Snapshot[Ui::AnalyzerUiSnapshot]
-    RenderSource --> Meter[AnalyzerMeter]
-    Snapshot --> Meter
-    Meter --> RenderData[Analyzer::RenderData]
-    RenderData --> Hold[AnalyzerGlobalHoldModel]
-    Snapshot --> Hold
-    RenderData --> ViewModel[AnalyzerViewModel]
-    Hold --> ViewModel
-    Snapshot --> ViewModel
-    ViewModel --> Overlay[AnalyzerHoverOverlayComponent]
-    ViewModel --> Paint[AnalyzerComponent paint]
+    Worker[AnalyzerDisplayWorker] --> Frame[AnalyzerDisplayFrame]
+    Frame --> AnalyzerComponent
+    Snapshot --> AnalyzerComponent
+
+    AnalyzerComponent --> StaticLayout[AnalyzerViewModel static layout]
+    AnalyzerComponent --> Batches[AnalyzerRenderBatchBuilder]
+    AnalyzerComponent --> Hover[AnalyzerHoverOverlayRenderer]
+    StaticLayout --> Paint[AnalyzerComponent paint]
+    Batches --> Paint
+    Hover --> Paint
 ```
 
 Important behavior:
 
-- the analyzer plot reads traces and band metadata from the render source
-- the analyzer plot reads visibility, freeze, grid, and meter settings from the immutable snapshot
-- slot-frozen display traces are a UI concern layered on top of live render data
-- one global hold overlay is derived after display composition from the traces that are currently drawn
-- owner tint for that hold overlay is latched in analyzer model logic, not DSP or snapshot state
-- idle polling remains a display concern only
+- `AnalyzerComponent` no longer runs meter/composition/hold logic
+- it consumes immutable display frames from the worker
+- it consumes immutable snapshot state from the processor
+- it rebuilds static layout only when layout inputs change
+- it rebuilds dynamic paint batches from:
+  - `AnalyzerDisplayFrame`
+  - visible bands
+  - slot order
+  - slot styling
+  - current grid range
 
-## Signal Metadata
+## `AnalyzerComponent` Responsibilities
 
-`SignalSlotOptions.h` is the source of truth for:
+`AnalyzerComponent` now owns:
 
-- mode labels
-- source labels
-- source hints
-- option availability
-- default slot selection order
-- visible option counts used by popup layout
+- `AnalyzerDisplayWorker`
+- latest consumed display frame pointer
+- static layout invalidation
+- dynamic batch rebuilds
+- repaint decisions
+- hover updates
 
-Rule:
+It does not own:
 
-- renaming or adding signal modes/sources must be done in the metadata table, not in views
+- `AnalyzerMeter`
+- display composition
+- hold evolution
+- refresh cadence state machine
+- copied raw trace vectors
 
-## Derived State Rules
+That is the key reason the hot path is smaller on the message thread.
 
-Derived state must be computed, not stored as a parallel mutable model.
+## Presentation vs Semantic State
+
+This split is the most important UI rule in the current design.
+
+### Semantic state
+
+Semantic state affects time-evolving display behavior and is submitted to the worker through `AnalyzerDisplayControlState`.
 
 Examples:
 
-- visible trace kinds are derived from `signalSlots`
-- popup row counts are derived from signal metadata
-- slot ordering for drawing is derived from `slotOrder` plus selectors
-- global hold is derived from the display-composed traces, not stored in the snapshot or DSP transport
+- global freeze
+- per-slot freeze
+- hold visibility/settings
+- contribution mask derived from slot visibility
+- floor dB
+
+### Presentation state
+
+Presentation state stays on the message thread and must not wake the worker.
+
+Examples:
+
+- slot order
+- colour
+- opacity
+- hover
+- zoom / visible frequency range
+
+Practical consequence:
+
+- opacity drag is UI-only
+- reorder drag is UI-only
+- freeze and hold still go through the worker
+
+## Static Layout vs Dynamic Batching
+
+The plot code is now split into two presentation stages.
+
+### Static layout
+
+Owned by `AnalyzerViewModel`.
+
+Inputs:
+
+- band layout
+- component bounds
+- grid min/max/step
+- visible frequency range
+
+Outputs:
+
+- plot bounds
+- visible bands
+- grid markers
+- frequency markers
+
+### Dynamic batching
+
+Owned by `AnalyzerRenderBatchBuilder`.
+
+Inputs:
+
+- latest `AnalyzerDisplayFrame`
+- visible bands
+- slot order
+- slot colour / opacity
+- meter visibility
+- plot bounds
+
+Outputs:
+
+- rectangle batches for bars
+- rectangle batches for hold
+- rectangle batches for hover highlight
+
+This removes the old extra pass that built full intermediate trace/bar models every frame.
+
+## Hover Overlay
+
+`AnalyzerHoverOverlayRenderer` remains a lightweight helper owned by `AnalyzerComponent`.
+
+It owns:
+
+- hover-only repaint bounds
+- hovered-bar highlight batches
+- tooltip chrome and glyphs
+
+It consumes:
+
+- hover info from `AnalyzerViewModel`
+- immutable display frame
+- visible bands
+- slot styling/order
+
+It does not own analyzer semantics.
+
+## Theme Ownership
+
+`Ui::Theme` remains the owner of visual tokens and repeated interaction metrics.
+
+Important groups:
+
+- `metrics.editor`
+- `metrics.popup`
+- `metrics.analyzerPlot`
+- `metrics.tooltip`
+- `metrics.slot`
+- `metrics.sectionDivider`
+
+Rule:
+
+- if a literal affects appearance, geometry, or repeated interaction behavior, it belongs in theme/config, not in a view file
 
 ## Triple Buffer Boundary
 
-The triple buffer is intentionally unchanged.
+The UI now consumes the second triple-buffer boundary, not the first one.
 
-- DSP publishes raw traces through the engine’s triple buffer
-- UI pulls the latest published raw traces through `AnalyzerRenderSource`
-- `Ui::AnalyzerUiSnapshot` does not carry trace payloads
+- DSP triple buffer
+  - raw traces
+  - reader: display worker
+- display triple buffer
+  - display frames
+  - reader: message thread
 
-This keeps the lock-free render transport separate from low-frequency UI state publication.
+UI snapshots remain separate from both.
+
+## Current State
+
+- analyzer plot is no longer timer-driven for semantic recomputation
+- worker thread owns display-rate analyzer state
+- message thread owns only presentation state
+- slot order, colour, and opacity are UI-only concerns
+- hold and freeze semantics are worker-owned concerns
+- analyzer docs and code now align on the explicit `dsp / display / ui` split

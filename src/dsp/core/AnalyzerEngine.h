@@ -12,6 +12,7 @@
 #include "../processing/InputActivityDetector.h"
 #include "../sources/AnalysisSourceBuilder.h"
 #include "../util/TripleBuffer.h"
+#include "display/analyzer/contracts/AnalyzerPublishedTracesView.h"
 #include "AnalyzerConstants.h"
 #include "AnalyzerData.h"
 #include "EngineParameterState.h"
@@ -55,9 +56,9 @@ namespace Analyzer {
         std::shared_ptr<const std::vector<BandInfo>> getBandInfo() const;
 
         /**
-         * Returns the latest published raw traces for this engine
+         * Returns a non-owning view of the latest published raw traces.
          */
-        std::vector<RawTrace> getTraces() const;
+        AnalyzerPublishedTracesView readPublishedTraces() const;
 
         /**
          * Returns whether the recent input history still counts as active.

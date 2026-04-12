@@ -74,7 +74,7 @@ namespace Analyzer {
          */
         void writeMeasurements(size_t bandAmount,
                                size_t numSamples,
-                               std::vector<BandMeasurements>& outputMeasurements);
+                               std::vector<BandMeasurements>& outputMeasurements) const;
 
         /**
          * Clears block-local power accumulators while keeping filter delay state intact.

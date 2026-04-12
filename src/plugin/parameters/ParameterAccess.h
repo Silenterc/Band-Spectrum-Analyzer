@@ -4,9 +4,9 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "../../display/analyzer/data/AnalyzerMeterData.h"
 #include "../../dsp/core/EngineParameterState.h"
-#include "../../ui/SignalSlotUiState.h"
-#include "../../ui/analyzer/AnalyzerRenderData.h"
+#include "../../ui/state/SignalSlotUiState.h"
 #include "ParameterSchema.h"
 
 namespace PluginParameters {

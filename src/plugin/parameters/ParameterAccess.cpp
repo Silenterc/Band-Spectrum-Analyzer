@@ -33,9 +33,13 @@ namespace PluginParameters {
         Analyzer::EngineParameterState state;
         state.bandMode = readBandMode();
 
-        const auto uiSlots = readUiSlots();
-        for (size_t slotIndex = 0; slotIndex < uiSlots.size(); ++slotIndex)
-            state.signalSlots[slotIndex] = uiSlots[slotIndex].configuration;
+        for (size_t slotIndex = 0; slotIndex < slotParams.size(); ++slotIndex) {
+            const auto &slot = slotParams[slotIndex];
+            auto &configuration = state.signalSlots[slotIndex];
+            configuration.enabled = readBool(slot.enabled);
+            configuration.source = readChoice(slot.source, Schema::signalSourceChoices);
+            configuration.mode = readChoice(slot.mode, Schema::signalModeChoices);
+        }
 
         return state;
     }

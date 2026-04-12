@@ -1,5 +1,5 @@
 #include "PluginProcessor.h"
-#include "../ui/PluginEditor.h"
+#include "../ui/editor/PluginEditor.h"
 
 namespace {
     // Temporary perf-tuning switch: ignore host/plugin state so new instances always use code defaults.
@@ -21,17 +21,12 @@ SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
       parameters(*this, nullptr, "SpecParams", createParameterLayout()),
       parameterAccess(parameters) {
     parameterAccess.cache();
-    registerUiStateParameterListeners();
-    signalSlotOrderState.addListener(*this);
+    changeTracker = std::make_unique<ProcessorChangeTracker>(
+        parameters,
+        signalSlotOrderState,
+        static_cast<ProcessorChangeTracker::Listener &>(*this));
 }
 
-SpectrumAnalyzerAudioProcessor::~SpectrumAnalyzerAudioProcessor() {
-    signalSlotOrderState.removeListener(*this);
-    unregisterUiStateParameterListeners();
-    cancelPendingUpdate();
-}
-
-//==============================================================================
 const juce::String SpectrumAnalyzerAudioProcessor::getName() const {
     return JucePlugin_Name;
 }
@@ -93,6 +88,7 @@ void SpectrumAnalyzerAudioProcessor::prepareToPlay(double sampleRate, int sample
     engine.prepare(sampleRate, samplesPerBlock);
     previousEngineParameters = parameterAccess.readEngineState();
     engine.setParameters(*previousEngineParameters);
+    changeTracker->clearEngineParametersDirty();
 }
 
 void SpectrumAnalyzerAudioProcessor::releaseResources() {
@@ -101,11 +97,11 @@ void SpectrumAnalyzerAudioProcessor::releaseResources() {
 }
 
 void SpectrumAnalyzerAudioProcessor::numBusesChanged() {
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::processorLayoutsChanged() {
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 bool SpectrumAnalyzerAudioProcessor::isBusesLayoutSupported(const BusesLayout &layouts) const {
@@ -157,13 +153,15 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    const auto currentEngineParameters = parameterAccess.readEngineState();
+    if (changeTracker->consumeEngineParametersDirty()) {
+        const auto currentEngineParameters = parameterAccess.readEngineState();
 
-    if (!previousEngineParameters.has_value()
-        || *previousEngineParameters != currentEngineParameters)
-        engine.setParameters(currentEngineParameters);
-
-    previousEngineParameters = currentEngineParameters;
+        if (!previousEngineParameters.has_value()
+            || *previousEngineParameters != currentEngineParameters) {
+            engine.setParameters(currentEngineParameters);
+            previousEngineParameters = currentEngineParameters;
+        }
+    }
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
@@ -226,25 +224,7 @@ void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int s
     previousEngineParameters = parameterAccess.readEngineState();
     if (previousEngineParameters.has_value())
         engine.setParameters(*previousEngineParameters);
-
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::registerUiStateParameterListeners() {
-    parameters.state.addListener(this);
-}
-
-void SpectrumAnalyzerAudioProcessor::unregisterUiStateParameterListeners() {
-    parameters.state.removeListener(this);
-}
-
-void SpectrumAnalyzerAudioProcessor::triggerUiStateUpdate() {
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-        handleAsyncUpdate();
-        return;
-    }
-
-    triggerAsyncUpdate();
+    changeTracker->clearEngineParametersDirty();
 }
 
 std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProcessor::getBandInfo() const {
@@ -272,8 +252,8 @@ void SpectrumAnalyzerAudioProcessor::removeAnalyzerUiSnapshotListener(AnalyzerUi
     uiSnapshotListeners.remove(&listener);
 }
 
-std::vector<Analyzer::RawTrace> SpectrumAnalyzerAudioProcessor::getRawTraces() const {
-    return engine.getTraces();
+AnalyzerPublishedTracesView SpectrumAnalyzerAudioProcessor::readPublishedTraces() const {
+    return engine.readPublishedTraces();
 }
 
 std::array<Ui::SignalSlotState, Shared::maxSignalSlots> SpectrumAnalyzerAudioProcessor::getSignalSlots() const {
@@ -318,44 +298,32 @@ juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcess
 
 void SpectrumAnalyzerAudioProcessor::setFreezeEnabled(const bool isFrozenValue) {
     parameterAccess.writeFreeze(isFrozenValue);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotEnabled(const size_t slotIndex, const bool isEnabled) {
     parameterAccess.writeSlotEnabled(slotIndex, isEnabled);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex, const bool isVisible) {
     parameterAccess.writeSlotVisible(slotIndex, isVisible);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotFrozen(const size_t slotIndex, const bool isFrozenValue) {
     parameterAccess.writeSlotFrozen(slotIndex, isFrozenValue);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotSource(const size_t slotIndex, const Analyzer::SignalSource source) {
     parameterAccess.writeSlotSignal(slotIndex, source, parameterAccess.readUiSlot(slotIndex).configuration.mode);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotMode(const size_t slotIndex, const Analyzer::SignalMode mode) {
     parameterAccess.writeSlotSignal(slotIndex, parameterAccess.readUiSlot(slotIndex).configuration.source, mode);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::setSignalSlotSignal(const size_t slotIndex,
-                                                         const Analyzer::SignalSource source,
-                                                         const Analyzer::SignalMode mode) {
-    parameterAccess.writeSlotSignal(slotIndex, source, mode);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::applySignalSlotState(const size_t slotIndex, const Ui::SignalSlotState &state) {
-    parameterAccess.writeSlotState(slotIndex, state);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::removeSignalSlot(const size_t slotIndex) {
@@ -364,7 +332,7 @@ void SpectrumAnalyzerAudioProcessor::removeSignalSlot(const size_t slotIndex) {
     state.visible = false;
     state.frozen = false;
     parameterAccess.writeSlotState(slotIndex, state);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
@@ -372,76 +340,40 @@ void SpectrumAnalyzerAudioProcessor::addSignalSlot(const size_t slotIndex,
                                                    const Shared::SignalSlotOrder &slotOrder) {
     parameterAccess.writeSlotState(slotIndex, state);
     signalSlotOrderState.setOrder(slotOrder);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) {
     signalSlotOrderState.setOrder(slotOrder);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotColour(const size_t slotIndex, const int colourIndex) {
     parameterAccess.writeSlotColour(slotIndex, colourIndex);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotOpacity(const size_t slotIndex, const float opacity) {
     parameterAccess.writeSlotOpacity(slotIndex, opacity);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowPeakEnabled(const bool isEnabled) {
     parameterAccess.writeShowPeak(isEnabled);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowRmsEnabled(const bool isEnabled) {
     parameterAccess.writeShowRms(isEnabled);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
 void SpectrumAnalyzerAudioProcessor::setShowHoldEnabled(const bool isEnabled) {
     parameterAccess.writeShowHold(isEnabled);
-    triggerUiStateUpdate();
+    changeTracker->requestUiRefresh();
 }
 
-void SpectrumAnalyzerAudioProcessor::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
-                                                             const juce::Identifier &property) {
-    juce::ignoreUnused(treeWhosePropertyHasChanged, property);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::valueTreeChildAdded(juce::ValueTree &parentTree,
-                                                         juce::ValueTree &childWhichHasBeenAdded) {
-    juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::valueTreeChildRemoved(juce::ValueTree &parentTree,
-                                                           juce::ValueTree &childWhichHasBeenRemoved,
-                                                           const int indexFromWhichChildWasRemoved) {
-    juce::ignoreUnused(parentTree, childWhichHasBeenRemoved, indexFromWhichChildWasRemoved);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
-                                                                const int oldIndex,
-                                                                const int newIndex) {
-    juce::ignoreUnused(parentTreeWhoseChildrenHaveMoved, oldIndex, newIndex);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) {
-    juce::ignoreUnused(treeWhoseParentHasChanged);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::signalSlotOrderChanged(const Shared::SignalSlotOrder &slotOrder) {
-    juce::ignoreUnused(slotOrder);
-    triggerUiStateUpdate();
-}
-
-void SpectrumAnalyzerAudioProcessor::handleAsyncUpdate() {
+void SpectrumAnalyzerAudioProcessor::processorUiRefreshRequested() {
     const auto snapshot = getAnalyzerUiSnapshot();
     if (lastPublishedUiSnapshot.has_value() && *lastPublishedUiSnapshot == snapshot)
         return;
