@@ -162,7 +162,7 @@ namespace Ui {
     };
 
     struct BackgroundMetrics {
-        int woodSideInset = 32;
+        int woodSideInset = 31;
         int screwPadding = 2;
     };
 
