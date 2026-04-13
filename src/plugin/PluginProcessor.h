@@ -108,6 +108,9 @@ public:
     void setShowPeakEnabled(bool isEnabled) override;
     void setShowRmsEnabled(bool isEnabled) override;
     void setShowHoldEnabled(bool isEnabled) override;
+    void setCustomFrequencyRangeEnabled(bool isEnabled) override;
+    void setVisibleMinFrequencyHz(float frequencyHz) override;
+    void setVisibleMaxFrequencyHz(float frequencyHz) override;
 
 private:
     std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const;
@@ -118,6 +121,9 @@ private:
     float getGridMinDb() const;
     float getGridMaxDb() const;
     float getGridStepDb() const;
+    bool getUseCustomFrequencyRange() const;
+    float getVisibleMinFrequencyHz() const;
+    float getVisibleMaxFrequencyHz() const;
 
     Analyzer::Engine engine;
     juce::AudioProcessorValueTreeState parameters;

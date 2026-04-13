@@ -131,7 +131,7 @@ namespace {
     }
 }
 
-TEST_CASE("AnalyzerUiSnapshot equality includes grid and freeze state", "[ui][snapshot]") {
+TEST_CASE("AnalyzerUiSnapshot equality includes grid, freeze, and frequency range state", "[ui][snapshot]") {
     Ui::AnalyzerUiSnapshot lhs;
     Ui::AnalyzerUiSnapshot rhs;
 
@@ -142,6 +142,18 @@ TEST_CASE("AnalyzerUiSnapshot equality includes grid and freeze state", "[ui][sn
 
     rhs = lhs;
     rhs.frozen = true;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.useCustomFrequencyRange = true;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.visibleMinFrequencyHz = 80.0f;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.visibleMaxFrequencyHz = 12000.0f;
     REQUIRE(lhs != rhs);
 }
 
@@ -179,7 +191,7 @@ TEST_CASE("Default signal configuration comes from centralized option metadata",
     REQUIRE(configuration.mode == Analyzer::SignalMode::side);
 }
 
-TEST_CASE("Hover readout matches the top-of-cursor visual reference", "[ui][hover]") {
+TEST_CASE("Hover readout matches the direct cursor grid-space mapping", "[ui][hover]") {
     const auto theme = Ui::makeTheme();
     const AnalyzerGeometry geometry(theme);
     const FrequencyFormatter formatter;
@@ -195,7 +207,7 @@ TEST_CASE("Hover readout matches the top-of-cursor visual reference", "[ui][hove
     };
 
     const auto hoverY = geometry.yForDb(-35.0f, -50.0f, 3.0f, plotBounds);
-    const juce::Point<float> hoverPosition(visibleBands.front().hitBounds.getCentreX(), hoverY + 4.0f);
+    const juce::Point<float> hoverPosition(visibleBands.front().hitBounds.getCentreX(), hoverY);
     const auto hoverInfo = hoverModel.build(localBounds, plotBounds, visibleBands,
                                             -50.0f, 3.0f, 20.0f, 20000.0f, hoverPosition);
 
@@ -223,6 +235,33 @@ TEST_CASE("Analyzer view model keeps full-range bar layout unchanged", "[ui][vie
     REQUIRE(visibleBands.size() == meterData.bandInfo->size());
     REQUIRE(visibleBands.front().sourceBandIndex == 0);
     REQUIRE(visibleBands.back().sourceBandIndex == meterData.bandInfo->size() - 1);
+
+    const auto &frequencyMarkers = layout.frequencyMarkers;
+    REQUIRE_FALSE(frequencyMarkers.empty());
+    REQUIRE(frequencyMarkers.front().label == "20");
+    REQUIRE(frequencyMarkers.back().label.contains("20"));
+    REQUIRE(frequencyMarkers.back().label.contains("k"));
+}
+
+TEST_CASE("Analyzer view model keeps edge labels when custom range matches full span", "[ui][view-model]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    const auto meterData = makeZoomMeterData();
+    AnalyzerViewState viewState;
+    viewState.useCustomFrequencyRange = true;
+    viewState.visibleMinFrequencyHz = 20.0f;
+    viewState.visibleMaxFrequencyHz = 20000.0f;
+
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
+
+    const auto &layout = viewModel.getLayout();
+    REQUIRE(layout.useCustomFrequencyRange);
 
     const auto &frequencyMarkers = layout.frequencyMarkers;
     REQUIRE_FALSE(frequencyMarkers.empty());
@@ -268,8 +307,8 @@ TEST_CASE("Analyzer view model reflows visible bands and hover with custom frequ
 
     const auto &frequencyMarkers = layout.frequencyMarkers;
     REQUIRE_FALSE(frequencyMarkers.empty());
-    REQUIRE(frequencyMarkers.front().label == "50");
-    REQUIRE(frequencyMarkers.back().label == "200");
+    REQUIRE(frequencyMarkers.front().label == "45");
+    REQUIRE(frequencyMarkers.back().label == "210");
 }
 
 TEST_CASE("Global hold takes the maximum of currently visible traces", "[ui][global-hold]") {

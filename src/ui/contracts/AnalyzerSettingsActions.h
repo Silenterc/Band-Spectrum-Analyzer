@@ -21,6 +21,9 @@ public:
     virtual void setShowPeakEnabled(bool isEnabled) = 0;
     virtual void setShowRmsEnabled(bool isEnabled) = 0;
     virtual void setShowHoldEnabled(bool isEnabled) = 0;
+    virtual void setCustomFrequencyRangeEnabled(bool isEnabled) = 0;
+    virtual void setVisibleMinFrequencyHz(float frequencyHz) = 0;
+    virtual void setVisibleMaxFrequencyHz(float frequencyHz) = 0;
     virtual void removeSignalSlot(size_t slotIndex) = 0;
     virtual void addSignalSlot(size_t slotIndex,
                                const Ui::SignalSlotState &state,

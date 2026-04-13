@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "display/analyzer/data/AnalyzerMeterData.h"
+#include "ui/analyzer/plot/data/AnalyzerUiConstants.h"
 #include "ui/state/SignalSlotUiState.h"
 
 namespace Ui {
@@ -26,6 +27,9 @@ namespace Ui {
         float gridMinDb = 0.0f;
         float gridMaxDb = 0.0f;
         float gridStepDb = 0.0f;
+        bool useCustomFrequencyRange = false;
+        float visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
+        float visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
     };
 
     inline bool operator==(const AnalyzerUiSnapshot &lhs, const AnalyzerUiSnapshot &rhs) {
@@ -36,7 +40,10 @@ namespace Ui {
                && lhs.sidechainAvailable == rhs.sidechainAvailable
                && std::abs(lhs.gridMinDb - rhs.gridMinDb) <= 0.0001f
                && std::abs(lhs.gridMaxDb - rhs.gridMaxDb) <= 0.0001f
-               && std::abs(lhs.gridStepDb - rhs.gridStepDb) <= 0.0001f;
+               && std::abs(lhs.gridStepDb - rhs.gridStepDb) <= 0.0001f
+               && lhs.useCustomFrequencyRange == rhs.useCustomFrequencyRange
+               && std::abs(lhs.visibleMinFrequencyHz - rhs.visibleMinFrequencyHz) <= 0.0001f
+               && std::abs(lhs.visibleMaxFrequencyHz - rhs.visibleMaxFrequencyHz) <= 0.0001f;
     }
 
     inline bool operator!=(const AnalyzerUiSnapshot &lhs, const AnalyzerUiSnapshot &rhs) {

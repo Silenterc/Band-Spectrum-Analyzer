@@ -38,6 +38,9 @@ namespace PluginParameters::Schema {
     inline constexpr auto gridMinDbName = "Grid Min dB";
     inline constexpr auto gridMaxDbName = "Grid Max dB";
     inline constexpr auto gridStepDbName = "Grid Step dB";
+    inline constexpr auto useCustomFrequencyRangeName = "Use Custom Frequency Range";
+    inline constexpr auto visibleMinFrequencyHzName = "Visible Min Frequency";
+    inline constexpr auto visibleMaxFrequencyHzName = "Visible Max Frequency";
 
     inline constexpr auto bandModeId = "bandMode";
     inline constexpr auto freezeId = "freeze";
@@ -48,6 +51,9 @@ namespace PluginParameters::Schema {
     inline constexpr auto gridMinDbId = "gridMinDb";
     inline constexpr auto gridMaxDbId = "gridMaxDb";
     inline constexpr auto gridStepDbId = "gridStepDb";
+    inline constexpr auto useCustomFrequencyRangeId = "useCustomFrequencyRange";
+    inline constexpr auto visibleMinFrequencyHzId = "visibleMinFrequencyHz";
+    inline constexpr auto visibleMaxFrequencyHzId = "visibleMaxFrequencyHz";
 
     inline constexpr std::array<EnumChoice<Analyzer::BandMode>, 4> bandModeChoices{{
         {Analyzer::BandMode::octaveThird, "1/3 Oct"},
@@ -129,6 +135,18 @@ namespace PluginParameters::Schema {
 
     inline auto gridStepDbRange() {
         return juce::NormalisableRange<float>(Defaults::gridStepDbMin, Defaults::gridStepDbMax, Defaults::gridStepDbStep);
+    }
+
+    inline auto visibleMinFrequencyHzRange() {
+        return juce::NormalisableRange<float>(Defaults::visibleMinFrequencyHzMin,
+                                              Defaults::visibleMinFrequencyHzMax,
+                                              Defaults::visibleMinFrequencyHzStep);
+    }
+
+    inline auto visibleMaxFrequencyHzRange() {
+        return juce::NormalisableRange<float>(Defaults::visibleMaxFrequencyHzMin,
+                                              Defaults::visibleMaxFrequencyHzMax,
+                                              Defaults::visibleMaxFrequencyHzStep);
     }
 
     inline juce::String slotParameterId(const SlotField field, const size_t slotIndex) {
@@ -286,6 +304,20 @@ namespace PluginParameters::Schema {
             gridStepDbName,
             gridStepDbRange(),
             Defaults::gridStepDb));
+        layout.add(std::make_unique<juce::AudioParameterBool>(
+            makeParameterID(useCustomFrequencyRangeId),
+            useCustomFrequencyRangeName,
+            Defaults::useCustomFrequencyRange));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            makeParameterID(visibleMinFrequencyHzId),
+            visibleMinFrequencyHzName,
+            visibleMinFrequencyHzRange(),
+            Defaults::visibleMinFrequencyHz));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            makeParameterID(visibleMaxFrequencyHzId),
+            visibleMaxFrequencyHzName,
+            visibleMaxFrequencyHzRange(),
+            Defaults::visibleMaxFrequencyHz));
 
         return layout;
     }

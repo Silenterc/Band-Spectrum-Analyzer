@@ -25,6 +25,9 @@ namespace PluginParameters {
         float readGridMinDb() const;
         float readGridMaxDb() const;
         float readGridStepDb() const;
+        bool readUseCustomFrequencyRange() const;
+        float readVisibleMinFrequencyHz() const;
+        float readVisibleMaxFrequencyHz() const;
 
         void writeFreeze(bool value);
         void writeSlotState(size_t slotIndex, const Ui::SignalSlotState &state);
@@ -37,6 +40,9 @@ namespace PluginParameters {
         void writeShowPeak(bool value);
         void writeShowRms(bool value);
         void writeShowHold(bool value);
+        void writeUseCustomFrequencyRange(bool value);
+        void writeVisibleMinFrequencyHz(float frequencyHz);
+        void writeVisibleMaxFrequencyHz(float frequencyHz);
 
     private:
         struct SlotRefs {
@@ -75,5 +81,8 @@ namespace PluginParameters {
         std::atomic<float> *gridMinDbParam = nullptr;
         std::atomic<float> *gridMaxDbParam = nullptr;
         std::atomic<float> *gridStepDbParam = nullptr;
+        std::atomic<float> *useCustomFrequencyRangeParam = nullptr;
+        std::atomic<float> *visibleMinFrequencyHzParam = nullptr;
+        std::atomic<float> *visibleMaxFrequencyHzParam = nullptr;
     };
 }

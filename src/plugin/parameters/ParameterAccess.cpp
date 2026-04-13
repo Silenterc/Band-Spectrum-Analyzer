@@ -27,6 +27,9 @@ namespace PluginParameters {
         gridMinDbParam = parameters.getRawParameterValue(Schema::gridMinDbId);
         gridMaxDbParam = parameters.getRawParameterValue(Schema::gridMaxDbId);
         gridStepDbParam = parameters.getRawParameterValue(Schema::gridStepDbId);
+        useCustomFrequencyRangeParam = parameters.getRawParameterValue(Schema::useCustomFrequencyRangeId);
+        visibleMinFrequencyHzParam = parameters.getRawParameterValue(Schema::visibleMinFrequencyHzId);
+        visibleMaxFrequencyHzParam = parameters.getRawParameterValue(Schema::visibleMaxFrequencyHzId);
     }
 
     Analyzer::EngineParameterState Access::readEngineState() const {
@@ -97,6 +100,18 @@ namespace PluginParameters {
         return readFloat(gridStepDbParam);
     }
 
+    bool Access::readUseCustomFrequencyRange() const {
+        return readBool(useCustomFrequencyRangeParam);
+    }
+
+    float Access::readVisibleMinFrequencyHz() const {
+        return readFloat(visibleMinFrequencyHzParam);
+    }
+
+    float Access::readVisibleMaxFrequencyHz() const {
+        return readFloat(visibleMaxFrequencyHzParam);
+    }
+
     void Access::writeFreeze(const bool value) {
         writeBool(Schema::freezeId, value);
     }
@@ -152,6 +167,24 @@ namespace PluginParameters {
 
     void Access::writeShowHold(const bool value) {
         writeBool(Schema::showHoldId, value);
+    }
+
+    void Access::writeUseCustomFrequencyRange(const bool value) {
+        writeBool(Schema::useCustomFrequencyRangeId, value);
+    }
+
+    void Access::writeVisibleMinFrequencyHz(const float frequencyHz) {
+        writeFloat(Schema::visibleMinFrequencyHzId,
+                   juce::jlimit(Defaults::visibleMinFrequencyHzMin,
+                                Defaults::visibleMinFrequencyHzMax,
+                                frequencyHz));
+    }
+
+    void Access::writeVisibleMaxFrequencyHz(const float frequencyHz) {
+        writeFloat(Schema::visibleMaxFrequencyHzId,
+                   juce::jlimit(Defaults::visibleMaxFrequencyHzMin,
+                                Defaults::visibleMaxFrequencyHzMax,
+                                frequencyHz));
     }
 
     bool Access::readBool(std::atomic<float> *parameter) {

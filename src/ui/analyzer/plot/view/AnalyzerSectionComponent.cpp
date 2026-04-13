@@ -115,6 +115,10 @@ void AnalyzerSectionComponent::rebuildLayout() {
     if (currentBandInfo == nullptr)
         return;
 
+    viewState.useCustomFrequencyRange = uiSnapshot.useCustomFrequencyRange;
+    viewState.visibleMinFrequencyHz = uiSnapshot.visibleMinFrequencyHz;
+    viewState.visibleMaxFrequencyHz = uiSnapshot.visibleMaxFrequencyHz;
+
     const auto layout = computeLayout();
     viewModel.updateLayout(*currentBandInfo,
                            viewState,
@@ -185,7 +189,10 @@ void AnalyzerSectionComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSna
 
     const auto layoutChanged = !nearlyEqual(uiSnapshot.gridMinDb, snapshot.gridMinDb)
                                || !nearlyEqual(uiSnapshot.gridMaxDb, snapshot.gridMaxDb)
-                               || !nearlyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb);
+                               || !nearlyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb)
+                               || uiSnapshot.useCustomFrequencyRange != snapshot.useCustomFrequencyRange
+                               || !nearlyEqual(uiSnapshot.visibleMinFrequencyHz, snapshot.visibleMinFrequencyHz)
+                               || !nearlyEqual(uiSnapshot.visibleMaxFrequencyHz, snapshot.visibleMaxFrequencyHz);
     uiSnapshot = snapshot;
     analyzerPlotComponent.setUiSnapshot(uiSnapshot);
 

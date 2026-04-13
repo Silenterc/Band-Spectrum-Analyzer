@@ -100,6 +100,9 @@ It contains:
 - `gridMinDb`
 - `gridMaxDb`
 - `gridStepDb`
+- `useCustomFrequencyRange`
+- `visibleMinFrequencyHz`
+- `visibleMaxFrequencyHz`
 
 ### 4. Action Channel
 

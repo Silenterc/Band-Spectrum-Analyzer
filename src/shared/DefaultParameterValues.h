@@ -16,6 +16,9 @@ namespace Defaults {
     inline constexpr float gridMinDb = -50.0f;
     inline constexpr float gridMaxDb = 3.0f;
     inline constexpr float gridStepDb = 5.0f;
+    inline constexpr bool useCustomFrequencyRange = false;
+    inline constexpr float visibleMinFrequencyHz = 20.0f;
+    inline constexpr float visibleMaxFrequencyHz = 20000.0f;
 
     // Global parameter ranges
     inline constexpr float holdMsMin = 0.0f;
@@ -33,6 +36,14 @@ namespace Defaults {
     inline constexpr float gridStepDbMin = 1.0f;
     inline constexpr float gridStepDbMax = 24.0f;
     inline constexpr float gridStepDbStep = 1.0f;
+
+    inline constexpr float visibleMinFrequencyHzMin = 20.0f;
+    inline constexpr float visibleMinFrequencyHzMax = 20000.0f;
+    inline constexpr float visibleMinFrequencyHzStep = 1.0f;
+
+    inline constexpr float visibleMaxFrequencyHzMin = 20.0f;
+    inline constexpr float visibleMaxFrequencyHzMax = 20000.0f;
+    inline constexpr float visibleMaxFrequencyHzStep = 1.0f;
 
     inline constexpr float signalOpacity = 0.78f;
     inline constexpr float signalOpacityMin = 0.15f;

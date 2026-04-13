@@ -241,6 +241,9 @@ Ui::AnalyzerUiSnapshot SpectrumAnalyzerAudioProcessor::getAnalyzerUiSnapshot() c
     state.gridMinDb = getGridMinDb();
     state.gridMaxDb = getGridMaxDb();
     state.gridStepDb = getGridStepDb();
+    state.useCustomFrequencyRange = getUseCustomFrequencyRange();
+    state.visibleMinFrequencyHz = getVisibleMinFrequencyHz();
+    state.visibleMaxFrequencyHz = getVisibleMaxFrequencyHz();
     return state;
 }
 
@@ -290,6 +293,18 @@ float SpectrumAnalyzerAudioProcessor::getGridMaxDb() const {
 
 float SpectrumAnalyzerAudioProcessor::getGridStepDb() const {
     return parameterAccess.readGridStepDb();
+}
+
+bool SpectrumAnalyzerAudioProcessor::getUseCustomFrequencyRange() const {
+    return parameterAccess.readUseCustomFrequencyRange();
+}
+
+float SpectrumAnalyzerAudioProcessor::getVisibleMinFrequencyHz() const {
+    return parameterAccess.readVisibleMinFrequencyHz();
+}
+
+float SpectrumAnalyzerAudioProcessor::getVisibleMaxFrequencyHz() const {
+    return parameterAccess.readVisibleMaxFrequencyHz();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcessor::createParameterLayout() {
@@ -370,6 +385,21 @@ void SpectrumAnalyzerAudioProcessor::setShowRmsEnabled(const bool isEnabled) {
 
 void SpectrumAnalyzerAudioProcessor::setShowHoldEnabled(const bool isEnabled) {
     parameterAccess.writeShowHold(isEnabled);
+    changeTracker->requestUiRefresh();
+}
+
+void SpectrumAnalyzerAudioProcessor::setCustomFrequencyRangeEnabled(const bool isEnabled) {
+    parameterAccess.writeUseCustomFrequencyRange(isEnabled);
+    changeTracker->requestUiRefresh();
+}
+
+void SpectrumAnalyzerAudioProcessor::setVisibleMinFrequencyHz(const float frequencyHz) {
+    parameterAccess.writeVisibleMinFrequencyHz(frequencyHz);
+    changeTracker->requestUiRefresh();
+}
+
+void SpectrumAnalyzerAudioProcessor::setVisibleMaxFrequencyHz(const float frequencyHz) {
+    parameterAccess.writeVisibleMaxFrequencyHz(frequencyHz);
     changeTracker->requestUiRefresh();
 }
 

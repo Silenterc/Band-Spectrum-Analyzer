@@ -61,6 +61,7 @@ flowchart TD
     ParamAccess --> Meter[MeterSettings]
     ParamAccess --> Freeze[freeze state]
     ParamAccess --> Grid[grid settings]
+    ParamAccess --> ViewRange[visible frequency range]
 ```
 
 `SpectrumAnalyzerAudioProcessor` is still the composition root.
