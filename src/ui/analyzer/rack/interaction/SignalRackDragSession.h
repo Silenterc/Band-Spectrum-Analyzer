@@ -8,13 +8,18 @@
 
 class SignalRackDragSession final {
 public:
+    struct UpdateResult {
+        bool draggedBoundsChanged = false;
+        bool previewOrderChanged = false;
+    };
+
     void begin(size_t slotIndex,
                const Shared::SignalSlotOrder &fullOrder,
                const std::vector<size_t> &visibleOrder,
                const SignalRackLayout &layout,
                float mouseX);
 
-    void update(float mouseX, const SignalRackLayout &layout);
+    UpdateResult update(float mouseX, const SignalRackLayout &layout);
 
     std::optional<Shared::SignalSlotOrder> finish();
     void cancel();

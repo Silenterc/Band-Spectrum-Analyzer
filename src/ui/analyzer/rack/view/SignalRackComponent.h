@@ -31,6 +31,20 @@ public:
     void paintOverChildren(juce::Graphics &g) override;
 
 private:
+    struct LayoutContext {
+        SignalRackLayout layout;
+        size_t visibleSlotCount = 0;
+    };
+
+    LayoutContext makeLayoutContext(const Shared::SignalSlotOrder &displayOrder) const;
+    LayoutContext makeCurrentLayoutContext() const;
+    void applyLayout(const LayoutContext &context, std::optional<size_t> draggedSlotIndex);
+    void applyCurrentLayout();
+    juce::Rectangle<int> getActiveSpanBounds(const LayoutContext &context) const;
+    juce::Rectangle<int> getDraggedSnapshotBounds(const juce::Rectangle<float> &draggedBounds) const;
+    juce::Rectangle<int> getDragRepaintBounds(const juce::Rectangle<float> &previousDraggedBounds,
+                                              const LayoutContext &beforeContext,
+                                              const std::optional<LayoutContext> &afterContext) const;
     void signalSlotSourceSelected(size_t slotIndex, Analyzer::SignalSource source) override;
     void signalSlotModeSelected(size_t slotIndex, Analyzer::SignalMode mode) override;
     void signalSlotColourSelected(size_t slotIndex, int colourIndex) override;

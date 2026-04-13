@@ -51,6 +51,10 @@ public:
     void mouseUp(const juce::MouseEvent &event) override;
 
 private:
+    bool slotInputsEqual(size_t slotIndexToCompare,
+                         const Ui::SignalSlotState &settingsToCompare,
+                         const std::vector<int> &usedColoursToCompare,
+                         const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToCompare) const;
     enum class OpenPopupMenu {
         none,
         mode,

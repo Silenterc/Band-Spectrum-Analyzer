@@ -23,13 +23,18 @@ void SignalRackDragSession::begin(const size_t slotIndex,
     dragOffsetX = mouseX - draggedBounds.getX();
 }
 
-void SignalRackDragSession::update(const float mouseX, const SignalRackLayout &layout) {
+SignalRackDragSession::UpdateResult SignalRackDragSession::update(const float mouseX, const SignalRackLayout &layout) {
+    UpdateResult result;
     if (!draggedSlotIndex.has_value())
-        return;
+        return result;
+
+    const auto previousDraggedBounds = draggedBounds;
+    const auto previousPreviewOrder = previewFullOrder;
 
     if (layout.activeSpan.getWidth() <= 0.0f) {
         recomputePreview(layout);
-        return;
+        result.previewOrderChanged = previewFullOrder != previousPreviewOrder;
+        return result;
     }
 
     const auto minX = layout.activeSpan.getX();
@@ -46,6 +51,10 @@ void SignalRackDragSession::update(const float mouseX, const SignalRackLayout &l
     draggedBounds.setY(layout.activeSpan.getY());
     draggedBounds.setHeight(layout.activeSpan.getHeight());
     recomputePreview(layout);
+
+    result.draggedBoundsChanged = draggedBounds != previousDraggedBounds;
+    result.previewOrderChanged = previewFullOrder != previousPreviewOrder;
+    return result;
 }
 
 std::optional<Shared::SignalSlotOrder> SignalRackDragSession::finish() {

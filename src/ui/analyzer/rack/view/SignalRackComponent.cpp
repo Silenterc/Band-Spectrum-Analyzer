@@ -56,6 +56,84 @@ SignalRackComponent::~SignalRackComponent() {
     uiSnapshotSource.removeAnalyzerUiSnapshotListener(*this);
 }
 
+SignalRackComponent::LayoutContext SignalRackComponent::makeLayoutContext(const Shared::SignalSlotOrder &displayOrder) const {
+    LayoutContext context;
+    const auto visibleOrderedSlots = getVisibleOrderedSlots(displayOrder);
+    context.visibleSlotCount = visibleOrderedSlots.size();
+    context.layout = buildLayout(visibleOrderedSlots);
+    return context;
+}
+
+SignalRackComponent::LayoutContext SignalRackComponent::makeCurrentLayoutContext() const {
+    return makeLayoutContext(dragSession.getDisplayOrder(currentSnapshot.slotOrder));
+}
+
+void SignalRackComponent::applyLayout(const LayoutContext &context,
+                                      const std::optional<size_t> draggedSlotIndex) {
+    for (size_t dividerIndex = 0; dividerIndex < slotDividers.size(); ++dividerIndex)
+        slotDividers[dividerIndex]->setBounds(context.layout.dividerBounds[dividerIndex].toNearestInt());
+
+    for (size_t slotIndex = 0; slotIndex < slotComponents.size(); ++slotIndex) {
+        auto &slotComponent = slotComponents[slotIndex];
+        if (!slotComponent->isVisible()) {
+            slotComponent->setDragged(false);
+            continue;
+        }
+
+        const auto entryIterator = std::find_if(context.layout.entries.begin(), context.layout.entries.end(),
+                                                [slotIndex](const SignalRackLayoutEntry &entry) {
+                                                    return entry.slotIndex == slotIndex;
+                                                });
+        if (entryIterator == context.layout.entries.end())
+            continue;
+
+        const auto isDraggedSlot = draggedSlotIndex.has_value() && slotIndex == *draggedSlotIndex;
+        slotComponent->setDragged(isDraggedSlot);
+        slotComponent->setAlpha(isDraggedSlot ? 0.0f : 1.0f);
+
+        if (!isDraggedSlot)
+            slotComponent->setBounds(entryIterator->bounds.toNearestInt());
+    }
+
+    if (addButton.isVisible()) {
+        const auto nextLaneIndex = juce::jlimit<size_t>(0,
+                                                        context.layout.laneBounds.size() - 1,
+                                                        context.visibleSlotCount);
+        const auto addBounds = getLaneModuleBounds(context.layout.laneBounds[nextLaneIndex].toNearestInt(), theme);
+        addButton.setBounds(addBounds);
+    }
+}
+
+void SignalRackComponent::applyCurrentLayout() {
+    applyLayout(makeCurrentLayoutContext(), dragSession.getDraggedSlotIndex());
+}
+
+juce::Rectangle<int> SignalRackComponent::getActiveSpanBounds(const LayoutContext &context) const {
+    return context.layout.activeSpan.getSmallestIntegerContainer();
+}
+
+juce::Rectangle<int> SignalRackComponent::getDraggedSnapshotBounds(const juce::Rectangle<float> &draggedBounds) const {
+    auto boundedDraggedRect = draggedBounds;
+    const auto rackBounds = getRackContentBounds(getLocalBounds(), theme);
+    boundedDraggedRect.setY(static_cast<float>(rackBounds.getY()));
+    boundedDraggedRect.setHeight(static_cast<float>(rackBounds.getHeight()));
+    return boundedDraggedRect.getSmallestIntegerContainer();
+}
+
+juce::Rectangle<int> SignalRackComponent::getDragRepaintBounds(
+    const juce::Rectangle<float> &previousDraggedBounds,
+    const LayoutContext &beforeContext,
+    const std::optional<LayoutContext> &afterContext) const {
+    auto repaintBounds = getDraggedSnapshotBounds(previousDraggedBounds)
+                             .getUnion(getDraggedSnapshotBounds(dragSession.getDraggedBounds()))
+                             .getUnion(getActiveSpanBounds(beforeContext));
+
+    if (afterContext.has_value())
+        repaintBounds = repaintBounds.getUnion(getActiveSpanBounds(*afterContext));
+
+    return repaintBounds;
+}
+
 void SignalRackComponent::signalSlotSourceSelected(const size_t slotIndex, const Analyzer::SignalSource source) {
     settingsActions.setSignalSlotSource(slotIndex, source);
 }
@@ -86,84 +164,62 @@ void SignalRackComponent::signalSlotOpacityChanged(const size_t slotIndex, const
 
 void SignalRackComponent::signalSlotReorderDragStarted(const size_t slotIndex, const float startMouseX) {
     const auto persistedOrder = currentSnapshot.slotOrder;
-    const auto visibleOrderedSlots = getVisibleOrderedSlots(persistedOrder);
-    const auto layout = buildLayout(visibleOrderedSlots);
-    dragSession.begin(slotIndex, persistedOrder, visibleOrderedSlots, layout, startMouseX);
+    const auto persistedContext = makeLayoutContext(persistedOrder);
+    const auto persistedVisibleOrderedSlots = getVisibleOrderedSlots(persistedOrder);
+    dragSession.begin(slotIndex,
+                      persistedOrder,
+                      persistedVisibleOrderedSlots,
+                      persistedContext.layout,
+                      startMouseX);
     if (auto *draggedComponent = findComponentForSlot(slotIndex))
         draggedSnapshot = draggedComponent->createComponentSnapshot(draggedComponent->getLocalBounds());
-    refreshFromState(true);
+
+    const auto dragContext = makeCurrentLayoutContext();
+    applyLayout(dragContext, dragSession.getDraggedSlotIndex());
+    repaint(getActiveSpanBounds(dragContext));
 }
 
 void SignalRackComponent::signalSlotReorderDragged(const float xPosition) {
-    const auto previewOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
-    const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
-    const auto layout = buildLayout(visibleOrderedSlots);
-    dragSession.update(xPosition, layout);
-    refreshFromState(true);
+    const auto previousDraggedBounds = dragSession.getDraggedBounds();
+    const auto beforeContext = makeCurrentLayoutContext();
+    const auto updateResult = dragSession.update(xPosition, beforeContext.layout);
+
+    if (!updateResult.draggedBoundsChanged && !updateResult.previewOrderChanged)
+        return;
+
+    std::optional<LayoutContext> afterContext;
+    if (updateResult.previewOrderChanged) {
+        afterContext = makeCurrentLayoutContext();
+        applyLayout(*afterContext, dragSession.getDraggedSlotIndex());
+    }
+
+    repaint(getDragRepaintBounds(previousDraggedBounds, beforeContext, afterContext));
 }
 
 void SignalRackComponent::signalSlotReorderDragEnded(const float xPosition) {
-    const auto previewOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
-    const auto visibleOrderedSlots = getVisibleOrderedSlots(previewOrder);
-    const auto layout = buildLayout(visibleOrderedSlots);
-    dragSession.update(xPosition, layout);
+    const auto previousDraggedBounds = dragSession.getDraggedBounds();
+    const auto beforeContext = makeCurrentLayoutContext();
+    dragSession.update(xPosition, beforeContext.layout);
+    const auto afterContext = makeCurrentLayoutContext();
     const auto reorderedSlots = dragSession.finish();
+    draggedSnapshot = {};
+    applyLayout(afterContext, std::nullopt);
+    repaint(getDragRepaintBounds(previousDraggedBounds, beforeContext, afterContext));
+
     if (reorderedSlots.has_value())
         settingsActions.setSignalSlotOrder(*reorderedSlots);
-    draggedSnapshot = {};
-    refreshFromState(true);
 }
 
 void SignalRackComponent::resized() {
-    const auto displayOrder = dragSession.getDisplayOrder(currentSnapshot.slotOrder);
-    const auto visibleOrderedSlots = getVisibleOrderedSlots(displayOrder);
-    const auto layout = buildLayout(visibleOrderedSlots);
-    const auto draggedSlotIndex = dragSession.getDraggedSlotIndex();
-
-    for (size_t dividerIndex = 0; dividerIndex < slotDividers.size(); ++dividerIndex)
-        slotDividers[dividerIndex]->setBounds(layout.dividerBounds[dividerIndex].toNearestInt());
-
-    for (size_t slotIndex = 0; slotIndex < slotComponents.size(); ++slotIndex) {
-        auto &slotComponent = slotComponents[slotIndex];
-        if (!slotComponent->isVisible()) {
-            slotComponent->setDragged(false);
-            continue;
-        }
-
-        const auto entryIterator = std::find_if(layout.entries.begin(), layout.entries.end(),
-                                                [slotIndex](const SignalRackLayoutEntry &entry) {
-                                                    return entry.slotIndex == slotIndex;
-                                                });
-        if (entryIterator == layout.entries.end())
-            continue;
-
-        slotComponent->setDragged(draggedSlotIndex.has_value() && slotIndex == *draggedSlotIndex);
-        slotComponent->setAlpha(slotComponent->getDragged() ? 0.0f : 1.0f);
-
-        // Keep the dragged child anchored while dragging. The floating preview is painted
-        // separately, so moving the real event source during drag destabilizes mouse coordinates.
-        if (!slotComponent->getDragged())
-            slotComponent->setBounds(entryIterator->bounds.toNearestInt());
-    }
-
-    if (addButton.isVisible()) {
-        const auto nextLaneIndex = juce::jlimit<size_t>(0, layout.laneBounds.size() - 1, visibleOrderedSlots.size());
-        const auto addBounds = getLaneModuleBounds(layout.laneBounds[nextLaneIndex].toNearestInt(), theme);
-        addButton.setBounds(addBounds);
-    }
+    applyCurrentLayout();
 }
 
 void SignalRackComponent::paintOverChildren(juce::Graphics &g) {
     if (!dragSession.isDragging() || draggedSnapshot.isNull())
         return;
 
-    auto draggedBounds = dragSession.getDraggedBounds();
-    const auto rackBounds = getRackContentBounds(getLocalBounds(), theme);
-    draggedBounds.setY(static_cast<float>(rackBounds.getY()));
-    draggedBounds.setHeight(static_cast<float>(rackBounds.getHeight()));
-
     g.setOpacity(1.0f);
-    g.drawImage(draggedSnapshot, draggedBounds);
+    g.drawImage(draggedSnapshot, getDraggedSnapshotBounds(dragSession.getDraggedBounds()).toFloat());
 }
 
 void SignalRackComponent::refreshFromState(const bool force) {
@@ -216,7 +272,7 @@ void SignalRackComponent::refreshFromState(const bool force) {
     }
 
     addButton.setVisible(activeCount < static_cast<int>(Shared::maxSignalSlots));
-    resized();
+    applyCurrentLayout();
     repaint();
 }
 

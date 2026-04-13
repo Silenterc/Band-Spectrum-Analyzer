@@ -79,6 +79,9 @@ void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
                                   const Ui::SignalSlotState &settingsToUse,
                                   const std::vector<int> &usedColoursToUse,
                                   const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToUse) {
+    if (slotInputsEqual(slotIndexToUse, settingsToUse, usedColoursToUse, usedSignalConfigsToUse))
+        return;
+
     slotIndex = slotIndexToUse;
     settings = settingsToUse;
     usedColours = usedColoursToUse;
@@ -87,6 +90,9 @@ void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
 }
 
 void SignalSlotComponent::setSidechainAvailable(const bool isAvailable) {
+    if (isSidechainRouted == isAvailable)
+        return;
+
     isSidechainRouted = isAvailable;
     refreshChildState();
 }
@@ -100,12 +106,25 @@ void SignalSlotComponent::setReorderEnabled(const bool shouldEnableReorder) {
 }
 
 void SignalSlotComponent::setDragged(const bool isDraggedValue) {
+    if (isDragged == isDraggedValue)
+        return;
+
     isDragged = isDraggedValue;
     repaint();
 }
 
 bool SignalSlotComponent::getDragged() const {
     return isDragged;
+}
+
+bool SignalSlotComponent::slotInputsEqual(const size_t slotIndexToCompare,
+                                          const Ui::SignalSlotState &settingsToCompare,
+                                          const std::vector<int> &usedColoursToCompare,
+                                          const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToCompare) const {
+    return slotIndex == slotIndexToCompare
+           && settings == settingsToCompare
+           && usedColours == usedColoursToCompare
+           && usedSignalConfigs == usedSignalConfigsToCompare;
 }
 
 void SignalSlotComponent::paint(juce::Graphics &g) {
