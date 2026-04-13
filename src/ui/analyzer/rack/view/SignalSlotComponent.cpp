@@ -19,14 +19,14 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
       sourceToggle(themeToUse),
       modeButton(themeToUse),
       swatchButton(themeToUse),
-      dragHandle(themeToUse),
+      soloButton(themeToUse, {}),
       visibilityButton(themeToUse, {}),
       freezeButton(themeToUse, {}),
       removeButton(themeToUse) {
     addAndMakeVisible(sourceToggle);
     addAndMakeVisible(modeButton);
     addAndMakeVisible(swatchButton);
-    addAndMakeVisible(dragHandle);
+    addAndMakeVisible(soloButton);
     addAndMakeVisible(visibilityButton);
     addAndMakeVisible(freezeButton);
     addAndMakeVisible(removeButton);
@@ -44,12 +44,13 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     swatchButton.onClick = [this] { handleSwatchClicked(); };
     swatchButton.onOpacityChanged = [this](const float opacity) { handleOpacityChanged(opacity); };
     swatchButton.onOpacityReset = [this] { handleOpacityReset(); };
-    dragHandle.onDragStarted = [this](const float parentX) { handleReorderDragStarted(parentX); };
-    dragHandle.onDragged = [this](const float parentX) { handleReorderDragged(parentX); };
-    dragHandle.onDragEnded = [this](const float parentX) { handleReorderDragEnded(parentX); };
     visibilityButton.onClick = [this] { handleVisibilityClicked(); };
     freezeButton.onClick = [this] { handleFreezeClicked(); };
     removeButton.onClick = [this] { handleRemoveClicked(); };
+
+    soloButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
+    soloButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
+    soloButton.setOverlayIcon(PadButton::OverlayIcon::headphones);
 
     visibilityButton.setScaleMultiplier(theme.metrics.slot.actionPadScaleMultiplier);
     visibilityButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
@@ -90,9 +91,16 @@ void SignalSlotComponent::setSidechainAvailable(const bool isAvailable) {
     refreshChildState();
 }
 
+void SignalSlotComponent::setReorderEnabled(const bool shouldEnableReorder) {
+    if (reorderEnabled == shouldEnableReorder)
+        return;
+
+    reorderEnabled = shouldEnableReorder;
+    setMouseCursor(reorderEnabled ? juce::MouseCursor::DraggingHandCursor : juce::MouseCursor::NormalCursor);
+}
+
 void SignalSlotComponent::setDragged(const bool isDraggedValue) {
     isDragged = isDraggedValue;
-    dragHandle.setDragged(isDraggedValue);
     repaint();
 }
 
@@ -157,11 +165,11 @@ void SignalSlotComponent::resized() {
 
     swatchButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(swatchControlSize), swatchControlSize));
     actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    dragHandle.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
-    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
-    visibilityButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    soloButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
     actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
     freezeButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
+    actionClusterBounds.removeFromLeft(static_cast<int>(std::round(slotMetrics.actionGap)));
+    visibilityButton.setBounds(getCenteredSquareBounds(actionClusterBounds.removeFromLeft(actionControlSize), actionControlSize));
 }
 
 juce::Rectangle<float> SignalSlotComponent::getModuleBounds() const {
@@ -213,7 +221,6 @@ void SignalSlotComponent::refreshChildState() {
     sourceToggle.setState(settings.configuration.source, isSidechainRouted);
     modeButton.setLabel(Ui::getSignalModeLabel(settings.configuration.mode));
     swatchButton.setState(settings.colourIndex, settings.opacity);
-    dragHandle.setDragged(isDragged);
     visibilityButton.setActive(settings.visible);
     freezeButton.setActive(settings.frozen);
 
@@ -481,6 +488,38 @@ void SignalSlotComponent::handleOpacityReset() {
         listener->signalSlotOpacityChanged(slotIndex, settings.opacity);
 }
 
+void SignalSlotComponent::mouseDown(const juce::MouseEvent &event) {
+    if (!reorderEnabled)
+        return;
+
+    mouseDownPosition = event.position;
+    trackingBackgroundDrag = false;
+}
+
+void SignalSlotComponent::mouseDrag(const juce::MouseEvent &event) {
+    if (!reorderEnabled)
+        return;
+
+    const auto delta = event.position - mouseDownPosition;
+    if (!trackingBackgroundDrag && delta.getDistanceFromOrigin() > 6.0f) {
+        trackingBackgroundDrag = true;
+        handleReorderDragStarted(getParentRelativeX(event));
+    }
+
+    if (trackingBackgroundDrag)
+        handleReorderDragged(getParentRelativeX(event));
+}
+
+void SignalSlotComponent::mouseUp(const juce::MouseEvent &event) {
+    if (!reorderEnabled)
+        return;
+
+    if (trackingBackgroundDrag)
+        handleReorderDragEnded(getParentRelativeX(event));
+
+    trackingBackgroundDrag = false;
+}
+
 void SignalSlotComponent::handleReorderDragStarted(const float parentX) {
     if (listener != nullptr)
         listener->signalSlotReorderDragStarted(slotIndex, parentX);
@@ -494,4 +533,11 @@ void SignalSlotComponent::handleReorderDragged(const float parentX) {
 void SignalSlotComponent::handleReorderDragEnded(const float parentX) {
     if (listener != nullptr)
         listener->signalSlotReorderDragEnded(parentX);
+}
+
+float SignalSlotComponent::getParentRelativeX(const juce::MouseEvent &event) const {
+    if (auto *parent = const_cast<juce::Component *>(getParentComponent()))
+        return event.getEventRelativeTo(parent).position.x;
+
+    return event.position.x;
 }

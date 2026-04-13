@@ -31,6 +31,9 @@ void PadButton::paint(juce::Graphics& g) {
             switch (overlayIcon) {
                 case OverlayIcon::none:
                     break;
+                case OverlayIcon::headphones:
+                    Ui::drawIcon(g, Ui::IconId::headphones, overlayIconBounds.toFloat(), markingColour);
+                    break;
                 case OverlayIcon::power:
                     Ui::drawIcon(g, Ui::IconId::power, overlayIconBounds.toFloat(), markingColour);
                     break;

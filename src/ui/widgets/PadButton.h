@@ -16,6 +16,7 @@ public:
 
     enum class OverlayIcon {
         none,
+        headphones,
         power,
         settings,
         snowflake

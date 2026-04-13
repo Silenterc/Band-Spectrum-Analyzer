@@ -1,7 +1,7 @@
 juce_add_binary_data(BsaUiAssets
     SOURCES
         ui/assets/icons/cancel.svg
-        ui/assets/icons/dots.svg
+        ui/assets/icons/headphones.svg
         ui/assets/icons/power.svg
         ui/assets/icons/settings.svg
         ui/assets/icons/snowflake.svg
@@ -62,7 +62,6 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/rack/view/SignalRackComponent.cpp
         ui/analyzer/rack/view/SignalSlotActionButton.cpp
         ui/analyzer/rack/view/SignalSlotComponent.cpp
-        ui/analyzer/rack/view/SignalSlotDragHandle.cpp
         ui/analyzer/rack/view/SignalSlotModeButton.cpp
         ui/analyzer/rack/view/SignalSlotSourceToggle.cpp
         ui/analyzer/rack/view/SignalSlotSwatchButton.cpp

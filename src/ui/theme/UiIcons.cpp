@@ -27,12 +27,12 @@ namespace Ui {
                 static auto drawable = juce::Drawable::createFromImageData(BinaryData::cancel_svg, BinaryData::cancel_svgSize);
                 return drawable.get();
             }
-            case IconId::power: {
-                static auto drawable = juce::Drawable::createFromImageData(BinaryData::power_svg, BinaryData::power_svgSize);
+            case IconId::headphones: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::headphones_svg, BinaryData::headphones_svgSize);
                 return drawable.get();
             }
-            case IconId::grip: {
-                static auto drawable = juce::Drawable::createFromImageData(BinaryData::dots_svg, BinaryData::dots_svgSize);
+            case IconId::power: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::power_svg, BinaryData::power_svgSize);
                 return drawable.get();
             }
             case IconId::settings: {

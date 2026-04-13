@@ -188,6 +188,10 @@ void SignalRackComponent::refreshFromState(const bool force) {
     std::vector<Ui::SignalSlotKey> usedSignalConfigs;
     usedColours.reserve(signalSlots.size());
     usedSignalConfigs.reserve(signalSlots.size());
+    const auto activeCount = static_cast<int>(std::count_if(signalSlots.begin(), signalSlots.end(),
+                                                            [](const Ui::SignalSlotState &slot) {
+                                                                return slot.configuration.enabled;
+                                                            }));
 
     for (const auto &slot: signalSlots) {
         if (slot.configuration.enabled) {
@@ -199,6 +203,7 @@ void SignalRackComponent::refreshFromState(const bool force) {
     for (size_t slotIndex = 0; slotIndex < slotComponents.size(); ++slotIndex) {
         auto &component = slotComponents[slotIndex];
         component->setSidechainAvailable(sidechainAvailable);
+        component->setReorderEnabled(activeCount > 1);
 
         if (slotIndex >= signalSlots.size() || !signalSlots[slotIndex].configuration.enabled) {
             component->setVisible(false);
@@ -210,10 +215,6 @@ void SignalRackComponent::refreshFromState(const bool force) {
         component->setSlot(slotIndex, signalSlots[slotIndex], usedColours, usedSignalConfigs);
     }
 
-    const auto activeCount = static_cast<int>(std::count_if(signalSlots.begin(), signalSlots.end(),
-                                                            [](const Ui::SignalSlotState &slot) {
-                                                                return slot.configuration.enabled;
-                                                            }));
     addButton.setVisible(activeCount < static_cast<int>(Shared::maxSignalSlots));
     resized();
     repaint();

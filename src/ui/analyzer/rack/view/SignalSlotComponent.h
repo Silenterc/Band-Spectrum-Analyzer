@@ -11,7 +11,6 @@
 #include "ui/theme/UiTheme.h"
 #include "ui/analyzer/rack/model/SignalSlotOptions.h"
 #include "SignalSlotActionButton.h"
-#include "SignalSlotDragHandle.h"
 #include "SignalSlotModeButton.h"
 #include "SignalSlotSourceToggle.h"
 #include "SignalSlotSwatchButton.h"
@@ -41,11 +40,15 @@ public:
                  const std::vector<int> &usedColoursToUse,
                  const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToUse);
     void setSidechainAvailable(bool isAvailable);
+    void setReorderEnabled(bool shouldEnableReorder);
     void setDragged(bool isDraggedValue);
     bool getDragged() const;
 
     void paint(juce::Graphics &g) override;
     void resized() override;
+    void mouseDown(const juce::MouseEvent &event) override;
+    void mouseDrag(const juce::MouseEvent &event) override;
+    void mouseUp(const juce::MouseEvent &event) override;
 
 private:
     enum class OpenPopupMenu {
@@ -83,6 +86,7 @@ private:
     void handleReorderDragStarted(float parentX);
     void handleReorderDragged(float parentX);
     void handleReorderDragEnded(float parentX);
+    float getParentRelativeX(const juce::MouseEvent &event) const;
 
     const Ui::Theme &theme;
     Listener *listener = nullptr;
@@ -92,16 +96,19 @@ private:
     std::vector<Ui::SignalSlotKey> usedSignalConfigs;
     bool isSidechainRouted = false;
     bool isDragged = false;
+    bool reorderEnabled = false;
+    bool trackingBackgroundDrag = false;
     bool suppressNextModeButtonClick = false;
     bool suppressNextSwatchClick = false;
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
     juce::Component::SafePointer<juce::CallOutBox> activeCallout;
     juce::Image cachedBackground;
+    juce::Point<float> mouseDownPosition;
     PopupLookAndFeel popupLookAndFeel;
     SignalSlotSourceToggle sourceToggle;
     SignalSlotModeButton modeButton;
     SignalSlotSwatchButton swatchButton;
-    SignalSlotDragHandle dragHandle;
+    PadButton soloButton;
     PadButton visibilityButton;
     PadButton freezeButton;
     SignalSlotActionButton removeButton;
