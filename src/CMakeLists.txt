@@ -56,8 +56,8 @@ target_sources(${PROJECT_NAME}
         ui/editor/EditorBackgroundComponent.cpp
         ui/analyzer/layout/MainLayoutComponent.cpp
         ui/analyzer/plot/view/AnalyzerSectionComponent.cpp
-        ui/analyzer/plot/view/AnalyzerComponent.cpp
-        ui/analyzer/plot/view/AnalyzerHoverOverlayRenderer.cpp
+        ui/analyzer/plot/view/AnalyzerPlotComponent.cpp
+        ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.cpp
         ui/analyzer/controls/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/rack/view/SignalRackComponent.cpp
         ui/analyzer/rack/view/SignalSlotActionButton.cpp

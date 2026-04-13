@@ -27,9 +27,10 @@ flowchart TD
     FrameModel --> Hold[AnalyzerGlobalHoldModel]
     Hold --> DisplayPublish[TripleBuffer AnalyzerDisplayFrame]
 
-    DisplayPublish --> AnalyzerComponent
+    DisplayPublish --> Plot[AnalyzerPlotComponent]
     Processor --> SnapshotSource[AnalyzerUiSnapshotSource]
-    SnapshotSource --> AnalyzerComponent
+    SnapshotSource --> Section[AnalyzerSectionComponent]
+    Section --> Plot
     SnapshotSource --> Rack[Signal rack UI]
     SnapshotSource --> Controls[Meter controls UI]
 ```
@@ -79,7 +80,7 @@ It now also implements `AnalyzerRawTraceSource`, which exposes:
 - `readPublishedTraces()`
 - `hasRecentSignal()`
 
-The processor does not own the display worker. The worker is editor-side and is owned by `AnalyzerComponent`.
+The processor does not own the display worker. The worker is editor-side and is owned by `AnalyzerPlotComponent`.
 
 ## 3. DSP Engine Responsibilities
 
@@ -247,14 +248,14 @@ That is what makes future solo support fit without redesigning the pipeline.
 flowchart LR
     WorkerState[worker-computed display frame] --> Writer[TripleBuffer writer storage]
     Writer --> Publish[frameBuffer.publish]
-    Publish --> UI[AnalyzerComponent async consumption]
+    Publish --> UI[AnalyzerPlotComponent async consumption]
 ```
 
 The display triple buffer carries:
 
 - `AnalyzerDisplayFrame`
 - one writer: display worker
-- one reader: message thread
+- one reader: `AnalyzerPlotComponent` on the message thread
 
 The display frame contains:
 
@@ -278,7 +279,7 @@ That `bandInfo` pointer is then:
 
 - read by the display worker
 - republished in `AnalyzerDisplayFrame`
-- consumed by the UI for static layout
+- forwarded into `AnalyzerSectionComponent` so the shell can rebuild canonical layout when band geometry changes
 
 This keeps one source of truth for frequency layout.
 

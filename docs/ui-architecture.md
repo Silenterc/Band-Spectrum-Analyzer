@@ -37,7 +37,14 @@ The processor still owns:
 - snapshot publication
 - action handling
 
-The analyzer plot now owns a display worker internally and no longer runs analyzer semantics on the message thread.
+The analyzer view is now split into:
+
+- `AnalyzerSectionComponent`
+  - static shell, labels, tooltip, and layout ownership
+- `AnalyzerPlotComponent`
+  - exact plot child, opaque hot surface, and worker-frame consumption
+
+Only the plot child repaints at the analyzer frame rate.
 
 ## Read / Write Channels
 
@@ -61,7 +68,7 @@ Rules:
 This channel is internal to the analyzer section:
 
 - producer: `AnalyzerDisplayWorker`
-- consumer: `AnalyzerComponent`
+- consumer: `AnalyzerPlotComponent`
 
 Transport:
 
@@ -129,18 +136,17 @@ Rules:
 - JUCE `Component` classes only
 - analyzer section container
 - analyzer plot component
-- hover overlay
+- tooltip helper
 
 ### `src/ui/analyzer/plot/logic/`
 
 Now message-thread-only and presentation-only:
 
 - `AnalyzerViewModel`
-  - static layout
-  - visible band layout
-  - grid lines
-  - frequency markers
-  - hover lookup
+  - canonical `AnalyzerSectionLayout`
+  - section-space labels and plot bounds
+  - plot-local band and grid geometry
+  - hover lookup from plot-local cursor input
 - `AnalyzerRenderBatchBuilder`
   - direct paint-batch generation from immutable display frames
 - `AnalyzerGeometry`
@@ -173,40 +179,51 @@ Those moved to `src/display/analyzer/`.
 flowchart TD
     SnapshotEvents[AnalyzerUiSnapshotSource listener] --> Snapshot[Ui::AnalyzerUiSnapshot]
     Worker[AnalyzerDisplayWorker] --> Frame[AnalyzerDisplayFrame]
-    Frame --> AnalyzerComponent
-    Snapshot --> AnalyzerComponent
-
-    AnalyzerComponent --> StaticLayout[AnalyzerViewModel static layout]
-    AnalyzerComponent --> Batches[AnalyzerRenderBatchBuilder]
-    AnalyzerComponent --> Hover[AnalyzerHoverOverlayRenderer]
-    StaticLayout --> Paint[AnalyzerComponent paint]
-    Batches --> Paint
-    Hover --> Paint
+    Snapshot --> Section[AnalyzerSectionComponent]
+    Frame --> Plot[AnalyzerPlotComponent]
+    Section --> Layout[AnalyzerViewModel canonical layout]
+    Layout --> Plot
+    Layout --> Tooltip[AnalyzerHoverTooltipRenderer]
+    Snapshot --> Plot
+    Plot --> Batches[AnalyzerRenderBatchBuilder]
 ```
 
 Important behavior:
 
-- `AnalyzerComponent` no longer runs meter/composition/hold logic
-- it consumes immutable display frames from the worker
-- it consumes immutable snapshot state from the processor
-- it rebuilds static layout only when layout inputs change
-- it rebuilds dynamic paint batches from:
-  - `AnalyzerDisplayFrame`
-  - visible bands
-  - slot order
-  - slot styling
-  - current grid range
+- `AnalyzerSectionComponent` owns layout, static shell repaint policy, and tooltip state
+- `AnalyzerPlotComponent` consumes immutable display frames from the worker
+- snapshot changes are split into:
+  - layout-affecting changes handled by the section shell
+  - plot-only presentation changes handled by the plot child
+- only the opaque plot child redraws bars, hold, and hover highlight every frame
 
-## `AnalyzerComponent` Responsibilities
+## `AnalyzerSectionComponent` Responsibilities
 
-`AnalyzerComponent` now owns:
+`AnalyzerSectionComponent` now owns:
+
+- canonical analyzer layout
+- section background cache
+- axis labels and outer plot chrome
+- plot child bounds
+- hover tooltip state
+- plot-local hover to tooltip translation
+
+It does not own:
+
+- analyzer worker state
+- bar/hold batch generation
+- steady-state analyzer repaint cadence
+
+## `AnalyzerPlotComponent` Responsibilities
+
+`AnalyzerPlotComponent` now owns:
 
 - `AnalyzerDisplayWorker`
 - latest consumed display frame pointer
-- static layout invalidation
+- opaque plot-base cache
 - dynamic batch rebuilds
-- repaint decisions
-- hover updates
+- plot-only repaint decisions
+- in-plot hover highlight
 
 It does not own:
 
@@ -215,8 +232,6 @@ It does not own:
 - hold evolution
 - refresh cadence state machine
 - copied raw trace vectors
-
-That is the key reason the hot path is smaller on the message thread.
 
 ## Presentation vs Semantic State
 
@@ -263,16 +278,18 @@ Owned by `AnalyzerViewModel`.
 Inputs:
 
 - band layout
-- component bounds
+- section bounds
+- analyzer display bounds
 - grid min/max/step
 - visible frequency range
 
 Outputs:
 
-- plot bounds
-- visible bands
-- grid markers
-- frequency markers
+- `AnalyzerSectionLayout`
+- section-space axis labels
+- section-space plot bounds and frame bounds
+- plot-local visible bands
+- plot-local grid and frequency marker positions
 
 ### Dynamic batching
 
@@ -295,22 +312,25 @@ Outputs:
 
 This removes the old extra pass that built full intermediate trace/bar models every frame.
 
-## Hover Overlay
+## Hover Split
 
-`AnalyzerHoverOverlayRenderer` remains a lightweight helper owned by `AnalyzerComponent`.
+Hover is now split across the shell and the plot child.
+
+`AnalyzerPlotComponent` owns:
+
+- hovered-band highlight batches
+- plot-only dirty repaint bounds
+- raw mouse tracking inside the exact plot rect
+
+`AnalyzerHoverTooltipRenderer` remains a lightweight helper owned by `AnalyzerSectionComponent`.
 
 It owns:
 
-- hover-only repaint bounds
-- hovered-bar highlight batches
 - tooltip chrome and glyphs
 
 It consumes:
 
 - hover info from `AnalyzerViewModel`
-- immutable display frame
-- visible bands
-- slot styling/order
 
 It does not own analyzer semantics.
 
@@ -348,7 +368,8 @@ UI snapshots remain separate from both.
 
 - analyzer plot is no longer timer-driven for semantic recomputation
 - worker thread owns display-rate analyzer state
-- message thread owns only presentation state
+- section shell owns static layout and tooltip presentation
+- opaque plot child owns hot-path plotting work
 - slot order, colour, and opacity are UI-only concerns
 - hold and freeze semantics are worker-owned concerns
 - analyzer docs and code now align on the explicit `dsp / display / ui` split

@@ -8,88 +8,82 @@ AnalyzerViewModel::AnalyzerViewModel(const Ui::Theme &themeToUse)
       hoverModel(geometry, formatter, musicTheory) {
 }
 
-void AnalyzerViewModel::updateStaticLayout(const std::vector<Analyzer::BandInfo> &bandInfo,
-                                           const AnalyzerViewState &viewState,
-                                           float gridMinDb, float gridMaxDb, float gridStepDb,
-                                           const juce::Rectangle<float> &localBounds) {
-    currentGridMinDb = gridMinDb;
-    plotBounds = geometry.getPlotBounds(localBounds);
+void AnalyzerViewModel::updateLayout(const std::vector<Analyzer::BandInfo> &bandInfo,
+                                     const AnalyzerViewState &viewState,
+                                     const float gridMinDb,
+                                     const float gridMaxDb,
+                                     const float gridStepDb,
+                                     const juce::Rectangle<float> &sectionBounds,
+                                     const juce::Rectangle<float> &displayBounds) {
+    layout = {};
+    layout.sectionBounds = sectionBounds.toNearestInt().toFloat();
+    layout.displayBounds = displayBounds.toNearestInt().toFloat();
+    layout.plotBounds = geometry.getPlotBounds(layout.displayBounds).toNearestInt().toFloat();
+    layout.plotLocalBounds = juce::Rectangle<float>(0.0f, 0.0f, layout.plotBounds.getWidth(), layout.plotBounds.getHeight());
+    layout.gridMinDb = gridMinDb;
+    layout.gridMaxDb = gridMaxDb;
+    layout.gridStepDb = gridStepDb;
+    layout.plotFrameBounds = layout.plotBounds.expanded(theme.metrics.analyzerPlot.frameExpansion);
     updateVisibleFrequencyRange(bandInfo, viewState);
     updateVisibleBands(bandInfo);
     updateGrid(gridMinDb, gridMaxDb, gridStepDb);
 }
 
-void AnalyzerViewModel::updateHover(const float gridMinDb,
-                                    const float gridMaxDb,
-                                    const juce::Rectangle<float> &localBounds,
-                                    const std::optional<juce::Point<float>> &hoverPositionToUse) {
-    if (!hoverPositionToUse.has_value()) {
-        hoverInfo.reset();
-        return;
-    }
+std::optional<AnalyzerHoverInfo> AnalyzerViewModel::buildHover(
+    const std::optional<juce::Point<float>> &plotLocalHoverPosition) const {
+    if (!plotLocalHoverPosition.has_value() || layout.sectionVisibleBands.empty())
+        return std::nullopt;
 
-    if (visibleBands.empty()) {
-        hoverInfo.reset();
-        return;
-    }
-
-    hoverInfo = hoverModel.build(localBounds, plotBounds, visibleBands, gridMinDb, gridMaxDb,
-                                 visibleMinFrequencyHz, visibleMaxFrequencyHz,
-                                 *hoverPositionToUse);
+    const auto sectionHoverPosition = plotLocalHoverPosition->translated(layout.plotBounds.getX(), layout.plotBounds.getY());
+    return hoverModel.build(layout.sectionBounds,
+                            layout.plotBounds,
+                            layout.sectionVisibleBands,
+                            layout.gridMinDb,
+                            layout.gridMaxDb,
+                            layout.visibleMinFrequencyHz,
+                            layout.visibleMaxFrequencyHz,
+                            sectionHoverPosition);
 }
 
-const juce::Rectangle<float> &AnalyzerViewModel::getPlotBounds() const {
-    return plotBounds;
-}
-
-const std::vector<AnalyzerGridLine> &AnalyzerViewModel::getGridLines() const {
-    return gridLines;
-}
-
-const std::vector<AnalyzerFrequencyMarker> &AnalyzerViewModel::getFrequencyMarkers() const {
-    return frequencyMarkers;
-}
-
-const std::optional<AnalyzerHoverInfo> &AnalyzerViewModel::getHoverInfo() const {
-    return hoverInfo;
-}
-
-float AnalyzerViewModel::getGridMinDb() const {
-    return currentGridMinDb;
-}
-
-const std::vector<AnalyzerVisibleBandLayout> &AnalyzerViewModel::getVisibleBands() const {
-    return visibleBands;
+const AnalyzerSectionLayout &AnalyzerViewModel::getLayout() const {
+    return layout;
 }
 
 void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridStepDb) {
-    gridLines.clear();
-    frequencyMarkers.clear();
-    gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
-    frequencyMarkers.reserve(theme.metrics.analyzerPlot.frequencyScaleLabelsHz.size());
+    layout.gridLines.clear();
+    layout.frequencyMarkers.clear();
+    layout.gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
+    layout.frequencyMarkers.reserve(theme.metrics.analyzerPlot.frequencyScaleLabelsHz.size());
 
     for (float db = gridMinDb; db <= gridMaxDb + 0.001f; db += gridStepDb) {
-        AnalyzerGridLine gridLine;
-        gridLine.y = geometry.yForDb(db, gridMinDb, gridMaxDb, plotBounds);
+        AnalyzerGridLineLayout gridLine;
+        gridLine.sectionY = geometry.yForDb(db, gridMinDb, gridMaxDb, layout.plotBounds);
+        gridLine.plotLocalY = gridLine.sectionY - layout.plotBounds.getY();
         gridLine.label = juce::String(static_cast<int>(std::round(db)));
-        gridLines.push_back(gridLine);
+        layout.gridLines.push_back(gridLine);
     }
 
     for (auto frequencyHz: theme.metrics.analyzerPlot.frequencyScaleLabelsHz) {
-        if (usingCustomFrequencyRange
-            && (frequencyHz < visibleMinFrequencyHz || frequencyHz > visibleMaxFrequencyHz))
+        if (layout.useCustomFrequencyRange
+            && (frequencyHz < layout.visibleMinFrequencyHz || frequencyHz > layout.visibleMaxFrequencyHz))
             continue;
 
-        AnalyzerFrequencyMarker frequencyMarker;
-        frequencyMarker.x = geometry.xForFrequency(frequencyHz, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds);
+        AnalyzerFrequencyMarkerLayout frequencyMarker;
+        frequencyMarker.sectionX = geometry.xForFrequency(frequencyHz,
+                                                          layout.visibleMinFrequencyHz,
+                                                          layout.visibleMaxFrequencyHz,
+                                                          layout.plotBounds);
+        frequencyMarker.plotLocalX = frequencyMarker.sectionX - layout.plotBounds.getX();
         frequencyMarker.label = formatter.formatScaleFrequency(frequencyHz);
-        frequencyMarkers.push_back(frequencyMarker);
+        layout.frequencyMarkers.push_back(frequencyMarker);
     }
 }
 
 void AnalyzerViewModel::updateVisibleBands(const std::vector<Analyzer::BandInfo> &bandInfo) {
-    visibleBands.clear();
-    visibleBands.reserve(bandInfo.size());
+    layout.sectionVisibleBands.clear();
+    layout.plotVisibleBands.clear();
+    layout.sectionVisibleBands.reserve(bandInfo.size());
+    layout.plotVisibleBands.reserve(bandInfo.size());
 
     if (bandInfo.empty())
         return;
@@ -101,42 +95,53 @@ void AnalyzerViewModel::updateVisibleBands(const std::vector<Analyzer::BandInfo>
 
     for (size_t bandIndex = 0; bandIndex < bandInfo.size(); ++bandIndex) {
         const auto &band = bandInfo[bandIndex];
-        if (band.highHz < visibleMinFrequencyHz || band.lowHz > visibleMaxFrequencyHz)
+        if (band.highHz < layout.visibleMinFrequencyHz || band.lowHz > layout.visibleMaxFrequencyHz)
             continue;
 
         sourceBandIndices.push_back(bandIndex);
     }
 
-    visibleBands.reserve(sourceBandIndices.size());
+    layout.sectionVisibleBands.reserve(sourceBandIndices.size());
+    layout.plotVisibleBands.reserve(sourceBandIndices.size());
     for (size_t visibleBandIndex = 0; visibleBandIndex < sourceBandIndices.size(); ++visibleBandIndex) {
         const auto sourceBandIndex = sourceBandIndices[visibleBandIndex];
         const auto &band = bandInfo[sourceBandIndex];
 
-        AnalyzerVisibleBandLayout visibleBand;
-        visibleBand.sourceBandIndex = sourceBandIndex;
-        visibleBand.hitBounds = geometry.getBandHitBounds(band.lowHz, band.highHz,
-                                                          visibleMinFrequencyHz, visibleMaxFrequencyHz,
-                                                          plotBounds);
-        const auto drawLeft = static_cast<int>(std::round(visibleBand.hitBounds.getX()));
-        auto drawRight = static_cast<int>(std::round(visibleBand.hitBounds.getRight()));
+        AnalyzerVisibleBandLayout sectionBand;
+        sectionBand.sourceBandIndex = sourceBandIndex;
+        sectionBand.hitBounds = geometry.getBandHitBounds(band.lowHz,
+                                                          band.highHz,
+                                                          layout.visibleMinFrequencyHz,
+                                                          layout.visibleMaxFrequencyHz,
+                                                          layout.plotBounds);
+        const auto drawLeft = static_cast<int>(std::round(sectionBand.hitBounds.getX()));
+        auto drawRight = static_cast<int>(std::round(sectionBand.hitBounds.getRight()));
         if (visibleBandIndex + 1 != sourceBandIndices.size())
             drawRight -= interBandGapPixels;
 
         const auto drawWidth = juce::jmax(0, drawRight - drawLeft);
-        visibleBand.drawBounds = juce::Rectangle<int>(drawLeft,
-                                                      static_cast<int>(std::round(visibleBand.hitBounds.getY())),
+        sectionBand.drawBounds = juce::Rectangle<int>(drawLeft,
+                                                      static_cast<int>(std::round(sectionBand.hitBounds.getY())),
                                                       drawWidth,
-                                                      static_cast<int>(std::round(visibleBand.hitBounds.getHeight()))).toFloat();
-        visibleBands.push_back(visibleBand);
+                                                      static_cast<int>(std::round(sectionBand.hitBounds.getHeight()))).toFloat();
+
+        AnalyzerVisibleBandLayout plotBand;
+        plotBand.sourceBandIndex = sourceBandIndex;
+        plotBand.hitBounds = sectionBand.hitBounds.translated(-layout.plotBounds.getX(), -layout.plotBounds.getY());
+        plotBand.drawBounds = sectionBand.drawBounds.translated(-layout.plotBounds.getX(), -layout.plotBounds.getY());
+
+        layout.sectionVisibleBands.push_back(sectionBand);
+        layout.plotVisibleBands.push_back(plotBand);
     }
 }
+
 void AnalyzerViewModel::updateVisibleFrequencyRange(const std::vector<Analyzer::BandInfo> &bandInfo,
                                                     const AnalyzerViewState &viewState) {
-    usingCustomFrequencyRange = viewState.useCustomFrequencyRange;
+    layout.useCustomFrequencyRange = viewState.useCustomFrequencyRange;
 
     if (bandInfo.empty()) {
-        visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
-        visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
+        layout.visibleMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
+        layout.visibleMaxFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMaxFrequencyHz;
         return;
     }
 
@@ -145,11 +150,11 @@ void AnalyzerViewModel::updateVisibleFrequencyRange(const std::vector<Analyzer::
     const auto uiMaxFrequencyHz = juce::jmin(fullMaxFrequencyHz, theme.metrics.analyzerPlot.maxUiFrequencyHz);
 
     if (!viewState.useCustomFrequencyRange) {
-        visibleMinFrequencyHz = fullMinFrequencyHz;
-        visibleMaxFrequencyHz = uiMaxFrequencyHz;
+        layout.visibleMinFrequencyHz = fullMinFrequencyHz;
+        layout.visibleMaxFrequencyHz = uiMaxFrequencyHz;
         return;
     }
 
-    visibleMinFrequencyHz = juce::jlimit(fullMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMinFrequencyHz);
-    visibleMaxFrequencyHz = juce::jlimit(visibleMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMaxFrequencyHz);
+    layout.visibleMinFrequencyHz = juce::jlimit(fullMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMinFrequencyHz);
+    layout.visibleMaxFrequencyHz = juce::jlimit(layout.visibleMinFrequencyHz, uiMaxFrequencyHz, viewState.visibleMaxFrequencyHz);
 }

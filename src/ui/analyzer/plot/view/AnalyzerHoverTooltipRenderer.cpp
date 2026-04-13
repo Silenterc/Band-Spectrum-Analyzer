@@ -1,81 +1,11 @@
-#include "ui/analyzer/plot/view/AnalyzerHoverOverlayRenderer.h"
+#include "ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.h"
 
-AnalyzerHoverOverlayRenderer::AnalyzerHoverOverlayRenderer(const Ui::Theme &themeToUse)
-    : theme(themeToUse),
-      renderBatchBuilder(themeToUse) {
+AnalyzerHoverTooltipRenderer::AnalyzerHoverTooltipRenderer(const Ui::Theme &themeToUse)
+    : theme(themeToUse) {
     tooltipLineGlyphs.resize(theme.metrics.tooltip.maxLines);
 }
 
-void AnalyzerHoverOverlayRenderer::draw(juce::Graphics &g) const {
-    drawHoveredBars(g);
-    drawTooltip(g);
-}
-
-juce::Rectangle<int> AnalyzerHoverOverlayRenderer::updateState(
-    const std::optional<AnalyzerHoverInfo> &newHoverInfo,
-    const AnalyzerDisplayFrame *displayFrame,
-    const std::vector<AnalyzerVisibleBandLayout> &visibleBands,
-    const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots,
-    const Shared::SignalSlotOrder &signalSlotOrder,
-    const std::uint64_t highlightVisualRevision,
-    const Analyzer::MeterSettings &meterSettings,
-    const float newGridMinDb,
-    const float newGridMaxDb,
-    const juce::Rectangle<float> &plotBounds,
-    const std::optional<juce::Rectangle<float>> &newHoveredBandBounds) {
-    auto dirtyBounds = getDirtyBounds(hoverInfo, hoveredBandBounds);
-    const auto tooltipContentChanged = !hasSameTooltipContent(newHoverInfo);
-
-    hoverInfo = newHoverInfo;
-    hoveredBandBounds = newHoveredBandBounds;
-    gridMinDb = newGridMinDb;
-    gridMaxDb = newGridMaxDb;
-    if (hoverInfo.has_value() && hoveredBandBounds.has_value()) {
-        const auto shouldRebuildHighlight = !highlightedBandIndex.has_value()
-                                            || *highlightedBandIndex != hoverInfo->bandIndex
-                                            || highlightedVisualRevision != highlightVisualRevision;
-        if (shouldRebuildHighlight) {
-            renderBatchBuilder.buildHoveredBarBatches(displayFrame,
-                                                      visibleBands,
-                                                      signalSlots,
-                                                      signalSlotOrder,
-                                                      meterSettings,
-                                                      hoverInfo->bandIndex,
-                                                      gridMinDb,
-                                                      gridMaxDb,
-                                                      plotBounds,
-                                                      *hoveredBandBounds);
-            highlightedBandIndex = hoverInfo->bandIndex;
-            highlightedVisualRevision = highlightVisualRevision;
-        }
-    } else {
-        renderBatchBuilder.reset();
-        highlightedBandIndex.reset();
-        highlightedVisualRevision = 0;
-    }
-    if (tooltipContentChanged) {
-        rebuildTooltipChrome();
-        rebuildTooltipGlyphs();
-    }
-
-    dirtyBounds = dirtyBounds.getUnion(getDirtyBounds(hoverInfo, hoveredBandBounds));
-    return dirtyBounds;
-}
-
-void AnalyzerHoverOverlayRenderer::drawHoveredBars(juce::Graphics &g) const {
-    if (!hoverInfo.has_value())
-        return;
-
-    for (const auto &batch: renderBatchBuilder.getBatches()) {
-        if (batch.rectangles.isEmpty())
-            continue;
-
-        g.setColour(batch.colour);
-        g.fillRectList(batch.rectangles);
-    }
-}
-
-void AnalyzerHoverOverlayRenderer::drawTooltip(juce::Graphics &g) const {
+void AnalyzerHoverTooltipRenderer::draw(juce::Graphics &g) const {
     if (!hoverInfo.has_value() || !tooltipChromeImage.isValid())
         return;
 
@@ -91,20 +21,29 @@ void AnalyzerHoverOverlayRenderer::drawTooltip(juce::Graphics &g) const {
         tooltipLineGlyphs[lineIndex].draw(g);
 }
 
-juce::Rectangle<int> AnalyzerHoverOverlayRenderer::getDirtyBounds(
-    const std::optional<AnalyzerHoverInfo> &hoverInfoToMeasure,
-    const std::optional<juce::Rectangle<float>> &bandBoundsToMeasure) const {
-    if (!hoverInfoToMeasure.has_value())
-        return {};
+juce::Rectangle<int> AnalyzerHoverTooltipRenderer::updateState(const std::optional<AnalyzerHoverInfo> &newHoverInfo) {
+    auto dirtyBounds = getDirtyBounds(hoverInfo);
+    const auto tooltipContentChanged = !hasSameTooltipContent(newHoverInfo);
 
-    auto dirtyBounds = hoverInfoToMeasure->bounds.getSmallestIntegerContainer().expanded(2);
-    if (bandBoundsToMeasure.has_value())
-        dirtyBounds = dirtyBounds.getUnion(bandBoundsToMeasure->getSmallestIntegerContainer().expanded(2));
+    hoverInfo = newHoverInfo;
+    if (tooltipContentChanged) {
+        rebuildTooltipChrome();
+        rebuildTooltipGlyphs();
+    }
 
+    dirtyBounds = dirtyBounds.getUnion(getDirtyBounds(hoverInfo));
     return dirtyBounds;
 }
 
-void AnalyzerHoverOverlayRenderer::rebuildTooltipChrome() {
+juce::Rectangle<int> AnalyzerHoverTooltipRenderer::getDirtyBounds(
+    const std::optional<AnalyzerHoverInfo> &hoverInfoToMeasure) const {
+    if (!hoverInfoToMeasure.has_value())
+        return {};
+
+    return hoverInfoToMeasure->bounds.getSmallestIntegerContainer().expanded(2);
+}
+
+void AnalyzerHoverTooltipRenderer::rebuildTooltipChrome() {
     if (!hoverInfo.has_value()) {
         tooltipChromeImage = {};
         return;
@@ -151,7 +90,7 @@ void AnalyzerHoverOverlayRenderer::rebuildTooltipChrome() {
     g.drawRoundedRectangle(localBounds, tooltipMetrics.cornerRadius, 1.0f);
 }
 
-void AnalyzerHoverOverlayRenderer::rebuildTooltipGlyphs() {
+void AnalyzerHoverTooltipRenderer::rebuildTooltipGlyphs() {
     for (auto &glyphs: tooltipLineGlyphs)
         glyphs.clear();
 
@@ -180,7 +119,7 @@ void AnalyzerHoverOverlayRenderer::rebuildTooltipGlyphs() {
     }
 }
 
-bool AnalyzerHoverOverlayRenderer::hasSameTooltipContent(
+bool AnalyzerHoverTooltipRenderer::hasSameTooltipContent(
     const std::optional<AnalyzerHoverInfo> &otherHoverInfo) const {
     if (hoverInfo.has_value() != otherHoverInfo.has_value())
         return false;

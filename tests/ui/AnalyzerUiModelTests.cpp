@@ -210,14 +210,21 @@ TEST_CASE("Analyzer view model keeps full-range bar layout unchanged", "[ui][vie
     const auto meterData = makeZoomMeterData();
     AnalyzerViewState viewState;
 
-    viewModel.updateStaticLayout(*meterData.bandInfo, viewState, -50.0f, 3.0f, 6.0f, {0.0f, 0.0f, 1000.0f, 600.0f});
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
 
-    const auto &visibleBands = viewModel.getVisibleBands();
+    const auto &layout = viewModel.getLayout();
+    const auto &visibleBands = layout.plotVisibleBands;
     REQUIRE(visibleBands.size() == meterData.bandInfo->size());
     REQUIRE(visibleBands.front().sourceBandIndex == 0);
     REQUIRE(visibleBands.back().sourceBandIndex == meterData.bandInfo->size() - 1);
 
-    const auto &frequencyMarkers = viewModel.getFrequencyMarkers();
+    const auto &frequencyMarkers = layout.frequencyMarkers;
     REQUIRE_FALSE(frequencyMarkers.empty());
     REQUIRE(frequencyMarkers.front().label == "20");
     REQUIRE(frequencyMarkers.back().label.contains("20"));
@@ -233,26 +240,33 @@ TEST_CASE("Analyzer view model reflows visible bands and hover with custom frequ
     viewState.visibleMinFrequencyHz = 45.0f;
     viewState.visibleMaxFrequencyHz = 210.0f;
 
-    viewModel.updateStaticLayout(*meterData.bandInfo, viewState, -50.0f, 3.0f, 6.0f, {0.0f, 0.0f, 1000.0f, 600.0f});
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
 
-    const auto &visibleBands = viewModel.getVisibleBands();
+    const auto &layout = viewModel.getLayout();
+    const auto &visibleBands = layout.plotVisibleBands;
     REQUIRE(visibleBands.size() == 3);
     REQUIRE(visibleBands[0].sourceBandIndex == 1);
     REQUIRE(visibleBands[1].sourceBandIndex == 2);
     REQUIRE(visibleBands[2].sourceBandIndex == 3);
 
-    const auto plotBounds = viewModel.getPlotBounds();
+    const auto plotBounds = layout.plotLocalBounds;
     REQUIRE(visibleBands[0].drawBounds.getX() == Catch::Approx(plotBounds.getX()));
     REQUIRE(visibleBands[2].drawBounds.getRight() == Catch::Approx(plotBounds.getRight()));
 
     const juce::Point<float> hoverPosition(visibleBands[1].drawBounds.getCentreX(), plotBounds.getCentreY());
-    viewModel.updateHover(-50.0f, 3.0f, {0.0f, 0.0f, 1000.0f, 600.0f}, hoverPosition);
+    const auto hoverInfo = viewModel.buildHover(hoverPosition);
 
-    REQUIRE(viewModel.getHoverInfo().has_value());
-    REQUIRE(viewModel.getHoverInfo()->bandIndex == 1);
-    REQUIRE(visibleBands[viewModel.getHoverInfo()->bandIndex].sourceBandIndex == 2);
+    REQUIRE(hoverInfo.has_value());
+    REQUIRE(hoverInfo->bandIndex == 1);
+    REQUIRE(visibleBands[hoverInfo->bandIndex].sourceBandIndex == 2);
 
-    const auto &frequencyMarkers = viewModel.getFrequencyMarkers();
+    const auto &frequencyMarkers = layout.frequencyMarkers;
     REQUIRE_FALSE(frequencyMarkers.empty());
     REQUIRE(frequencyMarkers.front().label == "50");
     REQUIRE(frequencyMarkers.back().label == "200");
@@ -592,19 +606,26 @@ TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", 
         .ownerKinds = {Analyzer::TraceKind::slot1, Analyzer::TraceKind::slot2}
     };
 
-    viewModel.updateStaticLayout(*meterData.bandInfo, viewState, -50.0f, 3.0f, 6.0f, {0.0f, 0.0f, 1000.0f, 600.0f});
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
 
     AnalyzerRenderBatchBuilder batchBuilder(theme);
-    const auto clipBounds = juce::Rectangle<float>(0.0f, 0.0f, 1000.0f, 600.0f);
-    const auto plotBounds = viewModel.getPlotBounds();
+    const auto &layout = viewModel.getLayout();
+    const auto clipBounds = layout.plotLocalBounds;
+    const auto plotBounds = layout.plotLocalBounds;
 
     batchBuilder.buildTraceBatches(&displayFrame,
-                                   viewModel.getVisibleBands(),
+                                   layout.plotVisibleBands,
                                    signalSlots,
                                    makeDefaultSignalSlotOrder(),
                                    Analyzer::MeterSettings{.showRms = true, .showPeak = true},
-                                   viewModel.getGridMinDb(),
-                                   3.0f,
+                                   layout.gridMinDb,
+                                   layout.gridMaxDb,
                                    plotBounds,
                                    clipBounds);
     int totalBarRects = 0;
@@ -613,11 +634,11 @@ TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", 
     REQUIRE(totalBarRects == 8);
 
     batchBuilder.buildGlobalHoldBatches(&displayFrame,
-                                        viewModel.getVisibleBands(),
+                                        layout.plotVisibleBands,
                                         signalSlots,
                                         Analyzer::MeterSettings{.showHold = true},
-                                        viewModel.getGridMinDb(),
-                                        3.0f,
+                                        layout.gridMinDb,
+                                        layout.gridMaxDb,
                                         plotBounds,
                                         clipBounds);
     int totalHoldRects = 0;
@@ -626,13 +647,13 @@ TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", 
     REQUIRE(totalHoldRects == 2);
 
     batchBuilder.buildHoveredBarBatches(&displayFrame,
-                                        viewModel.getVisibleBands(),
+                                        layout.plotVisibleBands,
                                         signalSlots,
                                         makeDefaultSignalSlotOrder(),
                                         Analyzer::MeterSettings{.showRms = true, .showPeak = true},
                                         0,
-                                        viewModel.getGridMinDb(),
-                                        3.0f,
+                                        layout.gridMinDb,
+                                        layout.gridMaxDb,
                                         plotBounds,
                                         clipBounds);
     int totalHoveredRects = 0;

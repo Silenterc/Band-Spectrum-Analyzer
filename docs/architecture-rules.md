@@ -211,7 +211,7 @@ Examples of suspicious changes:
 - adding APVTS knowledge to `src/ui/`
 - adding JUCE geometry types to worker data structs
 - adding colour/opacity handling to the display worker
-- adding hold logic back into `AnalyzerComponent`
+- adding hold logic back into `AnalyzerPlotComponent`
 
 ## General Rules
 
