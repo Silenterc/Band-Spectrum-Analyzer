@@ -30,10 +30,7 @@ std::optional<AnalyzerHoverInfo> AnalyzerHoverModel::build(const juce::Rectangle
     if (!bandIndex.has_value())
         return std::nullopt;
 
-    const auto hoveredDb = geometry.dbForY(hoverPosition.y - geometry.getTooltipCursorReferenceOffsetY(),
-                                           gridMinDb,
-                                           gridMaxDb,
-                                           plotBounds);
+    const auto hoveredDb = geometry.dbForY(hoverPosition.y, gridMinDb, gridMaxDb, plotBounds);
     // Hover frequency follows the cursor on the log axis, not the nearest band center
     const auto hoveredFrequencyHz = std::round(
         geometry.frequencyForX(hoverPosition.x, visibleMinFrequencyHz, visibleMaxFrequencyHz, plotBounds));

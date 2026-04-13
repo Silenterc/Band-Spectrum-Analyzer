@@ -49,13 +49,20 @@ void AnalyzerSectionComponent::resized() {
 void AnalyzerSectionComponent::drawAxisLabels(juce::Graphics &g) const {
     const auto &layout = viewModel.getLayout();
     const auto &plotMetrics = theme.metrics.analyzerPlot;
+    const auto gridLabelY = [&](const float sectionY) {
+        return juce::roundToInt(sectionY - static_cast<float>(plotMetrics.gridLabelHeight) * 0.5f);
+    };
+    const auto frequencyLabelX = [&](const float sectionX) {
+        return juce::roundToInt(sectionX - plotMetrics.frequencyLabelXHalfSpan);
+    };
+    const auto frequencyLabelY = juce::roundToInt(layout.plotBounds.getBottom() + plotMetrics.frequencyLabelYOffset);
 
     g.setColour(theme.axisText);
     g.setFont(plotMetrics.gridLabelFontHeight);
     for (const auto &gridLine: layout.gridLines) {
         g.drawText(gridLine.label,
-                   static_cast<int>(layout.displayBounds.getX()),
-                   static_cast<int>(gridLine.sectionY - plotMetrics.gridLabelYOffset),
+                   juce::roundToInt(layout.displayBounds.getX()),
+                   gridLabelY(gridLine.sectionY),
                    plotMetrics.gridLabelWidth,
                    plotMetrics.gridLabelHeight,
                    juce::Justification::centredRight);
@@ -63,8 +70,8 @@ void AnalyzerSectionComponent::drawAxisLabels(juce::Graphics &g) const {
 
     for (const auto &frequencyMarker: layout.frequencyMarkers) {
         g.drawText(frequencyMarker.label,
-                   static_cast<int>(frequencyMarker.sectionX - plotMetrics.frequencyLabelXHalfSpan),
-                   static_cast<int>(layout.plotBounds.getBottom() + plotMetrics.frequencyLabelYOffset),
+                   frequencyLabelX(frequencyMarker.sectionX),
+                   frequencyLabelY,
                    plotMetrics.frequencyLabelWidth,
                    plotMetrics.frequencyLabelHeight,
                    juce::Justification::centred);

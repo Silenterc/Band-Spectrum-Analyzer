@@ -59,10 +59,6 @@ public:
     juce::Rectangle<float> getTooltipBounds(juce::Point<float> hoverPosition, const juce::Rectangle<float> &plotBounds,
                                             const juce::Rectangle<float> &localBounds) const;
 
-    float getTooltipCursorReferenceOffsetY() const {
-        return theme.metrics.tooltip.cursorReferenceOffsetY;
-    }
-
 private:
     const Ui::Theme &theme;
 };

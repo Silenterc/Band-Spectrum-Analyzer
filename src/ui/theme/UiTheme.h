@@ -72,7 +72,6 @@ namespace Ui {
         float height = 72.0f;
         float offsetX = 12.0f;
         float offsetY = 10.0f;
-        float cursorReferenceOffsetY = 4.0f;
         float edgeInset = 8.0f;
         float cornerRadius = 8.0f;
         int textPaddingX = 10;

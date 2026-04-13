@@ -10,6 +10,7 @@ AnalyzerPlotComponent::AnalyzerPlotComponent(AnalyzerRawTraceSource &rawTraceSou
       globalHoldBatchBuilder(themeToUse),
       hoverHighlightBatchBuilder(themeToUse) {
     setOpaque(true);
+    setMouseCursor(juce::MouseCursor::CrosshairCursor);
     displayWorker.start();
 }
 
