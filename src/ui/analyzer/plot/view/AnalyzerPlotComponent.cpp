@@ -69,6 +69,7 @@ void AnalyzerPlotComponent::paint(juce::Graphics &g) {
     ensureStaticPlotLayer();
     g.drawImageAt(staticPlotLayer, 0, 0);
     drawBars(g);
+    drawRmsLines(g);
     drawGlobalHold(g);
     drawHoverHighlight(g);
 }
@@ -115,6 +116,28 @@ void AnalyzerPlotComponent::drawBars(juce::Graphics &g) const {
     }
 }
 
+void AnalyzerPlotComponent::drawRmsLines(juce::Graphics &g) const {
+    const auto underlayColour = theme.plotBackground.darker(1.1f)
+        .withAlpha(theme.metrics.analyzerPlot.rmsLineUnderlayAlpha);
+
+    for (const auto &batch: traceBatchBuilder.getPathBatches()) {
+        if (batch.path.isEmpty())
+            continue;
+
+        g.setColour(underlayColour);
+        g.strokePath(batch.path,
+                     juce::PathStrokeType(batch.strokeThickness + theme.metrics.analyzerPlot.rmsLineUnderlayExtraThickness,
+                                          juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
+
+        g.setColour(batch.colour);
+        g.strokePath(batch.path,
+                     juce::PathStrokeType(batch.strokeThickness,
+                                          juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
+    }
+}
+
 void AnalyzerPlotComponent::drawGlobalHold(juce::Graphics &g) const {
     for (const auto &batch: globalHoldBatchBuilder.getBatches()) {
         if (batch.rectangles.isEmpty())
@@ -132,6 +155,23 @@ void AnalyzerPlotComponent::drawHoverHighlight(juce::Graphics &g) const {
 
         g.setColour(batch.colour);
         g.fillRectList(batch.rectangles);
+    }
+
+    for (const auto &batch: hoverHighlightBatchBuilder.getPathBatches()) {
+        if (batch.path.isEmpty())
+            continue;
+
+        g.setColour(theme.plotBackground.darker(1.2f).withAlpha(theme.metrics.analyzerPlot.rmsLineUnderlayAlpha));
+        g.strokePath(batch.path,
+                     juce::PathStrokeType(batch.strokeThickness + theme.metrics.analyzerPlot.rmsLineUnderlayExtraThickness,
+                                          juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
+
+        g.setColour(batch.colour);
+        g.strokePath(batch.path,
+                     juce::PathStrokeType(batch.strokeThickness,
+                                          juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
     }
 }
 

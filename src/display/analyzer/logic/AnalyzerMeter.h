@@ -13,6 +13,9 @@ public:
 
     void tick(const std::shared_ptr<const std::vector<Analyzer::BandInfo>> &bandInfo,
               const std::vector<Analyzer::RawTrace> &traces,
+              bool hasNewData,
+              bool advanceSilentRms,
+              float hopDurationSeconds,
               const Analyzer::MeterSettings &meterSettings,
               float floorDb,
               float dtSeconds);
@@ -36,15 +39,20 @@ private:
         Analyzer::TraceKind kind = Analyzer::TraceKind::slot1;
         std::vector<float> rmsDb;
         std::vector<float> peakDb;
+        std::vector<float> lastPeakInputDb;
         std::vector<RmsWindowState> rmsWindows;
     };
 
     void ensureTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb);
     TraceState &getOrCreateTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb);
     static float getPeakDb(const Analyzer::BandMeasurements &measurements, float floorDb);
-    static float getMeanPower(const Analyzer::BandMeasurements &measurements);
-    static float pushMeanPower(RmsWindowState &windowState, float meanPower, float dtSeconds);
+    static float getHopMeanPower(const Analyzer::BandMeasurements &measurements);
+    static void pushMeanPower(RmsWindowState &windowState, float meanPower, float durationSeconds, float rmsWindowMs);
+    static void trimWindow(RmsWindowState &windowState, float rmsWindowMs);
+    static float getWindowMeanPower(const RmsWindowState &windowState);
 
     std::vector<TraceState> traceStates;
     Analyzer::MeterData meterData;
+    float pendingSilentRmsSeconds = 0.0f;
+    float lastAppliedRmsWindowMs = -1.0f;
 };

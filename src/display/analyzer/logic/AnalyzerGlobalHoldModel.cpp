@@ -27,19 +27,20 @@ void AnalyzerGlobalHoldModel::tick(const AnalyzerContributingPeakSummary &peakSu
         const auto strongestOwnerKind = bandIndex < peakSummary.ownerKinds.size()
                                             ? peakSummary.ownerKinds[bandIndex]
                                             : std::nullopt;
+        const auto hasContributingPeak = strongestPeakDb > floorDb;
 
         auto &heldDb = frame->holdDb[bandIndex];
         auto &ownerKind = frame->ownerKinds[bandIndex];
         auto &holdTimeMs = holdTimeRemainingMs[bandIndex];
 
-        if (strongestPeakDb >= heldDb) {
+        if (hasContributingPeak && strongestPeakDb >= heldDb) {
             heldDb = strongestPeakDb;
             holdTimeMs = meterSettings.holdMs;
             ownerKind = strongestOwnerKind;
             continue;
         }
 
-        const auto isWithinResetTolerance = strongestPeakDb > floorDb
+        const auto isWithinResetTolerance = hasContributingPeak
                                             && strongestPeakDb >= heldDb - Ui::analyzerMeterTuning.holdResetToleranceDb;
         if (isWithinResetTolerance) {
             holdTimeMs = meterSettings.holdMs;
@@ -53,7 +54,7 @@ void AnalyzerGlobalHoldModel::tick(const AnalyzerContributingPeakSummary &peakSu
 
         heldDb = heldDb - Ui::analyzerMeterTuning.holdDecayDbPerSecond * dtSeconds;
 
-        if (strongestPeakDb > floorDb
+        if (hasContributingPeak
             && heldDb <= strongestPeakDb + Ui::analyzerMeterTuning.holdResetToleranceDb) {
             heldDb = strongestPeakDb;
             holdTimeMs = meterSettings.holdMs;

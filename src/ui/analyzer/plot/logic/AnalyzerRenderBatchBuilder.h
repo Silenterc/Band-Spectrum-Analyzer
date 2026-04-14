@@ -17,6 +17,12 @@ public:
         juce::RectangleList<int> rectangles;
     };
 
+    struct PathBatch {
+        juce::Colour colour;
+        juce::Path path;
+        float strokeThickness = 1.0f;
+    };
+
     explicit AnalyzerRenderBatchBuilder(const Ui::Theme &themeToUse)
         : theme(themeToUse) {
     }
@@ -54,6 +60,7 @@ public:
                                 const juce::Rectangle<float> &clipBounds);
 
     const std::vector<Batch> &getBatches() const;
+    const std::vector<PathBatch> &getPathBatches() const;
 
 private:
     static float yForDb(float decibels, float minDb, float maxDb, const juce::Rectangle<float> &plotBounds);
@@ -62,7 +69,9 @@ private:
     juce::Colour makeGlobalHoldColour(const std::optional<Analyzer::TraceKind> &ownerKind,
                                       const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots) const;
     void addRect(const juce::Colour &colour, const juce::Rectangle<int> &bounds);
+    void addPath(const juce::Colour &colour, const juce::Path &path, float strokeThickness);
 
     const Ui::Theme &theme;
     std::vector<Batch> batches;
+    std::vector<PathBatch> pathBatches;
 };

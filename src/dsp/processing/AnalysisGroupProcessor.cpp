@@ -13,6 +13,7 @@ namespace Analyzer {
 
         const auto bandCount = bandInfo != nullptr ? bandInfo->size() : 0;
         outputMeasurements.assign(bandCount, {});
+        currentHopMeasurements.assign(bandCount, {});
         for (auto &frameMeasurements: accumulatedMeasurements)
             frameMeasurements.assign(bandCount, {});
 
@@ -25,6 +26,7 @@ namespace Analyzer {
         filterBank.reset();
         clearOutputMeasurements();
         clearAccumulatedMeasurements();
+        clearCurrentHop();
     }
 
     void AnalysisGroupProcessor::process(const SourceSet& sources) {
@@ -58,8 +60,18 @@ namespace Analyzer {
             const auto &sliceMeasurements = outputMeasurements[bandIndex];
             auto &accumulated = frameMeasurements[bandIndex];
             accumulated.peakPower = std::max(accumulated.peakPower, sliceMeasurements.peakPower);
-            accumulated.sumPower += sliceMeasurements.sumPower;
-            accumulated.numSamples += sliceMeasurements.numSamples;
+        }
+    }
+
+    void AnalysisGroupProcessor::accumulateCurrentHop() {
+        if (currentHopMeasurements.size() != outputMeasurements.size())
+            currentHopMeasurements.assign(outputMeasurements.size(), {});
+
+        for (size_t bandIndex = 0; bandIndex < outputMeasurements.size(); ++bandIndex) {
+            const auto &sliceMeasurements = outputMeasurements[bandIndex];
+            auto &hopMeasurements = currentHopMeasurements[bandIndex];
+            hopMeasurements.rmsHopSumPower += sliceMeasurements.rmsHopSumPower;
+            hopMeasurements.rmsHopNumSamples += sliceMeasurements.rmsHopNumSamples;
         }
     }
 
@@ -82,6 +94,11 @@ namespace Analyzer {
             trace.measurements.resize(frameMeasurements.size());
 
         std::copy(frameMeasurements.begin(), frameMeasurements.end(), trace.measurements.begin());
+
+        for (size_t bandIndex = 0; bandIndex < trace.measurements.size() && bandIndex < currentHopMeasurements.size(); ++bandIndex) {
+            trace.measurements[bandIndex].rmsHopSumPower = currentHopMeasurements[bandIndex].rmsHopSumPower;
+            trace.measurements[bandIndex].rmsHopNumSamples = currentHopMeasurements[bandIndex].rmsHopNumSamples;
+        }
     }
 
     size_t AnalysisGroupProcessor::getOutputCount() const {
@@ -125,5 +142,9 @@ namespace Analyzer {
         for (auto &frameMeasurements: accumulatedMeasurements) {
             std::fill(frameMeasurements.begin(), frameMeasurements.end(), BandMeasurements{});
         }
+    }
+
+    void AnalysisGroupProcessor::clearCurrentHop() {
+        std::fill(currentHopMeasurements.begin(), currentHopMeasurements.end(), BandMeasurements{});
     }
 }

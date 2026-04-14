@@ -1,12 +1,103 @@
 #include "AnalyzerRenderBatchBuilder.h"
 
+#include <optional>
+
 #include "ui/analyzer/plot/logic/AnalyzerUiSelectors.h"
+
+namespace {
+    juce::Path buildSmoothedPathFromPoints(const std::vector<juce::Point<float>> &points) {
+        juce::Path path;
+        if (points.empty())
+            return path;
+
+        path.startNewSubPath(points.front());
+        if (points.size() == 1)
+            return path;
+
+        if (points.size() == 2) {
+            path.lineTo(points.back());
+            return path;
+        }
+
+        for (size_t pointIndex = 1; pointIndex + 1 < points.size(); ++pointIndex) {
+            const auto &current = points[pointIndex];
+            const auto &next = points[pointIndex + 1];
+            const auto midpoint = juce::Point<float>((current.x + next.x) * 0.5f,
+                                                     (current.y + next.y) * 0.5f);
+            path.quadraticTo(current, midpoint);
+        }
+
+        path.lineTo(points.back());
+        return path;
+    }
+
+    std::optional<juce::Point<float>> getRmsPoint(const AnalyzerSlotDisplayFrame &slotFrame,
+                                                  const AnalyzerVisibleBandLayout &visibleBand,
+                                                  const float gridMinDb,
+                                                  const float gridMaxDb,
+                                                  const juce::Rectangle<float> &plotBounds,
+                                                  const juce::Rectangle<float> &clipBounds) {
+        if (!visibleBand.drawBounds.intersects(clipBounds))
+            return std::nullopt;
+
+        if (visibleBand.sourceBandIndex >= slotFrame.frame.rmsDb.size())
+            return std::nullopt;
+
+        const auto rmsDb = slotFrame.frame.rmsDb[visibleBand.sourceBandIndex];
+        const auto clampedDb = juce::jlimit(gridMinDb, gridMaxDb, rmsDb);
+        const auto normalised = juce::jmap(clampedDb, gridMinDb, gridMaxDb, 0.0f, 1.0f);
+        const auto y = plotBounds.getBottom() - normalised * plotBounds.getHeight();
+        return juce::Point<float>(visibleBand.drawBounds.getCentreX(), y);
+    }
+
+    juce::Path buildRmsPath(const AnalyzerSlotDisplayFrame &slotFrame,
+                            const std::vector<AnalyzerVisibleBandLayout> &visibleBands,
+                            const float gridMinDb,
+                            const float gridMaxDb,
+                            const juce::Rectangle<float> &plotBounds,
+                            const juce::Rectangle<float> &clipBounds,
+                            const size_t startIndex,
+                            const size_t endIndexExclusive) {
+        juce::Path path;
+        std::vector<juce::Point<float>> segmentPoints;
+        bool hasAudiblePoint = false;
+
+        for (size_t visibleBandIndex = startIndex; visibleBandIndex < endIndexExclusive; ++visibleBandIndex) {
+            const auto sourceBandIndex = visibleBands[visibleBandIndex].sourceBandIndex;
+            if (sourceBandIndex < slotFrame.frame.rmsDb.size()
+                && slotFrame.frame.rmsDb[sourceBandIndex] > gridMinDb) {
+                hasAudiblePoint = true;
+            }
+
+            const auto point = getRmsPoint(slotFrame,
+                                           visibleBands[visibleBandIndex],
+                                           gridMinDb,
+                                           gridMaxDb,
+                                           plotBounds,
+                                           clipBounds);
+            if (!point.has_value()) {
+                path.addPath(buildSmoothedPathFromPoints(segmentPoints));
+                segmentPoints.clear();
+                continue;
+            }
+
+            segmentPoints.push_back(*point);
+        }
+
+        if (!hasAudiblePoint)
+            return path;
+
+        path.addPath(buildSmoothedPathFromPoints(segmentPoints));
+        return path;
+    }
+}
 
 void AnalyzerRenderBatchBuilder::reset() {
     for (auto &batch: batches)
         batch.rectangles.clear();
 
     batches.clear();
+    pathBatches.clear();
 }
 
 void AnalyzerRenderBatchBuilder::buildTraceBatches(const AnalyzerDisplayFrame *displayFrame,
@@ -34,14 +125,12 @@ void AnalyzerRenderBatchBuilder::buildTraceBatches(const AnalyzerDisplayFrame *d
             continue;
 
         const auto peakColour = getTraceColour(slot);
-        const auto rmsColour = peakColour.withMultipliedAlpha(0.45f);
 
         for (const auto &visibleBand: visibleBands) {
             if (!visibleBand.drawBounds.intersects(clipBounds))
                 continue;
 
             const auto peakDb = getBandValue(slotFrame.frame.peakDb, visibleBand.sourceBandIndex, gridMinDb);
-            const auto rmsDb = getBandValue(slotFrame.frame.rmsDb, visibleBand.sourceBandIndex, gridMinDb);
 
             if (meterSettings.showPeak && peakDb > gridMinDb) {
                 const auto peakY = yForDb(peakDb, gridMinDb, gridMaxDb, plotBounds);
@@ -52,16 +141,21 @@ void AnalyzerRenderBatchBuilder::buildTraceBatches(const AnalyzerDisplayFrame *d
                 if (!peakBounds.isEmpty())
                     addRect(peakColour, peakBounds);
             }
+        }
 
-            if (meterSettings.showRms && rmsDb > gridMinDb) {
-                const auto rmsY = yForDb(rmsDb, gridMinDb, gridMaxDb, plotBounds);
-                const auto rmsBounds = juce::Rectangle<float>(visibleBand.drawBounds.getX(),
-                                                              rmsY,
-                                                              visibleBand.drawBounds.getWidth(),
-                                                              plotBounds.getBottom() - rmsY).getSmallestIntegerContainer();
-                if (!rmsBounds.isEmpty())
-                    addRect(rmsColour, rmsBounds);
-            }
+        if (meterSettings.showRms) {
+            const auto rmsColour = peakColour.withAlpha(1.0f)
+                .interpolatedWith(juce::Colours::white, theme.metrics.analyzerPlot.rmsLineWhiteness)
+                .withAlpha(theme.metrics.analyzerPlot.rmsLineAlpha);
+            const auto rmsPath = buildRmsPath(slotFrame,
+                                              visibleBands,
+                                              gridMinDb,
+                                              gridMaxDb,
+                                              plotBounds,
+                                              clipBounds,
+                                              0,
+                                              visibleBands.size());
+            addPath(rmsColour, rmsPath, theme.metrics.analyzerPlot.rmsLineThickness);
         }
     }
 }
@@ -88,6 +182,12 @@ void AnalyzerRenderBatchBuilder::buildGlobalHoldBatches(const AnalyzerDisplayFra
         if (holdDb <= gridMinDb)
             continue;
 
+        const auto ownerKind = visibleBand.sourceBandIndex < globalHoldFrame.ownerKinds.size()
+                                   ? globalHoldFrame.ownerKinds[visibleBand.sourceBandIndex]
+                                   : std::nullopt;
+        if (!ownerKind.has_value())
+            continue;
+
         const auto holdY = yForDb(holdDb, gridMinDb, gridMaxDb, plotBounds);
         const auto lineBounds = juce::Rectangle<float>(visibleBand.drawBounds.getX(),
                                                        holdY - 1.0f,
@@ -96,9 +196,6 @@ void AnalyzerRenderBatchBuilder::buildGlobalHoldBatches(const AnalyzerDisplayFra
         if (!lineBounds.toFloat().intersects(clipBounds) || lineBounds.isEmpty())
             continue;
 
-        const auto ownerKind = visibleBand.sourceBandIndex < globalHoldFrame.ownerKinds.size()
-                                   ? globalHoldFrame.ownerKinds[visibleBand.sourceBandIndex]
-                                   : std::nullopt;
         addRect(makeGlobalHoldColour(ownerKind, signalSlots), lineBounds);
     }
 }
@@ -132,9 +229,7 @@ void AnalyzerRenderBatchBuilder::buildHoveredBarBatches(const AnalyzerDisplayFra
             continue;
 
         const auto peakColour = getTraceColour(slot).brighter(0.18f);
-        const auto rmsColour = peakColour.withMultipliedAlpha(0.45f);
         const auto peakDb = getBandValue(slotFrame.frame.peakDb, visibleBand.sourceBandIndex, gridMinDb);
-        const auto rmsDb = getBandValue(slotFrame.frame.rmsDb, visibleBand.sourceBandIndex, gridMinDb);
 
         if (meterSettings.showPeak && peakDb > gridMinDb) {
             const auto peakY = yForDb(peakDb, gridMinDb, gridMaxDb, plotBounds);
@@ -146,20 +241,15 @@ void AnalyzerRenderBatchBuilder::buildHoveredBarBatches(const AnalyzerDisplayFra
                 addRect(peakColour, peakBounds);
         }
 
-        if (meterSettings.showRms && rmsDb > gridMinDb) {
-            const auto rmsY = yForDb(rmsDb, gridMinDb, gridMaxDb, plotBounds);
-            const auto rmsBounds = juce::Rectangle<float>(visibleBand.drawBounds.getX(),
-                                                          rmsY,
-                                                          visibleBand.drawBounds.getWidth(),
-                                                          plotBounds.getBottom() - rmsY).getSmallestIntegerContainer();
-            if (!rmsBounds.isEmpty())
-                addRect(rmsColour, rmsBounds);
-        }
     }
 }
 
 const std::vector<AnalyzerRenderBatchBuilder::Batch> &AnalyzerRenderBatchBuilder::getBatches() const {
     return batches;
+}
+
+const std::vector<AnalyzerRenderBatchBuilder::PathBatch> &AnalyzerRenderBatchBuilder::getPathBatches() const {
+    return pathBatches;
 }
 
 float AnalyzerRenderBatchBuilder::yForDb(const float decibels,
@@ -211,4 +301,24 @@ void AnalyzerRenderBatchBuilder::addRect(const juce::Colour &colour, const juce:
     batch.colour = colour;
     batch.rectangles.add(bounds);
     batches.push_back(std::move(batch));
+}
+
+void AnalyzerRenderBatchBuilder::addPath(const juce::Colour &colour,
+                                         const juce::Path &path,
+                                         const float strokeThickness) {
+    if (path.isEmpty())
+        return;
+
+    for (auto &batch: pathBatches) {
+        if (batch.colour == colour && juce::approximatelyEqual(batch.strokeThickness, strokeThickness)) {
+            batch.path.addPath(path);
+            return;
+        }
+    }
+
+    PathBatch batch;
+    batch.colour = colour;
+    batch.path = path;
+    batch.strokeThickness = strokeThickness;
+    pathBatches.push_back(std::move(batch));
 }

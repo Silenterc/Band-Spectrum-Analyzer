@@ -45,11 +45,11 @@ namespace Analyzer {
         }
 
         [[nodiscard]] bool shouldProcess() const {
-            return state == State::active;
+            return state != State::idle;
         }
 
         [[nodiscard]] bool hasRecentSignal() const {
-            return state != State::idle;
+            return state == State::active;
         }
 
         [[nodiscard]] float getPeakAbs() const {

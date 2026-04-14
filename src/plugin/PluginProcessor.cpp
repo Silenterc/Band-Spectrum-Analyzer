@@ -275,6 +275,10 @@ bool SpectrumAnalyzerAudioProcessor::hasRecentSignal() const {
     return engine.hasRecentSignal();
 }
 
+bool SpectrumAnalyzerAudioProcessor::shouldProcessAnalyzer() const {
+    return engine.shouldProcessAnalyzer();
+}
+
 bool SpectrumAnalyzerAudioProcessor::isFrozen() const {
     return parameterAccess.readFreeze();
 }

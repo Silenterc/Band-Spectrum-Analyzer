@@ -212,8 +212,8 @@ namespace Analyzer {
 
                 auto& measurements = outputMeasurements[bandIndex];
                 measurements.peakPower = peakPowerValues[lane];
-                measurements.sumPower = static_cast<double>(summedPowers[lane]);
-                measurements.numSamples = static_cast<int>(numSamples);
+                measurements.rmsHopSumPower = static_cast<double>(summedPowers[lane]);
+                measurements.rmsHopNumSamples = static_cast<int>(numSamples);
             }
         }
     }

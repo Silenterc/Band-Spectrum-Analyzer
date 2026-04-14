@@ -145,6 +145,10 @@ TEST_CASE("AnalyzerUiSnapshot equality includes grid, freeze, and frequency rang
     REQUIRE(lhs != rhs);
 
     rhs = lhs;
+    rhs.meterSettings.rmsWindowMs = 250.0f;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
     rhs.useCustomFrequencyRange = true;
     REQUIRE(lhs != rhs);
 
@@ -632,7 +636,7 @@ TEST_CASE("Display frame model preserves a hidden slot's frozen snapshot until i
     REQUIRE(visibleSummary.ownerKinds[0] == Analyzer::TraceKind::slot1);
 }
 
-TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", "[ui][render-batching]") {
+TEST_CASE("Render batching preserves visible analyzer bars, RMS lines, and hold rectangles", "[ui][render-batching]") {
     const auto theme = Ui::makeTheme();
     AnalyzerViewModel viewModel(theme);
     AnalyzerViewState viewState;
@@ -670,7 +674,12 @@ TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", 
     int totalBarRects = 0;
     for (const auto &batch: batchBuilder.getBatches())
         totalBarRects += batch.rectangles.getNumRectangles();
-    REQUIRE(totalBarRects == 8);
+    REQUIRE(totalBarRects == 4);
+
+    int totalRmsPaths = 0;
+    for (const auto &batch: batchBuilder.getPathBatches())
+        totalRmsPaths += batch.path.isEmpty() ? 0 : 1;
+    REQUIRE(totalRmsPaths == 2);
 
     batchBuilder.buildGlobalHoldBatches(&displayFrame,
                                         layout.plotVisibleBands,
@@ -698,5 +707,153 @@ TEST_CASE("Render batching preserves visible analyzer bar and hold rectangles", 
     int totalHoveredRects = 0;
     for (const auto &batch: batchBuilder.getBatches())
         totalHoveredRects += batch.rectangles.getNumRectangles();
-    REQUIRE(totalHoveredRects == 4);
+    REQUIRE(totalHoveredRects == 2);
+
+    int totalHoveredRmsPaths = 0;
+    for (const auto &batch: batchBuilder.getPathBatches())
+        totalHoveredRmsPaths += batch.path.isEmpty() ? 0 : 1;
+    REQUIRE(totalHoveredRmsPaths == 0);
+}
+
+TEST_CASE("RMS line is omitted when the whole trace is at the floor", "[ui][render-batching]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    AnalyzerViewState viewState;
+    const auto signalSlots = makeVisibleSignalSlots();
+
+    Analyzer::MeterData meterData;
+    meterData.bandInfo = makeBandInfo({
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f},
+        {.lowHz = 125.0f, .centerHz = 160.0f, .highHz = 200.0f}
+    });
+
+    Analyzer::MeterTrace trace;
+    trace.kind = Analyzer::TraceKind::slot1;
+    trace.frame.rmsDb = {-50.0f, -50.0f};
+    trace.frame.peakDb = {-50.0f, -50.0f};
+    meterData.traces.push_back(std::move(trace));
+
+    AnalyzerDisplayFrameModel frameModel;
+    auto displayFrame = buildDisplayFrame(meterData, signalSlots, -50.0f, frameModel);
+
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
+
+    AnalyzerRenderBatchBuilder batchBuilder(theme);
+    const auto &layout = viewModel.getLayout();
+    batchBuilder.buildTraceBatches(&displayFrame,
+                                   layout.plotVisibleBands,
+                                   signalSlots,
+                                   makeDefaultSignalSlotOrder(),
+                                   Analyzer::MeterSettings{.showRms = true, .showPeak = true},
+                                   layout.gridMinDb,
+                                   layout.gridMaxDb,
+                                   layout.plotLocalBounds,
+                                   layout.plotLocalBounds);
+
+    int totalRmsPaths = 0;
+    for (const auto &batch: batchBuilder.getPathBatches())
+        totalRmsPaths += batch.path.isEmpty() ? 0 : 1;
+    REQUIRE(totalRmsPaths == 0);
+}
+
+TEST_CASE("RMS path still renders for a decaying trace without recent activity gating", "[ui][render-batching]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    AnalyzerViewState viewState;
+    const auto signalSlots = makeVisibleSignalSlots();
+
+    Analyzer::MeterData meterData;
+    meterData.bandInfo = makeBandInfo({
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f},
+        {.lowHz = 125.0f, .centerHz = 160.0f, .highHz = 200.0f},
+        {.lowHz = 200.0f, .centerHz = 250.0f, .highHz = 315.0f}
+    });
+
+    Analyzer::MeterTrace trace;
+    trace.kind = Analyzer::TraceKind::slot1;
+    trace.frame.rmsDb = {-18.0f, -55.0f, -20.0f};
+    trace.frame.peakDb = {-50.0f, -50.0f, -50.0f};
+    meterData.traces.push_back(std::move(trace));
+
+    AnalyzerDisplayFrameModel frameModel;
+    auto displayFrame = buildDisplayFrame(meterData, signalSlots, -50.0f, frameModel);
+
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
+
+    AnalyzerRenderBatchBuilder batchBuilder(theme);
+    const auto &layout = viewModel.getLayout();
+    batchBuilder.buildTraceBatches(&displayFrame,
+                                   layout.plotVisibleBands,
+                                   signalSlots,
+                                   makeDefaultSignalSlotOrder(),
+                                   Analyzer::MeterSettings{.showRms = true, .showPeak = true},
+                                   layout.gridMinDb,
+                                   layout.gridMaxDb,
+                                   layout.plotLocalBounds,
+                                   layout.plotLocalBounds);
+
+    int totalBarRects = 0;
+    for (const auto &batch: batchBuilder.getBatches())
+        totalBarRects += batch.rectangles.getNumRectangles();
+    REQUIRE(totalBarRects == 0);
+
+    int totalRmsPaths = 0;
+    for (const auto &batch: batchBuilder.getPathBatches())
+        totalRmsPaths += batch.path.isEmpty() ? 0 : 1;
+    REQUIRE(totalRmsPaths == 1);
+
+    REQUIRE_FALSE(batchBuilder.getPathBatches().empty());
+    const auto pathBounds = batchBuilder.getPathBatches().front().path.getBounds();
+    REQUIRE(pathBounds.getX() <= Catch::Approx(layout.plotVisibleBands.front().drawBounds.getCentreX()).margin(0.5f));
+    REQUIRE(pathBounds.getRight() >= Catch::Approx(layout.plotVisibleBands.back().drawBounds.getCentreX()).margin(0.5f));
+}
+
+TEST_CASE("Hold rectangles require an owner kind and stay hidden at startup floor state", "[ui][render-batching]") {
+    const auto theme = Ui::makeTheme();
+    AnalyzerViewModel viewModel(theme);
+    AnalyzerViewState viewState;
+    const auto signalSlots = makeVisibleSignalSlots();
+    const auto meterData = makeMultiBandMeterData();
+    AnalyzerDisplayFrameModel frameModel;
+    auto displayFrame = buildDisplayFrame(meterData, signalSlots, -50.0f, frameModel);
+    displayFrame.globalHoldFrame = AnalyzerGlobalHoldFrame{
+        .holdDb = {-10.0f, -6.0f},
+        .ownerKinds = {std::nullopt, std::nullopt}
+    };
+
+    viewModel.updateLayout(*meterData.bandInfo,
+                           viewState,
+                           -50.0f,
+                           3.0f,
+                           6.0f,
+                           {0.0f, 0.0f, 1000.0f, 600.0f},
+                           {0.0f, 0.0f, 1000.0f, 600.0f});
+
+    AnalyzerRenderBatchBuilder batchBuilder(theme);
+    const auto &layout = viewModel.getLayout();
+    batchBuilder.buildGlobalHoldBatches(&displayFrame,
+                                        layout.plotVisibleBands,
+                                        signalSlots,
+                                        Analyzer::MeterSettings{.showHold = true},
+                                        layout.gridMinDb,
+                                        layout.gridMaxDb,
+                                        layout.plotLocalBounds,
+                                        layout.plotLocalBounds);
+
+    int totalHoldRects = 0;
+    for (const auto &batch: batchBuilder.getBatches())
+        totalHoldRects += batch.rectangles.getNumRectangles();
+    REQUIRE(totalHoldRects == 0);
 }

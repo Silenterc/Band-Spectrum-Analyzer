@@ -39,5 +39,6 @@ namespace Analyzer {
         bool showPeak = true;
         bool showHold = false;
         float holdMs = 0.0f;
+        float rmsWindowMs = Defaults::rmsWindowMs;
     };
 }

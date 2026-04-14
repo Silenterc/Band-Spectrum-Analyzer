@@ -90,6 +90,7 @@ public:
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
     AnalyzerPublishedTracesView readPublishedTraces() const override;
     bool hasRecentSignal() const override;
+    bool shouldProcessAnalyzer() const override;
 
     // AnalyzerSettingsActions
     void setFreezeEnabled(bool isFrozen) override;

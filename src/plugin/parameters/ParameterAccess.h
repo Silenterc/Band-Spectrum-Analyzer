@@ -78,6 +78,7 @@ namespace PluginParameters {
         std::atomic<float> *showPeakParam = nullptr;
         std::atomic<float> *showHoldParam = nullptr;
         std::atomic<float> *holdMsParam = nullptr;
+        std::atomic<float> *rmsWindowMsParam = nullptr;
         std::atomic<float> *gridMinDbParam = nullptr;
         std::atomic<float> *gridMaxDbParam = nullptr;
         std::atomic<float> *gridStepDbParam = nullptr;

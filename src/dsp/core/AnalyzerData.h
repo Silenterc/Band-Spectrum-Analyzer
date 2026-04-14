@@ -23,11 +23,11 @@ namespace Analyzer {
         // Maximum observed instantaneous linear power over the block: max(y * y)
         // This is still in squared sample units, not dB.
         float peakPower = 0.0f;
-        // Sum of instantaneous linear power over the block: sum(y * y)
-        // Divide by numSamples to get mean power before RMS / dB conversion.
-        double sumPower = 0.0;
-        // Number of filtered samples that contributed to sumPower
-        int numSamples = 0;
+        // Sum of instantaneous linear power over the newly advanced RMS hop: sum(y * y)
+        // Divide by rmsHopNumSamples to get mean power before RMS / dB conversion.
+        double rmsHopSumPower = 0.0;
+        // Number of filtered samples that contributed to rmsHopSumPower
+        int rmsHopNumSamples = 0;
     };
 
     /**

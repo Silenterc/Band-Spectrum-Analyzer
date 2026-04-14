@@ -45,6 +45,7 @@ public:
 private:
     void drawGrid(juce::Graphics &g) const;
     void drawBars(juce::Graphics &g) const;
+    void drawRmsLines(juce::Graphics &g) const;
     void drawGlobalHold(juce::Graphics &g) const;
     void drawHoverHighlight(juce::Graphics &g) const;
     void ensureStaticPlotLayer();

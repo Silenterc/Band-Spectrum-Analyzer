@@ -65,6 +65,11 @@ namespace Analyzer {
          */
         bool hasRecentSignal() const;
 
+        /**
+         * Returns whether the analyzer should still process input, including silent-hold flushing.
+         */
+        bool shouldProcessAnalyzer() const;
+
     private:
         struct FrameSlotState {
             bool active = false;
@@ -124,8 +129,12 @@ namespace Analyzer {
         size_t nextFrameSlotToStart = 1;
         // Number of samples remaining until the next hop boundary.
         size_t samplesUntilNextFrameStart = Constants::analysisHopSamples;
+        // Duration represented by one published RMS hop.
+        float hopDurationSeconds = 0.0f;
         // Runtime flag exposed to the UI so it can idle once the display has decayed to floor
         std::atomic<bool> recentSignalActive { false };
+        // Tracks whether the detector still wants DSP processing to continue.
+        std::atomic<bool> processAnalyzerActive { false };
         // Ensures silence is published only once per inactive period
         bool hasPublishedSilenceWhileInactive = false;
     };

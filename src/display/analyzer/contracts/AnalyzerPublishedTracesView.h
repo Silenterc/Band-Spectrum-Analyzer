@@ -8,6 +8,7 @@ struct AnalyzerPublishedTracesView {
     // The engine writes and the display worker reads, so this view stays single-writer/single-reader.
     const std::vector<Analyzer::RawTrace> *traces = nullptr;
     bool hasUpdate = false;
+    float hopDurationSeconds = 0.0f;
 
     const std::vector<Analyzer::RawTrace> &getTraces() const {
         static const std::vector<Analyzer::RawTrace> emptyTraces;

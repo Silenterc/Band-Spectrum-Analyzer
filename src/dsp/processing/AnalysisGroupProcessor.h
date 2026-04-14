@@ -25,7 +25,9 @@ namespace Analyzer {
 
         void process(const SourceSet& sources);
         void accumulateCurrentSlice(size_t frameSlotIndex);
+        void accumulateCurrentHop();
         void clearAccumulatedFrame(size_t frameSlotIndex);
+        void clearCurrentHop();
 
         void writeRawTraces(std::vector<RawTrace>& destination, size_t startIndex, size_t frameSlotIndex) const;
 
@@ -43,5 +45,7 @@ namespace Analyzer {
         std::vector<BandMeasurements> outputMeasurements;
         // Two overlapping fixed-size analysis frames are active at most with the current 50% hop.
         std::array<std::vector<BandMeasurements>, 2> accumulatedMeasurements;
+        // Newly advanced non-overlapping hop used to drive RMS history.
+        std::vector<BandMeasurements> currentHopMeasurements;
     };
 }

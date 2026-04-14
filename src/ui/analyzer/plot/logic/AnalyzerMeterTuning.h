@@ -4,8 +4,6 @@
 
 namespace Ui {
     struct AnalyzerMeterTuning {
-        float rmsWindowMs = Defaults::rmsWindowMs;
-        float rmsDecayDbPerSecond = Defaults::rmsDecayDbPerSecond;
         float peakDecayDbPerSecond = Defaults::peakDecayDbPerSecond;
         float holdDecayDbPerSecond = Defaults::holdDecayDbPerSecond;
         float holdResetToleranceDb = 1.0f;

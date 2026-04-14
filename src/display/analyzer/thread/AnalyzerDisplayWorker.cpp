@@ -103,15 +103,15 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
     displayFrameModel.syncControlState(previousControlState, currentControlState);
 
     const auto tracesView = rawTraceSource.readPublishedTraces();
-    const auto hasRecentSignal = rawTraceSource.hasRecentSignal();
+    const auto shouldProcessAnalyzer = rawTraceSource.shouldProcessAnalyzer();
     const auto shouldTick = shouldForceRefresh
                             || bandLayoutChanged
                             || tracesView.hasUpdate
-                            || hasRecentSignal
+                            || shouldProcessAnalyzer
                             || !meter.isSettledAtFloor(currentControlState.floorDb)
                             || !globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
 
-    useIdlePolling = !hasRecentSignal
+    useIdlePolling = !shouldProcessAnalyzer
                      && meter.isSettledAtFloor(currentControlState.floorDb)
                      && globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
 
@@ -120,6 +120,9 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
 
     meter.tick(currentBandInfo,
                tracesView.getTraces(),
+               tracesView.hasUpdate,
+               !shouldProcessAnalyzer && !tracesView.hasUpdate,
+               tracesView.hopDurationSeconds,
                currentControlState.meterSettings,
                currentControlState.floorDb,
                dtSeconds);

@@ -12,7 +12,8 @@ namespace Ui {
         return lhs.showRms == rhs.showRms
                && lhs.showPeak == rhs.showPeak
                && lhs.showHold == rhs.showHold
-               && std::abs(lhs.holdMs - rhs.holdMs) <= 0.0001f;
+               && std::abs(lhs.holdMs - rhs.holdMs) <= 0.0001f
+               && std::abs(lhs.rmsWindowMs - rhs.rmsWindowMs) <= 0.0001f;
     }
 
     /**

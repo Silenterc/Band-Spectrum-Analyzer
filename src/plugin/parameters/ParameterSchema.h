@@ -35,6 +35,7 @@ namespace PluginParameters::Schema {
     inline constexpr auto showPeakName = "Show Peak";
     inline constexpr auto showHoldName = "Show Hold";
     inline constexpr auto holdMsName = "Hold Time";
+    inline constexpr auto rmsWindowMsName = "RMS Time";
     inline constexpr auto gridMinDbName = "Grid Min dB";
     inline constexpr auto gridMaxDbName = "Grid Max dB";
     inline constexpr auto gridStepDbName = "Grid Step dB";
@@ -48,6 +49,7 @@ namespace PluginParameters::Schema {
     inline constexpr auto showPeakId = "showPeak";
     inline constexpr auto showHoldId = "showHold";
     inline constexpr auto holdMsId = "holdMs";
+    inline constexpr auto rmsWindowMsId = "rmsWindowMs";
     inline constexpr auto gridMinDbId = "gridMinDb";
     inline constexpr auto gridMaxDbId = "gridMaxDb";
     inline constexpr auto gridStepDbId = "gridStepDb";
@@ -123,6 +125,12 @@ namespace PluginParameters::Schema {
 
     inline auto holdMsRange() {
         return juce::NormalisableRange<float>(Defaults::holdMsMin, Defaults::holdMsMax, Defaults::holdMsStep);
+    }
+
+    inline auto rmsWindowMsRange() {
+        return juce::NormalisableRange<float>(Defaults::rmsWindowMsMin,
+                                              Defaults::rmsWindowMsMax,
+                                              Defaults::rmsWindowMsStep);
     }
 
     inline auto gridMinDbRange() {
@@ -289,6 +297,11 @@ namespace PluginParameters::Schema {
             holdMsName,
             holdMsRange(),
             Defaults::holdMs));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            makeParameterID(rmsWindowMsId),
+            rmsWindowMsName,
+            rmsWindowMsRange(),
+            Defaults::rmsWindowMs));
         layout.add(std::make_unique<juce::AudioParameterFloat>(
             makeParameterID(gridMinDbId),
             gridMinDbName,

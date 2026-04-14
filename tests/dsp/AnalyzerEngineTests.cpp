@@ -30,6 +30,7 @@ namespace {
         bool showPeak = true;
         bool showHold = false;
         float holdMs = Defaults::holdMs;
+        float rmsWindowMs = Defaults::rmsWindowMs;
         float gridMinDb = Defaults::gridMinDb;
         float gridMaxDb = Defaults::gridMaxDb;
         float gridStepDb = Defaults::gridStepDb;
@@ -129,6 +130,7 @@ namespace {
         meterSettings.showPeak = parameters.showPeak;
         meterSettings.showHold = parameters.showHold;
         meterSettings.holdMs = parameters.holdMs;
+        meterSettings.rmsWindowMs = parameters.rmsWindowMs;
         return meterSettings;
     }
 
@@ -242,8 +244,12 @@ namespace {
     Analyzer::MeterData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                        const TestParameters &parameters,
                                        float dtSeconds = Ui::AnalyzerConstants::meterPollIntervalSeconds) {
+        const auto publishedTraces = engine.readPublishedTraces();
         displayMeter.tick(engine.getBandInfo(),
-                          engine.readPublishedTraces().getTraces(),
+                          publishedTraces.getTraces(),
+                          publishedTraces.hasUpdate,
+                          false,
+                          publishedTraces.hopDurationSeconds,
                           makeMeterSettings(parameters),
                           parameters.gridMinDb,
                           dtSeconds);
@@ -270,11 +276,21 @@ namespace {
     Analyzer::MeterData tickMeter(AnalyzerMeter &displayMeter,
                                   const std::vector<Analyzer::BandInfo> &bandInfo,
                                   const std::vector<Analyzer::RawTrace> &traces,
+                                  const bool hasNewData,
+                                  const bool advanceSilentRms,
+                                  const float hopDurationSeconds,
                                   const Analyzer::MeterSettings &meterSettings,
                                   const float floorDb,
                                   const float dtSeconds) {
         const auto sharedBandInfo = std::make_shared<const std::vector<Analyzer::BandInfo>>(bandInfo);
-        displayMeter.tick(sharedBandInfo, traces, meterSettings, floorDb, dtSeconds);
+        displayMeter.tick(sharedBandInfo,
+                          traces,
+                          hasNewData,
+                          advanceSilentRms,
+                          hopDurationSeconds,
+                          meterSettings,
+                          floorDb,
+                          dtSeconds);
         return displayMeter.getMeterData();
     }
 }
@@ -460,7 +476,7 @@ TEST_CASE("AnalyzerEngine stereo mode still works with mono input") {
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 }
 
-TEST_CASE("AnalyzerEngine clears sidechain traces when sidechain input disappears") {
+TEST_CASE("AnalyzerEngine clears sidechain traces after the silent hold flushes analyzer state") {
     Analyzer::Engine engine;
     AnalyzerMeter displayMeter;
     auto parameters = makeDefaultParameters();
@@ -471,16 +487,16 @@ TEST_CASE("AnalyzerEngine clears sidechain traces when sidechain input disappear
 
     requireStrongestBandNearFrequency(displayMeter, engine, parameters, lowSineHz);
 
-    processSilenceBlocks(engine, 2, 1);
+    processSilenceBlocks(engine, 2, 16);
 
     const auto &traces = engine.readPublishedTraces().getTraces();
     REQUIRE(traces.size() == 1);
-    constexpr float powerTolerance = 0.000001f;
+    constexpr float powerTolerance = 0.00001f;
 
     for (const auto &measurement: traces.front().measurements) {
         REQUIRE(std::abs(measurement.peakPower) < powerTolerance);
-        REQUIRE(std::abs(measurement.sumPower) < powerTolerance);
-        REQUIRE(measurement.numSamples == 0);
+        REQUIRE(std::abs(measurement.rmsHopSumPower) < powerTolerance);
+        REQUIRE(measurement.rmsHopNumSamples == 0);
     }
 }
 
@@ -576,7 +592,7 @@ TEST_CASE("AnalyzerEngine 44.1 kHz 1/6-octave centers keep consistent raw peak l
         REQUIRE(strongestBandIndex == static_cast<int>(bandIndex));
 
         const auto &measurement = traces.front().measurements[bandIndex];
-        REQUIRE(measurement.numSamples > 0);
+        REQUIRE(measurement.rmsHopNumSamples > 0);
 
         centerPeakDb.push_back(juce::Decibels::gainToDecibels(std::sqrt(measurement.peakPower), floorDb));
     }
@@ -595,7 +611,7 @@ TEST_CASE("AnalyzerEngine 44.1 kHz 1/6-octave centers keep consistent raw peak l
     REQUIRE(peakSpreadDb <= allowedSpreadDb);
 }
 
-TEST_CASE("AnalyzerMeter RMS release stays aligned with peak decay") {
+TEST_CASE("AnalyzerMeter RMS follows fresh hop updates instead of display ticks") {
     AnalyzerMeter displayMeter;
     Analyzer::MeterSettings meterSettings;
     meterSettings.showRms = true;
@@ -603,7 +619,8 @@ TEST_CASE("AnalyzerMeter RMS release stays aligned with peak decay") {
     meterSettings.showHold = false;
 
     constexpr float floorDb = -80.0f;
-    constexpr float dtSeconds = 0.1f;
+    constexpr float dtSeconds = 0.016f;
+    constexpr float hopDurationSeconds = 0.09f;
     constexpr float toleranceDb = 0.01f;
 
     const std::vector<Analyzer::BandInfo> bandInfo{
@@ -614,25 +631,189 @@ TEST_CASE("AnalyzerMeter RMS release stays aligned with peak decay") {
     activeTrace.kind = Analyzer::TraceKind::slot1;
     activeTrace.measurements.resize(1);
     activeTrace.measurements[0].peakPower = 1.0f;
-    activeTrace.measurements[0].sumPower = 1024.0;
-    activeTrace.measurements[0].numSamples = 1024;
+    activeTrace.measurements[0].rmsHopSumPower = 1024.0;
+    activeTrace.measurements[0].rmsHopNumSamples = 1024;
 
-    const auto activeData = tickMeter(displayMeter, bandInfo, {activeTrace}, meterSettings, floorDb, dtSeconds);
+    const auto activeData = tickMeter(displayMeter,
+                                      bandInfo,
+                                      {activeTrace},
+                                      true,
+                                      false,
+                                      hopDurationSeconds,
+                                      meterSettings,
+                                      floorDb,
+                                      dtSeconds);
     REQUIRE(activeData.traces.size() == 1);
     REQUIRE(std::abs(activeData.traces.front().frame.rmsDb[0] - 0.0f) < toleranceDb);
     REQUIRE(std::abs(activeData.traces.front().frame.peakDb[0] - 0.0f) < toleranceDb);
 
-    Analyzer::RawTrace silentTrace = activeTrace;
-    silentTrace.measurements[0].peakPower = 0.0f;
-    silentTrace.measurements[0].sumPower = 0.0;
+    const auto noUpdateData = tickMeter(displayMeter,
+                                        bandInfo,
+                                        {activeTrace},
+                                        false,
+                                        false,
+                                        hopDurationSeconds,
+                                        meterSettings,
+                                        floorDb,
+                                        dtSeconds);
+    REQUIRE(std::abs(noUpdateData.traces.front().frame.rmsDb[0] - 0.0f) < toleranceDb);
 
-    const auto firstSilentData = tickMeter(displayMeter, bandInfo, {silentTrace}, meterSettings, floorDb, dtSeconds);
-    REQUIRE(std::abs(firstSilentData.traces.front().frame.rmsDb[0] + 1.5f) < toleranceDb);
-    REQUIRE(std::abs(firstSilentData.traces.front().frame.peakDb[0] + 1.5f) < toleranceDb);
+    Analyzer::MeterData firstSilentData;
+    constexpr int ticksPerSilentHop = 6;
+    for (int tickIndex = 0; tickIndex < ticksPerSilentHop; ++tickIndex) {
+        firstSilentData = tickMeter(displayMeter,
+                                    bandInfo,
+                                    {activeTrace},
+                                    false,
+                                    true,
+                                    hopDurationSeconds,
+                                    meterSettings,
+                                    floorDb,
+                                    dtSeconds);
+    }
+    REQUIRE(std::abs(firstSilentData.traces.front().frame.rmsDb[0] + 3.0103f) < 0.05f);
+    REQUIRE(std::abs(firstSilentData.traces.front().frame.peakDb[0]) < toleranceDb);
 
-    const auto secondSilentData = tickMeter(displayMeter, bandInfo, {silentTrace}, meterSettings, floorDb, dtSeconds);
-    REQUIRE(std::abs(secondSilentData.traces.front().frame.rmsDb[0] + 3.0f) < toleranceDb);
-    REQUIRE(std::abs(secondSilentData.traces.front().frame.peakDb[0] + 3.0f) < toleranceDb);
+    Analyzer::MeterData secondSilentData;
+    for (int tickIndex = 0; tickIndex < ticksPerSilentHop; ++tickIndex) {
+        secondSilentData = tickMeter(displayMeter,
+                                     bandInfo,
+                                     {activeTrace},
+                                     false,
+                                     true,
+                                     hopDurationSeconds,
+                                     meterSettings,
+                                     floorDb,
+                                     dtSeconds);
+    }
+    REQUIRE(std::abs(secondSilentData.traces.front().frame.rmsDb[0] - floorDb) < toleranceDb);
+}
+
+TEST_CASE("AnalyzerMeter discards peak state once it settles below the display floor") {
+    AnalyzerMeter displayMeter;
+    Analyzer::MeterSettings meterSettings;
+    meterSettings.showRms = true;
+    meterSettings.showPeak = true;
+
+    constexpr float floorDb = -80.0f;
+    constexpr float dtSeconds = 0.016f;
+    constexpr float hopDurationSeconds = 0.09f;
+    constexpr float nearFloorDb = -79.95f;
+    constexpr float lowerFloorDb = -100.0f;
+    constexpr float toleranceDb = 0.001f;
+
+    const std::vector<Analyzer::BandInfo> bandInfo{
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f}
+    };
+
+    Analyzer::RawTrace trace;
+    trace.kind = Analyzer::TraceKind::slot1;
+    trace.measurements.resize(1);
+    const auto nearFloorGain = juce::Decibels::decibelsToGain(nearFloorDb);
+    trace.measurements[0].peakPower = nearFloorGain * nearFloorGain;
+    trace.measurements[0].rmsHopSumPower = static_cast<double>(trace.measurements[0].peakPower) * 1024.0;
+    trace.measurements[0].rmsHopNumSamples = 1024;
+
+    const auto meterData = tickMeter(displayMeter,
+                                     bandInfo,
+                                     {trace},
+                                     true,
+                                     false,
+                                     hopDurationSeconds,
+                                     meterSettings,
+                                     floorDb,
+                                     dtSeconds);
+
+    REQUIRE(std::isinf(meterData.traces.front().frame.peakDb[0]));
+    REQUIRE(meterData.traces.front().frame.peakDb[0] < 0.0f);
+    REQUIRE(displayMeter.isSettledAtFloor(floorDb));
+
+    const auto loweredFloorData = tickMeter(displayMeter,
+                                            bandInfo,
+                                            {trace},
+                                            false,
+                                            false,
+                                            hopDurationSeconds,
+                                            meterSettings,
+                                            lowerFloorDb,
+                                            dtSeconds);
+
+    REQUIRE(std::isinf(loweredFloorData.traces.front().frame.peakDb[0]));
+    REQUIRE(loweredFloorData.traces.front().frame.peakDb[0] < 0.0f);
+    REQUIRE(std::abs(loweredFloorData.traces.front().frame.rmsDb[0] - nearFloorDb) < toleranceDb);
+}
+
+TEST_CASE("AnalyzerMeter RMS window parameter changes averaging time") {
+    AnalyzerMeter shortWindowMeter;
+    AnalyzerMeter longWindowMeter;
+    Analyzer::MeterSettings shortWindowSettings;
+    shortWindowSettings.showRms = true;
+    shortWindowSettings.showPeak = true;
+    shortWindowSettings.rmsWindowMs = 90.0f;
+
+    Analyzer::MeterSettings longWindowSettings = shortWindowSettings;
+    longWindowSettings.rmsWindowMs = 180.0f;
+
+    constexpr float floorDb = -80.0f;
+    constexpr float dtSeconds = 0.016f;
+    constexpr float hopDurationSeconds = 0.09f;
+
+    const std::vector<Analyzer::BandInfo> bandInfo{
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f}
+    };
+
+    Analyzer::RawTrace activeTrace;
+    activeTrace.kind = Analyzer::TraceKind::slot1;
+    activeTrace.measurements.resize(1);
+    activeTrace.measurements[0].peakPower = 1.0f;
+    activeTrace.measurements[0].rmsHopSumPower = 1024.0;
+    activeTrace.measurements[0].rmsHopNumSamples = 1024;
+
+    tickMeter(shortWindowMeter,
+              bandInfo,
+              {activeTrace},
+              true,
+              false,
+              hopDurationSeconds,
+              shortWindowSettings,
+              floorDb,
+              dtSeconds);
+    tickMeter(longWindowMeter,
+              bandInfo,
+              {activeTrace},
+              true,
+              false,
+              hopDurationSeconds,
+              longWindowSettings,
+              floorDb,
+              dtSeconds);
+
+    Analyzer::MeterData shortWindowSilentData;
+    Analyzer::MeterData longWindowSilentData;
+    constexpr int ticksPerSilentHop = 6;
+    for (int tickIndex = 0; tickIndex < ticksPerSilentHop; ++tickIndex) {
+        shortWindowSilentData = tickMeter(shortWindowMeter,
+                                          bandInfo,
+                                          {activeTrace},
+                                          false,
+                                          true,
+                                          hopDurationSeconds,
+                                          shortWindowSettings,
+                                          floorDb,
+                                          dtSeconds);
+        longWindowSilentData = tickMeter(longWindowMeter,
+                                         bandInfo,
+                                         {activeTrace},
+                                         false,
+                                         true,
+                                         hopDurationSeconds,
+                                         longWindowSettings,
+                                         floorDb,
+                                         dtSeconds);
+    }
+
+    REQUIRE(std::abs(shortWindowSilentData.traces.front().frame.rmsDb[0] - floorDb) < 0.01f);
+    REQUIRE(std::abs(longWindowSilentData.traces.front().frame.rmsDb[0] + 3.0103f) < 0.05f);
 }
 
 TEST_CASE("AnalyzerEngine keeps the same tone area after band mode reconfiguration") {

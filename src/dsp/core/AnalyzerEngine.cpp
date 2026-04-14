@@ -29,6 +29,7 @@ namespace Analyzer {
     void Engine::prepare(double sampleRate, int maximumBlockSize) {
         currentSampleRate = sampleRate;
         currentMaximumBlockSize = maximumBlockSize;
+        hopDurationSeconds = static_cast<float>(static_cast<double>(Constants::analysisHopSamples) / currentSampleRate);
         isPrepared = true;
         sourceBuilder.prepare(maximumBlockSize);
         inputActivityDetector.prepare(sampleRate);
@@ -45,6 +46,7 @@ namespace Analyzer {
         nextFrameSlotToStart = 1;
         samplesUntilNextFrameStart = Constants::analysisHopSamples;
         recentSignalActive.store(false, std::memory_order_relaxed);
+        processAnalyzerActive.store(false, std::memory_order_relaxed);
         hasPublishedSilenceWhileInactive = false;
         publishProcessorState(true);
     }
@@ -78,6 +80,7 @@ namespace Analyzer {
             return;
 
         inputActivityDetector.update(mainBuffer, sidechainBuffer);
+        processAnalyzerActive.store(inputActivityDetector.shouldProcess(), std::memory_order_relaxed);
         recentSignalActive.store(inputActivityDetector.hasRecentSignal(), std::memory_order_relaxed);
 
         if (!inputActivityDetector.shouldProcess()) {
@@ -106,6 +109,7 @@ namespace Analyzer {
                     if (frameSlots[frameSlotIndex].active)
                         processor.accumulateCurrentSlice(frameSlotIndex);
                 }
+                processor.accumulateCurrentHop();
             }
 
             for (auto &frameSlot: frameSlots) {
@@ -119,13 +123,18 @@ namespace Analyzer {
             if (samplesUntilNextFrameStart == 0) {
                 // Reuse the next rotating frame slot at each hop boundary.
                 const auto slotToRestart = nextFrameSlotToStart;
+                const auto completedFrame = frameSlots[slotToRestart].active
+                                           && frameSlots[slotToRestart].fillSamples == Constants::analysisFrameSamples;
 
-                // Publish and clear the completed frame before reusing this slot.
-                if (frameSlots[slotToRestart].active
-                    && frameSlots[slotToRestart].fillSamples == Constants::analysisFrameSamples) {
-                    publishProcessorState(false, slotToRestart);
-                    for (auto &processor: processors)
+                // Publish once per hop. Peak comes from the completed overlapping frame when available,
+                // while RMS always comes from the newly advanced non-overlapping hop.
+                publishProcessorState(false, slotToRestart);
+
+                for (auto &processor: processors) {
+                    if (completedFrame) {
                         processor.clearAccumulatedFrame(slotToRestart);
+                    }
+                    processor.clearCurrentHop();
                 }
 
                 // Start a fresh overlapping frame in this slot.
@@ -145,11 +154,15 @@ namespace Analyzer {
 
     AnalyzerPublishedTracesView Engine::readPublishedTraces() const {
         const auto [publishedTraces, hasUpdate] = traces.get_for_reader();
-        return {.traces = publishedTraces, .hasUpdate = hasUpdate};
+        return {.traces = publishedTraces, .hasUpdate = hasUpdate, .hopDurationSeconds = hopDurationSeconds};
     }
 
     bool Engine::hasRecentSignal() const {
         return recentSignalActive.load(std::memory_order_relaxed);
+    }
+
+    bool Engine::shouldProcessAnalyzer() const {
+        return processAnalyzerActive.load(std::memory_order_relaxed);
     }
 
     void Engine::rebuildBands() {

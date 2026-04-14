@@ -24,6 +24,7 @@ namespace PluginParameters {
         showPeakParam = parameters.getRawParameterValue(Schema::showPeakId);
         showHoldParam = parameters.getRawParameterValue(Schema::showHoldId);
         holdMsParam = parameters.getRawParameterValue(Schema::holdMsId);
+        rmsWindowMsParam = parameters.getRawParameterValue(Schema::rmsWindowMsId);
         gridMinDbParam = parameters.getRawParameterValue(Schema::gridMinDbId);
         gridMaxDbParam = parameters.getRawParameterValue(Schema::gridMaxDbId);
         gridStepDbParam = parameters.getRawParameterValue(Schema::gridStepDbId);
@@ -77,6 +78,7 @@ namespace PluginParameters {
         settings.showPeak = readBool(showPeakParam);
         settings.showHold = readBool(showHoldParam);
         settings.holdMs = readFloat(holdMsParam);
+        settings.rmsWindowMs = readFloat(rmsWindowMsParam);
         return settings;
     }
 

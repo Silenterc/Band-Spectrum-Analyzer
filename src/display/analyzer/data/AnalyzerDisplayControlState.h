@@ -20,6 +20,7 @@ struct AnalyzerDisplayControlState {
                && meterSettings.showPeak == other.meterSettings.showPeak
                && meterSettings.showHold == other.meterSettings.showHold
                && std::abs(meterSettings.holdMs - other.meterSettings.holdMs) <= 0.0001f
+               && std::abs(meterSettings.rmsWindowMs - other.meterSettings.rmsWindowMs) <= 0.0001f
                && std::abs(floorDb - other.floorDb) <= 0.0001f
                && globalFrozen == other.globalFrozen
                && slotFrozen == other.slotFrozen
