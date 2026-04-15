@@ -9,6 +9,10 @@
 namespace {
     constexpr float discardedPeakDb = -std::numeric_limits<float>::infinity();
 
+    float snapRmsToDisplayFloor(const float valueDb, const float floorDb) {
+        return valueDb <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb ? floorDb : valueDb;
+    }
+
     void discardPeakIfBelowFloor(float &peakDb, float &lastPeakInputDb, const float floorDb) {
         if (peakDb > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
             return;
@@ -96,9 +100,14 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                 std::sqrt(getWindowMeanPower(traceState.rmsWindows[bandIndex])),
                 floorDb);
             discardPeakIfBelowFloor(traceState.peakDb[bandIndex], traceState.lastPeakInputDb[bandIndex], floorDb);
+            traceState.rmsDb[bandIndex] = snapRmsToDisplayFloor(traceState.rmsDb[bandIndex], floorDb);
 
             meterTrace.frame.rmsDb[bandIndex] = meterSettings.showRms ? traceState.rmsDb[bandIndex] : floorDb;
-            meterTrace.frame.peakDb[bandIndex] = meterSettings.showPeak ? traceState.peakDb[bandIndex] : floorDb;
+            meterTrace.frame.peakDb[bandIndex] = meterSettings.showPeak
+                                                     ? (std::isfinite(traceState.peakDb[bandIndex])
+                                                            ? traceState.peakDb[bandIndex]
+                                                            : floorDb)
+                                                     : floorDb;
         }
 
         meterData.traces.push_back(std::move(meterTrace));

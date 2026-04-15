@@ -239,6 +239,8 @@ TEST_CASE("Analyzer view model keeps full-range bar layout unchanged", "[ui][vie
     REQUIRE(visibleBands.size() == meterData.bandInfo->size());
     REQUIRE(visibleBands.front().sourceBandIndex == 0);
     REQUIRE(visibleBands.back().sourceBandIndex == meterData.bandInfo->size() - 1);
+    REQUIRE(visibleBands.front().drawBounds.getX() == Catch::Approx(layout.plotLocalBounds.getX()));
+    REQUIRE(visibleBands.back().drawBounds.getRight() == Catch::Approx(layout.plotLocalBounds.getRight()));
 
     const auto &frequencyMarkers = layout.frequencyMarkers;
     REQUIRE_FALSE(frequencyMarkers.empty());
@@ -816,8 +818,8 @@ TEST_CASE("RMS path still renders for a decaying trace without recent activity g
 
     REQUIRE_FALSE(batchBuilder.getPathBatches().empty());
     const auto pathBounds = batchBuilder.getPathBatches().front().path.getBounds();
-    REQUIRE(pathBounds.getX() <= Catch::Approx(layout.plotVisibleBands.front().drawBounds.getCentreX()).margin(0.5f));
-    REQUIRE(pathBounds.getRight() >= Catch::Approx(layout.plotVisibleBands.back().drawBounds.getCentreX()).margin(0.5f));
+    REQUIRE(pathBounds.getX() <= Catch::Approx(layout.plotLocalBounds.getX()).margin(0.5f));
+    REQUIRE(pathBounds.getRight() >= Catch::Approx(layout.plotLocalBounds.getRight()).margin(0.5f));
 }
 
 TEST_CASE("Hold rectangles require an owner kind and stay hidden at startup floor state", "[ui][render-batching]") {

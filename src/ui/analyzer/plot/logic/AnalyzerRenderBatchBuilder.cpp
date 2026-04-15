@@ -50,6 +50,17 @@ namespace {
         return juce::Point<float>(visibleBand.drawBounds.getCentreX(), y);
     }
 
+    void appendRmsSegment(juce::Path &path,
+                          std::vector<juce::Point<float>> &segmentPoints,
+                          const float segmentRightX) {
+        if (segmentPoints.empty())
+            return;
+
+        segmentPoints.push_back({segmentRightX, segmentPoints.back().y});
+        path.addPath(buildSmoothedPathFromPoints(segmentPoints));
+        segmentPoints.clear();
+    }
+
     juce::Path buildRmsPath(const AnalyzerSlotDisplayFrame &slotFrame,
                             const std::vector<AnalyzerVisibleBandLayout> &visibleBands,
                             const float gridMinDb,
@@ -61,6 +72,7 @@ namespace {
         juce::Path path;
         std::vector<juce::Point<float>> segmentPoints;
         bool hasAudiblePoint = false;
+        float segmentRightX = 0.0f;
 
         for (size_t visibleBandIndex = startIndex; visibleBandIndex < endIndexExclusive; ++visibleBandIndex) {
             const auto sourceBandIndex = visibleBands[visibleBandIndex].sourceBandIndex;
@@ -76,18 +88,21 @@ namespace {
                                            plotBounds,
                                            clipBounds);
             if (!point.has_value()) {
-                path.addPath(buildSmoothedPathFromPoints(segmentPoints));
-                segmentPoints.clear();
+                appendRmsSegment(path, segmentPoints, segmentRightX);
                 continue;
             }
 
+            if (segmentPoints.empty())
+                segmentPoints.push_back({visibleBands[visibleBandIndex].drawBounds.getX(), point->y});
+
             segmentPoints.push_back(*point);
+            segmentRightX = visibleBands[visibleBandIndex].drawBounds.getRight();
         }
 
         if (!hasAudiblePoint)
             return path;
 
-        path.addPath(buildSmoothedPathFromPoints(segmentPoints));
+        appendRmsSegment(path, segmentPoints, segmentRightX);
         return path;
     }
 }

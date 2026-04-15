@@ -617,6 +617,7 @@ TEST_CASE("AnalyzerMeter RMS follows fresh hop updates instead of display ticks"
     meterSettings.showRms = true;
     meterSettings.showPeak = true;
     meterSettings.showHold = false;
+    meterSettings.rmsWindowMs = 180.0f;
 
     constexpr float floorDb = -80.0f;
     constexpr float dtSeconds = 0.016f;
@@ -689,7 +690,7 @@ TEST_CASE("AnalyzerMeter RMS follows fresh hop updates instead of display ticks"
     REQUIRE(std::abs(secondSilentData.traces.front().frame.rmsDb[0] - floorDb) < toleranceDb);
 }
 
-TEST_CASE("AnalyzerMeter discards peak state once it settles below the display floor") {
+TEST_CASE("AnalyzerMeter discards peak state internally once it settles below the display floor") {
     AnalyzerMeter displayMeter;
     Analyzer::MeterSettings meterSettings;
     meterSettings.showRms = true;
@@ -724,8 +725,7 @@ TEST_CASE("AnalyzerMeter discards peak state once it settles below the display f
                                      floorDb,
                                      dtSeconds);
 
-    REQUIRE(std::isinf(meterData.traces.front().frame.peakDb[0]));
-    REQUIRE(meterData.traces.front().frame.peakDb[0] < 0.0f);
+    REQUIRE(std::abs(meterData.traces.front().frame.peakDb[0] - floorDb) < toleranceDb);
     REQUIRE(displayMeter.isSettledAtFloor(floorDb));
 
     const auto loweredFloorData = tickMeter(displayMeter,
@@ -738,8 +738,7 @@ TEST_CASE("AnalyzerMeter discards peak state once it settles below the display f
                                             lowerFloorDb,
                                             dtSeconds);
 
-    REQUIRE(std::isinf(loweredFloorData.traces.front().frame.peakDb[0]));
-    REQUIRE(loweredFloorData.traces.front().frame.peakDb[0] < 0.0f);
+    REQUIRE(std::abs(loweredFloorData.traces.front().frame.peakDb[0] - lowerFloorDb) < toleranceDb);
     REQUIRE(std::abs(loweredFloorData.traces.front().frame.rmsDb[0] - nearFloorDb) < toleranceDb);
 }
 

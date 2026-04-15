@@ -122,6 +122,16 @@ void AnalyzerViewModel::updateVisibleBands(const std::vector<Analyzer::BandInfo>
                                                           layout.visibleMinFrequencyHz,
                                                           layout.visibleMaxFrequencyHz,
                                                           layout.plotBounds);
+        if (visibleBandIndex == 0 && !sectionBand.hitBounds.isEmpty()) {
+            const auto right = sectionBand.hitBounds.getRight();
+            sectionBand.hitBounds.setX(layout.plotBounds.getX());
+            sectionBand.hitBounds.setWidth(right - sectionBand.hitBounds.getX());
+        }
+
+        if (visibleBandIndex + 1 == sourceBandIndices.size() && !sectionBand.hitBounds.isEmpty()) {
+            sectionBand.hitBounds.setWidth(layout.plotBounds.getRight() - sectionBand.hitBounds.getX());
+        }
+
         const auto drawLeft = static_cast<int>(std::round(sectionBand.hitBounds.getX()));
         auto drawRight = static_cast<int>(std::round(sectionBand.hitBounds.getRight()));
         if (visibleBandIndex + 1 != sourceBandIndices.size())
