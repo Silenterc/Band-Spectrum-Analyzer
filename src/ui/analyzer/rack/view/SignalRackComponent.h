@@ -50,6 +50,7 @@ private:
     void signalSlotColourSelected(size_t slotIndex, int colourIndex) override;
     void signalSlotVisibilityChanged(size_t slotIndex, bool isVisible) override;
     void signalSlotFrozenChanged(size_t slotIndex, bool isFrozen) override;
+    void signalSlotSoloChanged(size_t slotIndex, bool isSolo) override;
     void signalSlotRemoveRequested(size_t slotIndex) override;
     void signalSlotOpacityChanged(size_t slotIndex, float opacity) override;
     void signalSlotReorderDragStarted(size_t slotIndex, float startMouseX) override;

@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
+    plugin/SignalOutputMixerTests.cpp
     ui/AnalyzerUiModelTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
     ../src/dsp/filterbank/FilterBank.cpp
@@ -21,6 +22,8 @@ add_executable(band-spectrum-analyzer-tests
     ../src/display/analyzer/logic/AnalyzerDisplayFrameModel.cpp
     ../src/display/analyzer/logic/AnalyzerGlobalHoldModel.cpp
     ../src/display/analyzer/logic/AnalyzerMeter.cpp
+    ../src/plugin/SignalOutputMixer.cpp
+    ../src/plugin/parameters/ParameterAccess.cpp
     ../src/ui/theme/UiTheme.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerGeometry.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerHoverModel.cpp

@@ -154,6 +154,10 @@ void SignalRackComponent::signalSlotFrozenChanged(const size_t slotIndex, const 
     settingsActions.setSignalSlotFrozen(slotIndex, isFrozen);
 }
 
+void SignalRackComponent::signalSlotSoloChanged(const size_t slotIndex, const bool isSolo) {
+    settingsActions.setSignalSlotSolo(slotIndex, isSolo);
+}
+
 void SignalRackComponent::signalSlotRemoveRequested(const size_t slotIndex) {
     settingsActions.removeSignalSlot(slotIndex);
 }

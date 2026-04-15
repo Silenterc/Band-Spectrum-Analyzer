@@ -15,6 +15,7 @@ namespace PluginParameters::Schema {
 
     enum class SlotField {
         enabled,
+        solo,
         visible,
         frozen,
         source,
@@ -163,6 +164,8 @@ namespace PluginParameters::Schema {
         switch (field) {
             case SlotField::enabled:
                 return "signalSlot" + slot + "Enabled";
+            case SlotField::solo:
+                return "signalSlot" + slot + "Solo";
             case SlotField::visible:
                 return "signalSlot" + slot + "Visible";
             case SlotField::frozen:
@@ -186,6 +189,8 @@ namespace PluginParameters::Schema {
         switch (field) {
             case SlotField::enabled:
                 return prefix + "Enabled";
+            case SlotField::solo:
+                return prefix + "Solo";
             case SlotField::visible:
                 return prefix + "Visible";
             case SlotField::frozen:
@@ -210,6 +215,11 @@ namespace PluginParameters::Schema {
                     makeParameterID(slotParameterId(field, slotIndex)),
                     slotParameterName(field, slotIndex),
                     Defaults::isSignalSlotEnabled(slotIndex));
+            case SlotField::solo:
+                return std::make_unique<juce::AudioParameterBool>(
+                    makeParameterID(slotParameterId(field, slotIndex)),
+                    slotParameterName(field, slotIndex),
+                    Defaults::isSignalSlotSolo(slotIndex));
             case SlotField::visible:
                 return std::make_unique<juce::AudioParameterBool>(
                     makeParameterID(slotParameterId(field, slotIndex)),
@@ -266,6 +276,7 @@ namespace PluginParameters::Schema {
 
         constexpr std::array slotFields{
             SlotField::enabled,
+            SlotField::solo,
             SlotField::visible,
             SlotField::frozen,
             SlotField::source,

@@ -15,6 +15,7 @@ namespace Ui {
         Analyzer::SignalSlotConfiguration configuration;
         bool visible = true;
         bool frozen = false;
+        bool solo = false;
         int colourIndex = 0;
         float opacity = defaultSignalOpacity;
     };
@@ -23,6 +24,7 @@ namespace Ui {
         return lhs.configuration == rhs.configuration
                && lhs.visible == rhs.visible
                && lhs.frozen == rhs.frozen
+               && lhs.solo == rhs.solo
                && lhs.colourIndex == rhs.colourIndex
                && std::abs(lhs.opacity - rhs.opacity) <= 0.0001f;
     }

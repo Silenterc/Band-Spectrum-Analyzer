@@ -149,6 +149,10 @@ TEST_CASE("AnalyzerUiSnapshot equality includes grid, freeze, and frequency rang
     REQUIRE(lhs != rhs);
 
     rhs = lhs;
+    rhs.signalSlots[0].solo = true;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
     rhs.useCustomFrequencyRange = true;
     REQUIRE(lhs != rhs);
 

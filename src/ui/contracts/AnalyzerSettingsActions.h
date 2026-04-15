@@ -13,6 +13,7 @@ public:
     virtual void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) = 0;
     virtual void setSignalSlotVisible(size_t slotIndex, bool isVisible) = 0;
     virtual void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) = 0;
+    virtual void setSignalSlotSolo(size_t slotIndex, bool isSolo) = 0;
     virtual void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) = 0;
     virtual void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) = 0;
     virtual void setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) = 0;

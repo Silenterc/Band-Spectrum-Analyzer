@@ -4,6 +4,22 @@
 namespace {
     // Temporary perf-tuning switch: ignore host/plugin state so new instances always use code defaults.
     constexpr bool bypassStatePersistence = true;
+
+    std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> makeMixerSlotStates(
+        const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &uiSlots) {
+        std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> mixerSlots{};
+
+        for (size_t slotIndex = 0; slotIndex < uiSlots.size(); ++slotIndex) {
+            const auto &uiSlot = uiSlots[slotIndex];
+            auto &mixerSlot = mixerSlots[slotIndex];
+            mixerSlot.enabled = uiSlot.configuration.enabled;
+            mixerSlot.solo = uiSlot.solo;
+            mixerSlot.source = uiSlot.configuration.source;
+            mixerSlot.mode = uiSlot.configuration.mode;
+        }
+
+        return mixerSlots;
+    }
 }
 
 //==============================================================================
@@ -86,6 +102,7 @@ void SpectrumAnalyzerAudioProcessor::prepareToPlay(double sampleRate, int sample
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     engine.prepare(sampleRate, samplesPerBlock);
+    outputMixer.prepare(samplesPerBlock);
     previousEngineParameters = parameterAccess.readEngineState();
     engine.setParameters(*previousEngineParameters);
     changeTracker->clearEngineParametersDirty();
@@ -170,14 +187,17 @@ void SpectrumAnalyzerAudioProcessor::processBlock(juce::AudioBuffer<float> &buff
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
     auto mainBuffer = getBusBuffer(buffer, true, 0);
+    const auto mixerSlotStates = makeMixerSlotStates(parameterAccess.readUiSlots());
 
     if (getBusCount(true) > 1 && getChannelCountOfBus(true, 1) > 0) {
         auto sidechainBuffer = getBusBuffer(buffer, true, 1);
         engine.processBlock(mainBuffer, &sidechainBuffer);
+        outputMixer.processBlock(mainBuffer, &sidechainBuffer, mixerSlotStates);
         return;
     }
 
     engine.processBlock(mainBuffer);
+    outputMixer.processBlock(mainBuffer, nullptr, mixerSlotStates);
 }
 
 //==============================================================================
@@ -332,6 +352,11 @@ void SpectrumAnalyzerAudioProcessor::setSignalSlotVisible(const size_t slotIndex
 
 void SpectrumAnalyzerAudioProcessor::setSignalSlotFrozen(const size_t slotIndex, const bool isFrozenValue) {
     parameterAccess.writeSlotFrozen(slotIndex, isFrozenValue);
+    changeTracker->requestUiRefresh();
+}
+
+void SpectrumAnalyzerAudioProcessor::setSignalSlotSolo(const size_t slotIndex, const bool isSolo) {
+    parameterAccess.writeSlotSolo(slotIndex, isSolo);
     changeTracker->requestUiRefresh();
 }
 

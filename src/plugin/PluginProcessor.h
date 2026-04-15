@@ -12,6 +12,7 @@
 #include "../ui/contracts/AnalyzerUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
 #include "ProcessorChangeTracker.h"
+#include "SignalOutputMixer.h"
 #include "parameters/ParameterAccess.h"
 #include "parameters/ParameterSchema.h"
 #include "state/SignalSlotOrderState.h"
@@ -97,6 +98,7 @@ public:
     void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
     void setSignalSlotVisible(size_t slotIndex, bool isVisible) override;
     void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) override;
+    void setSignalSlotSolo(size_t slotIndex, bool isSolo) override;
     void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) override;
     void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) override;
     void removeSignalSlot(size_t slotIndex) override;
@@ -127,6 +129,7 @@ private:
     float getVisibleMaxFrequencyHz() const;
 
     Analyzer::Engine engine;
+    SignalOutputMixer outputMixer;
     juce::AudioProcessorValueTreeState parameters;
     PluginParameters::Access parameterAccess;
     SignalSlotOrderState signalSlotOrderState;

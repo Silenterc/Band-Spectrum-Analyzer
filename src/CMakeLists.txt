@@ -79,6 +79,7 @@ target_sources(${PROJECT_NAME}
         ui/editor/PluginEditor.cpp
         plugin/parameters/ParameterAccess.cpp
         plugin/ProcessorChangeTracker.cpp
+        plugin/SignalOutputMixer.cpp
         plugin/PluginProcessor.cpp
         plugin/state/SignalSlotOrderState.cpp)
 

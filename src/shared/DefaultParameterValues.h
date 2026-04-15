@@ -26,8 +26,8 @@ namespace Defaults {
     inline constexpr float holdMsStep = 10.0f;
 
     inline constexpr float rmsWindowMsMin = 50.0f;
-    inline constexpr float rmsWindowMsMax = 2000.0f;
-    inline constexpr float rmsWindowMsStep = 10.0f;
+    inline constexpr float rmsWindowMsMax = 5000.0f;
+    inline constexpr float rmsWindowMsStep = 50.0f;
 
     inline constexpr float gridMinDbMin = -120.0f;
     inline constexpr float gridMinDbMax = -12.0f;
@@ -69,6 +69,11 @@ namespace Defaults {
     }
 
     inline constexpr bool isSignalSlotFrozen(const size_t slotIndex) {
+        (void) slotIndex;
+        return false;
+    }
+
+    inline constexpr bool isSignalSlotSolo(const size_t slotIndex) {
         (void) slotIndex;
         return false;
     }

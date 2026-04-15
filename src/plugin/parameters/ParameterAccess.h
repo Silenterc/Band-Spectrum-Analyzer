@@ -33,6 +33,7 @@ namespace PluginParameters {
         void writeSlotState(size_t slotIndex, const Ui::SignalSlotState &state);
         void writeSlotSignal(size_t slotIndex, Analyzer::SignalSource source, Analyzer::SignalMode mode);
         void writeSlotEnabled(size_t slotIndex, bool value);
+        void writeSlotSolo(size_t slotIndex, bool value);
         void writeSlotVisible(size_t slotIndex, bool value);
         void writeSlotFrozen(size_t slotIndex, bool value);
         void writeSlotColour(size_t slotIndex, int colourIndex);
@@ -47,6 +48,7 @@ namespace PluginParameters {
     private:
         struct SlotRefs {
             std::atomic<float> *enabled = nullptr;
+            std::atomic<float> *solo = nullptr;
             std::atomic<float> *visible = nullptr;
             std::atomic<float> *frozen = nullptr;
             std::atomic<float> *source = nullptr;

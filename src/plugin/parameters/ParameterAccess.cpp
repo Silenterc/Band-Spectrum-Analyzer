@@ -12,6 +12,7 @@ namespace PluginParameters {
         for (size_t slotIndex = 0; slotIndex < slotParams.size(); ++slotIndex) {
             auto &slot = slotParams[slotIndex];
             slot.enabled = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::enabled, slotIndex));
+            slot.solo = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::solo, slotIndex));
             slot.visible = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::visible, slotIndex));
             slot.frozen = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::frozen, slotIndex));
             slot.source = parameters.getRawParameterValue(Schema::slotParameterId(Schema::SlotField::source, slotIndex));
@@ -63,6 +64,7 @@ namespace PluginParameters {
 
         Ui::SignalSlotState state;
         state.configuration.enabled = readBool(slot.enabled);
+        state.solo = readBool(slot.solo);
         state.visible = readBool(slot.visible);
         state.frozen = readBool(slot.frozen);
         state.configuration.source = readChoice(slot.source, Schema::signalSourceChoices);
@@ -122,6 +124,7 @@ namespace PluginParameters {
         writeSlotSignal(slotIndex, state.configuration.source, state.configuration.mode);
         writeSlotColour(slotIndex, state.colourIndex);
         writeSlotOpacity(slotIndex, state.opacity);
+        writeSlotSolo(slotIndex, state.solo);
         writeSlotVisible(slotIndex, state.visible);
         writeSlotFrozen(slotIndex, state.frozen);
         writeSlotEnabled(slotIndex, state.configuration.enabled);
@@ -138,6 +141,10 @@ namespace PluginParameters {
 
     void Access::writeSlotEnabled(const size_t slotIndex, const bool value) {
         writeBool(Schema::slotParameterId(Schema::SlotField::enabled, slotIndex), value);
+    }
+
+    void Access::writeSlotSolo(const size_t slotIndex, const bool value) {
+        writeBool(Schema::slotParameterId(Schema::SlotField::solo, slotIndex), value);
     }
 
     void Access::writeSlotVisible(const size_t slotIndex, const bool value) {

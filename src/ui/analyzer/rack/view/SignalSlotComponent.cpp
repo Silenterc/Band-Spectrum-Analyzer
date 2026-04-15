@@ -44,6 +44,7 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
     swatchButton.onClick = [this] { handleSwatchClicked(); };
     swatchButton.onOpacityChanged = [this](const float opacity) { handleOpacityChanged(opacity); };
     swatchButton.onOpacityReset = [this] { handleOpacityReset(); };
+    soloButton.onClick = [this] { handleSoloClicked(); };
     visibilityButton.onClick = [this] { handleVisibilityClicked(); };
     freezeButton.onClick = [this] { handleFreezeClicked(); };
     removeButton.onClick = [this] { handleRemoveClicked(); };
@@ -240,6 +241,7 @@ void SignalSlotComponent::refreshChildState() {
     sourceToggle.setState(settings.configuration.source, isSidechainRouted);
     modeButton.setLabel(Ui::getSignalModeLabel(settings.configuration.mode));
     swatchButton.setState(settings.colourIndex, settings.opacity);
+    soloButton.setActive(settings.solo);
     visibilityButton.setActive(settings.visible);
     freezeButton.setActive(settings.frozen);
 
@@ -459,6 +461,14 @@ void SignalSlotComponent::handleModeClicked() {
     }
 
     showModeMenu();
+}
+
+void SignalSlotComponent::handleSoloClicked() {
+    settings.solo = !settings.solo;
+    refreshChildState();
+
+    if (listener != nullptr)
+        listener->signalSlotSoloChanged(slotIndex, settings.solo);
 }
 
 void SignalSlotComponent::handleVisibilityClicked() {

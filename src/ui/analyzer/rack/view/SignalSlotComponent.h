@@ -25,6 +25,7 @@ public:
         virtual void signalSlotColourSelected(size_t slotIndex, int colourIndex) = 0;
         virtual void signalSlotVisibilityChanged(size_t slotIndex, bool isVisible) = 0;
         virtual void signalSlotFrozenChanged(size_t slotIndex, bool isFrozen) = 0;
+        virtual void signalSlotSoloChanged(size_t slotIndex, bool isSolo) = 0;
         virtual void signalSlotRemoveRequested(size_t slotIndex) = 0;
         virtual void signalSlotOpacityChanged(size_t slotIndex, float opacity) = 0;
         virtual void signalSlotReorderDragStarted(size_t slotIndex, float startMouseX) = 0;
@@ -81,6 +82,7 @@ private:
     void handleSourceSelected(Analyzer::SignalSource source);
     void handleModePressed();
     void handleModeClicked();
+    void handleSoloClicked();
     void handleVisibilityClicked();
     void handleFreezeClicked();
     void handleRemoveClicked();
