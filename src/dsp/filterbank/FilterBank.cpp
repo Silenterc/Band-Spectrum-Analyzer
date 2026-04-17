@@ -147,6 +147,7 @@ namespace Analyzer {
         clearPowerAccumulators();
 
         auto* filters = primaryFilters.data();
+        auto* sums = sumPowers.data();
         auto* peaks = peakPowers.data();
         const auto filterCount = primaryFilters.size();
 
@@ -157,6 +158,7 @@ namespace Analyzer {
             for (size_t filterIndex = 0; filterIndex < filterCount; ++filterIndex) {
                 const auto output = filters[filterIndex].process(input);
                 const auto power = output * output;
+                sums[filterIndex] += power;
                 peaks[filterIndex] = juce::jmax(peaks[filterIndex], power);
             }
         }
@@ -171,6 +173,7 @@ namespace Analyzer {
 
         auto* primary = primaryFilters.data();
         auto* secondary = secondaryFilters.data();
+        auto* sums = sumPowers.data();
         auto* peaks = peakPowers.data();
         const auto filterCount = primaryFilters.size();
         const auto numSamples = std::min(primarySignalView.numSamples, secondarySignalView.numSamples);
@@ -184,6 +187,7 @@ namespace Analyzer {
                 const auto primaryOutput = primary[filterIndex].process(primaryInput);
                 const auto secondaryOutput = secondary[filterIndex].process(secondaryInput);
                 const auto power = half * (primaryOutput * primaryOutput + secondaryOutput * secondaryOutput);
+                sums[filterIndex] += power;
                 peaks[filterIndex] = juce::jmax(peaks[filterIndex], power);
             }
         }
