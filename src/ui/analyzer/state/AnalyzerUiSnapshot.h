@@ -13,7 +13,9 @@ namespace Ui {
                && lhs.showPeak == rhs.showPeak
                && lhs.showHold == rhs.showHold
                && std::abs(lhs.holdMs - rhs.holdMs) <= 0.0001f
-               && std::abs(lhs.rmsWindowMs - rhs.rmsWindowMs) <= 0.0001f;
+               && std::abs(lhs.rmsWindowMs - rhs.rmsWindowMs) <= 0.0001f
+               && std::abs(lhs.peakDecayDbPerSecond - rhs.peakDecayDbPerSecond) <= 0.0001f
+               && std::abs(lhs.holdDecayDbPerSecond - rhs.holdDecayDbPerSecond) <= 0.0001f;
     }
 
     /**

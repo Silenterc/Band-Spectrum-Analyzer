@@ -52,7 +52,7 @@ void AnalyzerGlobalHoldModel::tick(const AnalyzerContributingPeakSummary &peakSu
             continue;
         }
 
-        heldDb = heldDb - Ui::analyzerMeterTuning.holdDecayDbPerSecond * dtSeconds;
+        heldDb = heldDb - meterSettings.holdDecayDbPerSecond * dtSeconds;
 
         if (hasContributingPeak
             && heldDb <= strongestPeakDb + Ui::analyzerMeterTuning.holdResetToleranceDb) {

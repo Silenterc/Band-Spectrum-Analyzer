@@ -94,7 +94,7 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                 trimWindow(traceState.rmsWindows[bandIndex], meterSettings.rmsWindowMs);
 
             traceState.peakDb[bandIndex] = std::max(
-                traceState.peakDb[bandIndex] - Ui::analyzerMeterTuning.peakDecayDbPerSecond * dtSeconds,
+                traceState.peakDb[bandIndex] - meterSettings.peakDecayDbPerSecond * dtSeconds,
                 traceState.lastPeakInputDb[bandIndex]);
             traceState.rmsDb[bandIndex] = juce::Decibels::gainToDecibels(
                 std::sqrt(getWindowMeanPower(traceState.rmsWindows[bandIndex])),

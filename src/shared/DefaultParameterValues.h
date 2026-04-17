@@ -31,6 +31,14 @@ namespace Defaults {
     inline constexpr float rmsWindowMsMax = 5000.0f;
     inline constexpr float rmsWindowMsStep = 50.0f;
 
+    inline constexpr float peakDecayDbPerSecondMin = 0.0f;
+    inline constexpr float peakDecayDbPerSecondMax = 60.0f;
+    inline constexpr float peakDecayDbPerSecondStep = 0.5f;
+
+    inline constexpr float holdDecayDbPerSecondMin = 0.0f;
+    inline constexpr float holdDecayDbPerSecondMax = 60.0f;
+    inline constexpr float holdDecayDbPerSecondStep = 0.5f;
+
     inline constexpr float gridMinDbMin = -120.0f;
     inline constexpr float gridMinDbMax = -12.0f;
     inline constexpr float gridMinDbStep = 1.0f;

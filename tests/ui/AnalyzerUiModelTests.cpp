@@ -149,6 +149,14 @@ TEST_CASE("AnalyzerUiSnapshot equality includes grid, freeze, and frequency rang
     REQUIRE(lhs != rhs);
 
     rhs = lhs;
+    rhs.meterSettings.peakDecayDbPerSecond = 21.0f;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.meterSettings.holdDecayDbPerSecond = 9.0f;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
     rhs.signalSlots[0].solo = true;
     REQUIRE(lhs != rhs);
 
@@ -162,6 +170,20 @@ TEST_CASE("AnalyzerUiSnapshot equality includes grid, freeze, and frequency rang
 
     rhs = lhs;
     rhs.visibleMaxFrequencyHz = 12000.0f;
+    REQUIRE(lhs != rhs);
+}
+
+TEST_CASE("AnalyzerDisplayControlState equality includes decay settings", "[ui][display-control]") {
+    AnalyzerDisplayControlState lhs;
+    AnalyzerDisplayControlState rhs;
+
+    REQUIRE(lhs == rhs);
+
+    rhs.meterSettings.peakDecayDbPerSecond = lhs.meterSettings.peakDecayDbPerSecond + 1.0f;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.meterSettings.holdDecayDbPerSecond = lhs.meterSettings.holdDecayDbPerSecond + 1.0f;
     REQUIRE(lhs != rhs);
 }
 
@@ -418,6 +440,7 @@ TEST_CASE("Global hold decays after hold time elapses", "[ui][global-hold]") {
     Analyzer::MeterSettings meterSettings;
     meterSettings.showHold = true;
     meterSettings.holdMs = 100.0f;
+    meterSettings.holdDecayDbPerSecond = 7.5f;
 
     const auto signalSlots = makeVisibleSignalSlots();
     const auto floorDb = -50.0f;
@@ -440,7 +463,7 @@ TEST_CASE("Global hold decays after hold time elapses", "[ui][global-hold]") {
                    floorDb,
                    0.250f);
     REQUIRE(holdModel.getFrame()->holdDb[0]
-            == Catch::Approx(-0.250f * Ui::analyzerMeterTuning.holdDecayDbPerSecond));
+            == Catch::Approx(-0.250f * meterSettings.holdDecayDbPerSecond));
     REQUIRE(holdModel.getFrame()->ownerKinds[0] == Analyzer::TraceKind::slot1);
 }
 

@@ -26,6 +26,8 @@ namespace PluginParameters {
         showHoldParam = parameters.getRawParameterValue(Schema::showHoldId);
         holdMsParam = parameters.getRawParameterValue(Schema::holdMsId);
         rmsWindowMsParam = parameters.getRawParameterValue(Schema::rmsWindowMsId);
+        peakDecayDbPerSecondParam = parameters.getRawParameterValue(Schema::peakDecayDbPerSecondId);
+        holdDecayDbPerSecondParam = parameters.getRawParameterValue(Schema::holdDecayDbPerSecondId);
         gridMinDbParam = parameters.getRawParameterValue(Schema::gridMinDbId);
         gridMaxDbParam = parameters.getRawParameterValue(Schema::gridMaxDbId);
         gridStepDbParam = parameters.getRawParameterValue(Schema::gridStepDbId);
@@ -82,6 +84,8 @@ namespace PluginParameters {
         settings.showHold = readBool(showHoldParam);
         settings.holdMs = readFloat(holdMsParam);
         settings.rmsWindowMs = readFloat(rmsWindowMsParam);
+        settings.peakDecayDbPerSecond = readFloat(peakDecayDbPerSecondParam);
+        settings.holdDecayDbPerSecond = readFloat(holdDecayDbPerSecondParam);
         return settings;
     }
 

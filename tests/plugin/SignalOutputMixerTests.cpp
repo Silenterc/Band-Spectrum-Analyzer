@@ -152,6 +152,40 @@ TEST_CASE_METHOD(ParameterAccessFixture, "ParameterAccess maps the UI scale choi
     REQUIRE(access.readUiScalePreset() == Ui::UiScalePreset::x2);
 }
 
+TEST_CASE_METHOD(ParameterAccessFixture,
+                 "Decay parameters are exposed in the APVTS layout and read into meter settings",
+                 "[plugin][parameters]") {
+    auto *peakDecayParameter = dynamic_cast<juce::AudioParameterFloat *>(
+        parameters.getParameter(PluginParameters::Schema::peakDecayDbPerSecondId));
+    auto *holdDecayParameter = dynamic_cast<juce::AudioParameterFloat *>(
+        parameters.getParameter(PluginParameters::Schema::holdDecayDbPerSecondId));
+
+    REQUIRE(peakDecayParameter != nullptr);
+    REQUIRE(holdDecayParameter != nullptr);
+
+    REQUIRE(peakDecayParameter->getNormalisableRange().start == Catch::Approx(Defaults::peakDecayDbPerSecondMin));
+    REQUIRE(peakDecayParameter->getNormalisableRange().end == Catch::Approx(Defaults::peakDecayDbPerSecondMax));
+    REQUIRE(peakDecayParameter->getNormalisableRange().interval == Catch::Approx(Defaults::peakDecayDbPerSecondStep));
+    REQUIRE(peakDecayParameter->get() == Catch::Approx(Defaults::peakDecayDbPerSecond));
+
+    REQUIRE(holdDecayParameter->getNormalisableRange().start == Catch::Approx(Defaults::holdDecayDbPerSecondMin));
+    REQUIRE(holdDecayParameter->getNormalisableRange().end == Catch::Approx(Defaults::holdDecayDbPerSecondMax));
+    REQUIRE(holdDecayParameter->getNormalisableRange().interval == Catch::Approx(Defaults::holdDecayDbPerSecondStep));
+    REQUIRE(holdDecayParameter->get() == Catch::Approx(Defaults::holdDecayDbPerSecond));
+
+    peakDecayParameter->beginChangeGesture();
+    peakDecayParameter->setValueNotifyingHost(peakDecayParameter->convertTo0to1(24.5f));
+    peakDecayParameter->endChangeGesture();
+
+    holdDecayParameter->beginChangeGesture();
+    holdDecayParameter->setValueNotifyingHost(holdDecayParameter->convertTo0to1(8.5f));
+    holdDecayParameter->endChangeGesture();
+
+    const auto meterSettings = access.readMeterSettings();
+    REQUIRE(meterSettings.peakDecayDbPerSecond == Catch::Approx(24.5f));
+    REQUIRE(meterSettings.holdDecayDbPerSecond == Catch::Approx(8.5f));
+}
+
 TEST_CASE("SignalOutputMixer outputs main stereo once when stereo is soloed", "[plugin][solo]") {
     SignalOutputMixer mixer;
     mixer.prepare(8);

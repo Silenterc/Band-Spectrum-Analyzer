@@ -38,6 +38,8 @@ namespace PluginParameters::Schema {
     inline constexpr auto showHoldName = "Show Hold";
     inline constexpr auto holdMsName = "Hold Time";
     inline constexpr auto rmsWindowMsName = "RMS Time";
+    inline constexpr auto peakDecayDbPerSecondName = "Peak Decay";
+    inline constexpr auto holdDecayDbPerSecondName = "Hold Decay";
     inline constexpr auto gridMinDbName = "Grid Min dB";
     inline constexpr auto gridMaxDbName = "Grid Max dB";
     inline constexpr auto gridStepDbName = "Grid Step dB";
@@ -53,6 +55,8 @@ namespace PluginParameters::Schema {
     inline constexpr auto showHoldId = "showHold";
     inline constexpr auto holdMsId = "holdMs";
     inline constexpr auto rmsWindowMsId = "rmsWindowMs";
+    inline constexpr auto peakDecayDbPerSecondId = "peakDecayDbPerSecond";
+    inline constexpr auto holdDecayDbPerSecondId = "holdDecayDbPerSecond";
     inline constexpr auto gridMinDbId = "gridMinDb";
     inline constexpr auto gridMaxDbId = "gridMaxDb";
     inline constexpr auto gridStepDbId = "gridStepDb";
@@ -141,6 +145,18 @@ namespace PluginParameters::Schema {
         return juce::NormalisableRange<float>(Defaults::rmsWindowMsMin,
                                               Defaults::rmsWindowMsMax,
                                               Defaults::rmsWindowMsStep);
+    }
+
+    inline auto peakDecayDbPerSecondRange() {
+        return juce::NormalisableRange<float>(Defaults::peakDecayDbPerSecondMin,
+                                              Defaults::peakDecayDbPerSecondMax,
+                                              Defaults::peakDecayDbPerSecondStep);
+    }
+
+    inline auto holdDecayDbPerSecondRange() {
+        return juce::NormalisableRange<float>(Defaults::holdDecayDbPerSecondMin,
+                                              Defaults::holdDecayDbPerSecondMax,
+                                              Defaults::holdDecayDbPerSecondStep);
     }
 
     inline auto gridMinDbRange() {
@@ -322,6 +338,16 @@ namespace PluginParameters::Schema {
             rmsWindowMsName,
             rmsWindowMsRange(),
             Defaults::rmsWindowMs));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            makeParameterID(peakDecayDbPerSecondId),
+            peakDecayDbPerSecondName,
+            peakDecayDbPerSecondRange(),
+            Defaults::peakDecayDbPerSecond));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+            makeParameterID(holdDecayDbPerSecondId),
+            holdDecayDbPerSecondName,
+            holdDecayDbPerSecondRange(),
+            Defaults::holdDecayDbPerSecond));
         layout.add(std::make_unique<juce::AudioParameterFloat>(
             makeParameterID(gridMinDbId),
             gridMinDbName,

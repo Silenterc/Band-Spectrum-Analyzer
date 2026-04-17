@@ -40,5 +40,7 @@ namespace Analyzer {
         bool showHold = false;
         float holdMs = 0.0f;
         float rmsWindowMs = Defaults::rmsWindowMs;
+        float peakDecayDbPerSecond = Defaults::peakDecayDbPerSecond;
+        float holdDecayDbPerSecond = Defaults::holdDecayDbPerSecond;
     };
 }

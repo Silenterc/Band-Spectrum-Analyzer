@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "dsp/core/AnalyzerConstants.h"
@@ -740,6 +741,80 @@ TEST_CASE("AnalyzerMeter discards peak state internally once it settles below th
 
     REQUIRE(std::abs(loweredFloorData.traces.front().frame.peakDb[0] - lowerFloorDb) < toleranceDb);
     REQUIRE(std::abs(loweredFloorData.traces.front().frame.rmsDb[0] - nearFloorDb) < toleranceDb);
+}
+
+TEST_CASE("AnalyzerMeter peak decay parameter changes peak falloff speed") {
+    AnalyzerMeter slowDecayMeter;
+    AnalyzerMeter fastDecayMeter;
+    Analyzer::MeterSettings slowDecaySettings;
+    slowDecaySettings.showRms = true;
+    slowDecaySettings.showPeak = true;
+    slowDecaySettings.peakDecayDbPerSecond = 5.0f;
+
+    Analyzer::MeterSettings fastDecaySettings = slowDecaySettings;
+    fastDecaySettings.peakDecayDbPerSecond = 20.0f;
+
+    constexpr float floorDb = -80.0f;
+    constexpr float dtSeconds = 0.1f;
+    constexpr float hopDurationSeconds = 0.09f;
+    constexpr float toleranceDb = 0.001f;
+
+    const std::vector<Analyzer::BandInfo> bandInfo{
+        {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f}
+    };
+
+    Analyzer::RawTrace activeTrace;
+    activeTrace.kind = Analyzer::TraceKind::slot1;
+    activeTrace.measurements.resize(1);
+    activeTrace.measurements[0].peakPower = 1.0f;
+    activeTrace.measurements[0].rmsHopSumPower = 1024.0;
+    activeTrace.measurements[0].rmsHopNumSamples = 1024;
+
+    Analyzer::RawTrace quieterTrace = activeTrace;
+    const auto quieterPeakGain = juce::Decibels::decibelsToGain(-40.0f);
+    quieterTrace.measurements[0].peakPower = quieterPeakGain * quieterPeakGain;
+
+    tickMeter(slowDecayMeter,
+              bandInfo,
+              {activeTrace},
+              true,
+              false,
+              hopDurationSeconds,
+              slowDecaySettings,
+              floorDb,
+              dtSeconds);
+    tickMeter(fastDecayMeter,
+              bandInfo,
+              {activeTrace},
+              true,
+              false,
+              hopDurationSeconds,
+              fastDecaySettings,
+              floorDb,
+              dtSeconds);
+
+    const auto slowDecayData = tickMeter(slowDecayMeter,
+                                         bandInfo,
+                                         {quieterTrace},
+                                         true,
+                                         false,
+                                         hopDurationSeconds,
+                                         slowDecaySettings,
+                                         floorDb,
+                                         dtSeconds);
+    const auto fastDecayData = tickMeter(fastDecayMeter,
+                                         bandInfo,
+                                         {quieterTrace},
+                                         true,
+                                         false,
+                                         hopDurationSeconds,
+                                         fastDecaySettings,
+                                         floorDb,
+                                         dtSeconds);
+
+    REQUIRE(slowDecayData.traces.front().frame.peakDb[0] == Catch::Approx(-0.5f).margin(toleranceDb));
+    REQUIRE(fastDecayData.traces.front().frame.peakDb[0] == Catch::Approx(-2.0f).margin(toleranceDb));
+    REQUIRE(fastDecayData.traces.front().frame.peakDb[0] < slowDecayData.traces.front().frame.peakDb[0]);
 }
 
 TEST_CASE("AnalyzerMeter RMS window parameter changes averaging time") {

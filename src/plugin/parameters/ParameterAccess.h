@@ -83,6 +83,8 @@ namespace PluginParameters {
         std::atomic<float> *showHoldParam = nullptr;
         std::atomic<float> *holdMsParam = nullptr;
         std::atomic<float> *rmsWindowMsParam = nullptr;
+        std::atomic<float> *peakDecayDbPerSecondParam = nullptr;
+        std::atomic<float> *holdDecayDbPerSecondParam = nullptr;
         std::atomic<float> *gridMinDbParam = nullptr;
         std::atomic<float> *gridMaxDbParam = nullptr;
         std::atomic<float> *gridStepDbParam = nullptr;
