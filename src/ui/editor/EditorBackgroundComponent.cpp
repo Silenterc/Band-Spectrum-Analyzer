@@ -2,8 +2,7 @@
 
 #include "../theme/UiRasterAssets.h"
 
-EditorBackgroundComponent::EditorBackgroundComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse) {
+EditorBackgroundComponent::EditorBackgroundComponent(const Ui::Theme&) {
     setOpaque(true);
     setInterceptsMouseClicks(false, false);
 }
@@ -36,16 +35,4 @@ void EditorBackgroundComponent::rebuildCachedLayer() {
                        0,
                        background.getWidth(),
                        background.getHeight());
-
-    const auto& screw = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto screwPadding = theme.metrics.background.screwPadding;
-    const auto topLeftBounds = Ui::getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
-    const auto topRightBounds = Ui::getLogicalAssetBounds(
-        screw,
-        rasterScale,
-        {bounds.getWidth() - screwPadding - topLeftBounds.getWidth(), screwPadding});
-
-    Ui::drawAssetWithin(graphics, screw, topLeftBounds);
-    Ui::drawAssetWithin(graphics, screw, topRightBounds);
 }

@@ -10,6 +10,7 @@
 #include "../dsp/core/EngineParameterState.h"
 #include "../ui/contracts/AnalyzerSettingsActions.h"
 #include "../ui/contracts/AnalyzerUiSnapshotSource.h"
+#include "../ui/contracts/EditorPresentationStateSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
 #include "ProcessorChangeTracker.h"
 #include "SignalOutputMixer.h"
@@ -22,6 +23,7 @@ class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
                                              public AnalyzerRawTraceSource,
                                              public AnalyzerSettingsActions,
                                              public AnalyzerUiSnapshotSource,
+                                             public EditorPresentationStateSource,
                                              private ProcessorChangeTracker::Listener {
 public:
     //==============================================================================
@@ -87,6 +89,11 @@ public:
     void addAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
     void removeAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
 
+    // EditorPresentationStateSource
+    Ui::EditorPresentationState getEditorPresentationState() const override;
+    void addEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
+    void removeEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
+
     // AnalyzerRawTraceSource
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
     AnalyzerPublishedTracesView readPublishedTraces() const override;
@@ -127,6 +134,9 @@ private:
     bool getUseCustomFrequencyRange() const;
     float getVisibleMinFrequencyHz() const;
     float getVisibleMaxFrequencyHz() const;
+    Ui::UiScalePreset getUiScalePreset() const;
+    void publishAnalyzerUiSnapshot();
+    void publishEditorPresentationState();
 
     Analyzer::Engine engine;
     SignalOutputMixer outputMixer;
@@ -137,7 +147,9 @@ private:
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
     std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
+    std::optional<Ui::EditorPresentationState> lastPublishedEditorPresentationState;
     juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
+    juce::ListenerList<EditorPresentationStateSource::Listener> editorPresentationStateListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void processorUiRefreshRequested() override;

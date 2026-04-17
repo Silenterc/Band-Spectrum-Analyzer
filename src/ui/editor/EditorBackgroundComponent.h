@@ -14,7 +14,6 @@ public:
 private:
     void rebuildCachedLayer();
 
-    const Ui::Theme& theme;
     juce::Image cachedLayer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EditorBackgroundComponent)

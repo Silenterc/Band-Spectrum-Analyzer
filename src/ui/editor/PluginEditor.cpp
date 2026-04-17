@@ -7,15 +7,17 @@
 #endif
 
 //==============================================================================
-SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &audioProcessor)
-    : AudioProcessorEditor(&audioProcessor),
-      theme(Ui::makeTheme()),
+SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(SpectrumAnalyzerAudioProcessor &processorToUse)
+    : AudioProcessorEditor(&processorToUse),
+      audioProcessor(processorToUse),
+      theme(Ui::makeTheme(processorToUse.getEditorPresentationState().scale)),
       backgroundComponent(theme),
-      mainLayout(audioProcessor, audioProcessor, audioProcessor, theme) {
+      mainLayout(processorToUse, processorToUse, processorToUse, theme) {
     setOpaque(true);
     addAndMakeVisible(backgroundComponent);
     addAndMakeVisible(mainLayout);
     setSize(theme.metrics.editor.initialWidth, theme.metrics.editor.initialHeight);
+    this->audioProcessor.addEditorPresentationStateListener(*this);
 
     if (juce::JUCEApplicationBase::isStandaloneApp())
     {
@@ -26,7 +28,9 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(Spect
     }
 }
 
-SpectrumAnalyzerAudioProcessorEditor::~SpectrumAnalyzerAudioProcessorEditor() = default;
+SpectrumAnalyzerAudioProcessorEditor::~SpectrumAnalyzerAudioProcessorEditor() {
+    audioProcessor.removeEditorPresentationStateListener(*this);
+}
 
 //==============================================================================
 void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
@@ -36,4 +40,14 @@ void SpectrumAnalyzerAudioProcessorEditor::paint(juce::Graphics &g) {
 void SpectrumAnalyzerAudioProcessorEditor::resized() {
     backgroundComponent.setBounds(getLocalBounds());
     mainLayout.setBounds(getLocalBounds());
+}
+
+void SpectrumAnalyzerAudioProcessorEditor::editorPresentationStateChanged(const Ui::EditorPresentationState &state) {
+    applyPresentationState(state);
+}
+
+void SpectrumAnalyzerAudioProcessorEditor::applyPresentationState(const Ui::EditorPresentationState &state) {
+    theme = Ui::makeTheme(state.scale);
+    setSize(theme.metrics.editor.initialWidth, theme.metrics.editor.initialHeight);
+    repaint();
 }

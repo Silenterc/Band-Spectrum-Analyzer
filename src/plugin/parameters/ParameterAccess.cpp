@@ -32,6 +32,7 @@ namespace PluginParameters {
         useCustomFrequencyRangeParam = parameters.getRawParameterValue(Schema::useCustomFrequencyRangeId);
         visibleMinFrequencyHzParam = parameters.getRawParameterValue(Schema::visibleMinFrequencyHzId);
         visibleMaxFrequencyHzParam = parameters.getRawParameterValue(Schema::visibleMaxFrequencyHzId);
+        uiScaleParam = parameters.getRawParameterValue(Schema::uiScaleId);
     }
 
     Analyzer::EngineParameterState Access::readEngineState() const {
@@ -114,6 +115,10 @@ namespace PluginParameters {
 
     float Access::readVisibleMaxFrequencyHz() const {
         return readFloat(visibleMaxFrequencyHzParam);
+    }
+
+    Ui::UiScalePreset Access::readUiScalePreset() const {
+        return readChoice(uiScaleParam, Schema::uiScaleChoices);
     }
 
     void Access::writeFreeze(const bool value) {

@@ -41,13 +41,13 @@ namespace Analyzer {
         /**
          * Processes one broadcast input sample through all packed bands.
          */
-        inline SimdFloat process(SimdFloat input) noexcept {
+        SimdFloat process(SimdFloat input) noexcept {
             const auto stage1Output = processStage(input, stage1s1, stage1s2);
             return processStage(stage1Output, stage2s1, stage2s2);
         }
 
     private:
-        inline SimdFloat processStage(const SimdFloat input, SimdFloat &s1, SimdFloat &s2) noexcept {
+        SimdFloat processStage(const SimdFloat input, SimdFloat &s1, SimdFloat &s2) const noexcept {
             const auto y = params.b0 * input + s1;
             s1 = s2 + params.b1 * input - params.a1 * y;
             s2 = params.b2 * input - params.a2 * y;

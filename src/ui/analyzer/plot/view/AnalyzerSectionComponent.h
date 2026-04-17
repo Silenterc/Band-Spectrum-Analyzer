@@ -33,6 +33,7 @@ private:
     };
 
     void drawAxisLabels(juce::Graphics &g) const;
+    void drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const;
     void drawPlotChrome(juce::Graphics &g) const;
     void rebuildLayout();
     void rebuildCachedBackground();

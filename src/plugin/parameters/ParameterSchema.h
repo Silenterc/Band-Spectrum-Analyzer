@@ -8,6 +8,7 @@
 #include "../../dsp/core/BandMode.h"
 #include "../../shared/DefaultParameterValues.h"
 #include "../../shared/SignalPresetCatalog.h"
+#include "../../ui/editor/EditorPresentationState.h"
 #include "../../ui/state/SignalSlotUiState.h"
 
 namespace PluginParameters::Schema {
@@ -43,6 +44,7 @@ namespace PluginParameters::Schema {
     inline constexpr auto useCustomFrequencyRangeName = "Use Custom Frequency Range";
     inline constexpr auto visibleMinFrequencyHzName = "Visible Min Frequency";
     inline constexpr auto visibleMaxFrequencyHzName = "Visible Max Frequency";
+    inline constexpr auto uiScaleName = "UI Scale";
 
     inline constexpr auto bandModeId = "bandMode";
     inline constexpr auto freezeId = "freeze";
@@ -57,6 +59,7 @@ namespace PluginParameters::Schema {
     inline constexpr auto useCustomFrequencyRangeId = "useCustomFrequencyRange";
     inline constexpr auto visibleMinFrequencyHzId = "visibleMinFrequencyHz";
     inline constexpr auto visibleMaxFrequencyHzId = "visibleMaxFrequencyHz";
+    inline constexpr auto uiScaleId = "uiScale";
 
     inline constexpr std::array<EnumChoice<Analyzer::BandMode>, 4> bandModeChoices{{
         {Analyzer::BandMode::octaveThird, "1/3 Oct"},
@@ -74,6 +77,12 @@ namespace PluginParameters::Schema {
         {Analyzer::SignalMode::mid, "Mid"},
         {Analyzer::SignalMode::side, "Side"},
         {Analyzer::SignalMode::stereo, "Stereo"}
+    }};
+
+    inline constexpr std::array<EnumChoice<Ui::UiScalePreset>, 3> uiScaleChoices{{
+        {Ui::UiScalePreset::x1, "1x"},
+        {Ui::UiScalePreset::x1_5, "1.5x"},
+        {Ui::UiScalePreset::x2, "2x"}
     }};
 
     template<typename Enum, size_t Size>
@@ -342,6 +351,11 @@ namespace PluginParameters::Schema {
             visibleMaxFrequencyHzName,
             visibleMaxFrequencyHzRange(),
             Defaults::visibleMaxFrequencyHz));
+        layout.add(std::make_unique<juce::AudioParameterChoice>(
+            makeParameterID(uiScaleId),
+            uiScaleName,
+            toStringArray(uiScaleChoices),
+            indexForValue(Defaults::uiScalePreset, uiScaleChoices)));
 
         return layout;
     }

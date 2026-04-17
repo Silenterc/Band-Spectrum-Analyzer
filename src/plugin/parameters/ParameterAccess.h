@@ -6,6 +6,7 @@
 
 #include "../../display/analyzer/data/AnalyzerMeterData.h"
 #include "../../dsp/core/EngineParameterState.h"
+#include "../../ui/editor/EditorPresentationState.h"
 #include "../../ui/state/SignalSlotUiState.h"
 #include "ParameterSchema.h"
 
@@ -28,6 +29,7 @@ namespace PluginParameters {
         bool readUseCustomFrequencyRange() const;
         float readVisibleMinFrequencyHz() const;
         float readVisibleMaxFrequencyHz() const;
+        Ui::UiScalePreset readUiScalePreset() const;
 
         void writeFreeze(bool value);
         void writeSlotState(size_t slotIndex, const Ui::SignalSlotState &state);
@@ -87,5 +89,6 @@ namespace PluginParameters {
         std::atomic<float> *useCustomFrequencyRangeParam = nullptr;
         std::atomic<float> *visibleMinFrequencyHzParam = nullptr;
         std::atomic<float> *visibleMaxFrequencyHzParam = nullptr;
+        std::atomic<float> *uiScaleParam = nullptr;
     };
 }

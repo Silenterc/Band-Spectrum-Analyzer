@@ -125,6 +125,33 @@ TEST_CASE("SignalOutputMixer leaves output untouched when no solo is active", "[
     requireBufferEquals(mainBuffer, originalBuffer);
 }
 
+TEST_CASE_METHOD(ParameterAccessFixture, "UI scale parameter exposes 1x and 2x choices", "[plugin][parameters]") {
+    auto *parameter = dynamic_cast<juce::AudioParameterChoice *>(parameters.getParameter(PluginParameters::Schema::uiScaleId));
+    REQUIRE(parameter != nullptr);
+    REQUIRE(parameter->choices.size() == 3);
+    REQUIRE(parameter->choices[0] == "1x");
+    REQUIRE(parameter->choices[1] == "1.5x");
+    REQUIRE(parameter->choices[2] == "2x");
+    REQUIRE(access.readUiScalePreset() == Ui::UiScalePreset::x1);
+}
+
+TEST_CASE_METHOD(ParameterAccessFixture, "ParameterAccess maps the UI scale choice to the editor preset", "[plugin][parameters]") {
+    auto *parameter = parameters.getParameter(PluginParameters::Schema::uiScaleId);
+    REQUIRE(parameter != nullptr);
+
+    parameter->beginChangeGesture();
+    parameter->setValueNotifyingHost(0.5f);
+    parameter->endChangeGesture();
+
+    REQUIRE(access.readUiScalePreset() == Ui::UiScalePreset::x1_5);
+
+    parameter->beginChangeGesture();
+    parameter->setValueNotifyingHost(1.0f);
+    parameter->endChangeGesture();
+
+    REQUIRE(access.readUiScalePreset() == Ui::UiScalePreset::x2);
+}
+
 TEST_CASE("SignalOutputMixer outputs main stereo once when stereo is soloed", "[plugin][solo]") {
     SignalOutputMixer mixer;
     mixer.prepare(8);

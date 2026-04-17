@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../dsp/core/BandMode.h"
+#include "../ui/editor/EditorPresentationState.h"
 #include "SignalSlotConfiguration.h"
 
 namespace Defaults {
@@ -19,6 +20,7 @@ namespace Defaults {
     inline constexpr bool useCustomFrequencyRange = false;
     inline constexpr float visibleMinFrequencyHz = 20.0f;
     inline constexpr float visibleMaxFrequencyHz = 20000.0f;
+    inline constexpr Ui::UiScalePreset uiScalePreset = Ui::UiScalePreset::x1;
 
     // Global parameter ranges
     inline constexpr float holdMsMin = 0.0f;

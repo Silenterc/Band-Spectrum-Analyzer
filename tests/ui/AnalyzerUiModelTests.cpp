@@ -199,6 +199,40 @@ TEST_CASE("Default signal configuration comes from centralized option metadata",
     REQUIRE(configuration.mode == Analyzer::SignalMode::side);
 }
 
+TEST_CASE("Theme preserves current editor sizing and raster scale at 1x", "[ui][theme]") {
+    const auto theme = Ui::makeTheme(Ui::UiScalePreset::x1);
+
+    REQUIRE(theme.metrics.editor.initialWidth == 1000);
+    REQUIRE(theme.metrics.editor.initialHeight == 600);
+    REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(2.0f));
+    REQUIRE(theme.metrics.analyzerSection.plotInset == 36);
+    REQUIRE(theme.metrics.meterControls.padTextFontHeight == Catch::Approx(16.0f));
+}
+
+TEST_CASE("Theme scales dimensional UI metrics and logical raster size at 1.5x", "[ui][theme]") {
+    const auto theme = Ui::makeTheme(Ui::UiScalePreset::x1_5);
+
+    REQUIRE(theme.metrics.editor.initialWidth == 1500);
+    REQUIRE(theme.metrics.editor.initialHeight == 900);
+    REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(4.0f / 3.0f));
+    REQUIRE(theme.metrics.analyzerSection.plotInset == 54);
+    REQUIRE(theme.metrics.analyzerPlot.gridLabelWidth == 72);
+    REQUIRE(theme.metrics.slot.actionSize == Catch::Approx(42.0f));
+    REQUIRE(theme.metrics.meterControls.padTextFontHeight == Catch::Approx(24.0f));
+}
+
+TEST_CASE("Theme doubles dimensional UI metrics and logical raster size at 2x", "[ui][theme]") {
+    const auto theme = Ui::makeTheme(Ui::UiScalePreset::x2);
+
+    REQUIRE(theme.metrics.editor.initialWidth == 2000);
+    REQUIRE(theme.metrics.editor.initialHeight == 1200);
+    REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(1.0f));
+    REQUIRE(theme.metrics.analyzerSection.plotInset == 72);
+    REQUIRE(theme.metrics.analyzerPlot.gridLabelWidth == 96);
+    REQUIRE(theme.metrics.slot.actionSize == Catch::Approx(56.0f));
+    REQUIRE(theme.metrics.meterControls.padTextFontHeight == Catch::Approx(32.0f));
+}
+
 TEST_CASE("Hover readout matches the direct cursor grid-space mapping", "[ui][hover]") {
     const auto theme = Ui::makeTheme();
     const AnalyzerGeometry geometry(theme);

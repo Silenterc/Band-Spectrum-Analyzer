@@ -275,6 +275,21 @@ void SpectrumAnalyzerAudioProcessor::removeAnalyzerUiSnapshotListener(AnalyzerUi
     uiSnapshotListeners.remove(&listener);
 }
 
+Ui::EditorPresentationState SpectrumAnalyzerAudioProcessor::getEditorPresentationState() const {
+    Ui::EditorPresentationState state;
+    state.scale = getUiScalePreset();
+    return state;
+}
+
+void SpectrumAnalyzerAudioProcessor::addEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) {
+    editorPresentationStateListeners.add(&listener);
+}
+
+void SpectrumAnalyzerAudioProcessor::removeEditorPresentationStateListener(
+    EditorPresentationStateSource::Listener &listener) {
+    editorPresentationStateListeners.remove(&listener);
+}
+
 AnalyzerPublishedTracesView SpectrumAnalyzerAudioProcessor::readPublishedTraces() const {
     return engine.readPublishedTraces();
 }
@@ -329,6 +344,10 @@ float SpectrumAnalyzerAudioProcessor::getVisibleMinFrequencyHz() const {
 
 float SpectrumAnalyzerAudioProcessor::getVisibleMaxFrequencyHz() const {
     return parameterAccess.readVisibleMaxFrequencyHz();
+}
+
+Ui::UiScalePreset SpectrumAnalyzerAudioProcessor::getUiScalePreset() const {
+    return parameterAccess.readUiScalePreset();
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SpectrumAnalyzerAudioProcessor::createParameterLayout() {
@@ -433,6 +452,11 @@ void SpectrumAnalyzerAudioProcessor::setVisibleMaxFrequencyHz(const float freque
 }
 
 void SpectrumAnalyzerAudioProcessor::processorUiRefreshRequested() {
+    publishAnalyzerUiSnapshot();
+    publishEditorPresentationState();
+}
+
+void SpectrumAnalyzerAudioProcessor::publishAnalyzerUiSnapshot() {
     const auto snapshot = getAnalyzerUiSnapshot();
     if (lastPublishedUiSnapshot.has_value() && *lastPublishedUiSnapshot == snapshot)
         return;
@@ -440,6 +464,17 @@ void SpectrumAnalyzerAudioProcessor::processorUiRefreshRequested() {
     lastPublishedUiSnapshot = snapshot;
     uiSnapshotListeners.call([&snapshot](AnalyzerUiSnapshotSource::Listener &listener) {
         listener.analyzerUiSnapshotChanged(snapshot);
+    });
+}
+
+void SpectrumAnalyzerAudioProcessor::publishEditorPresentationState() {
+    const auto state = getEditorPresentationState();
+    if (lastPublishedEditorPresentationState.has_value() && *lastPublishedEditorPresentationState == state)
+        return;
+
+    lastPublishedEditorPresentationState = state;
+    editorPresentationStateListeners.call([&state](EditorPresentationStateSource::Listener &listener) {
+        listener.editorPresentationStateChanged(state);
     });
 }
 

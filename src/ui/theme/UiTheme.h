@@ -4,6 +4,7 @@
 
 #include <juce_graphics/juce_graphics.h>
 
+#include "ui/editor/EditorPresentationState.h"
 #include "../state/SignalSlotUiState.h"
 #include "../../shared/SignalPresetCatalog.h"
 
@@ -13,6 +14,8 @@ namespace Ui {
         int rackHeight = 112;
         int analyzerToSideStripGap = 10;
         int sideStripWidth = 84;
+
+        [[nodiscard]] PanelMetrics scaled(float factor) const;
     };
 
     struct MeterControlsMetrics {
@@ -34,10 +37,14 @@ namespace Ui {
         float freezeIconScaleMultiplier = 1.2f;
         float decorScale = 0.9f;
         float padTextFontHeight = 16.0f;
+
+        [[nodiscard]] MeterControlsMetrics scaled(float factor) const;
     };
 
     struct AnalyzerSectionMetrics {
         int plotInset = 36;
+
+        [[nodiscard]] AnalyzerSectionMetrics scaled(float factor) const;
     };
 
     struct AnalyzerPlotMetrics {
@@ -70,6 +77,8 @@ namespace Ui {
         std::array<float, 10> frequencyScaleLabelsHz{
             20.0f, 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f, 20000.0f
         };
+
+        [[nodiscard]] AnalyzerPlotMetrics scaled(float factor) const;
     };
 
     struct TooltipMetrics {
@@ -90,11 +99,15 @@ namespace Ui {
         float highlightStartAlpha = 0.055f;
         float highlightEndAlpha = 0.0f;
         float highlightHeightFraction = 0.45f;
+
+        [[nodiscard]] TooltipMetrics scaled(float factor) const;
     };
 
     struct RackMetrics {
         float topInset = 0.0f;
         float bottomInset = 2.0f;
+
+        [[nodiscard]] RackMetrics scaled(float factor) const;
     };
 
     struct SlotMetrics {
@@ -137,6 +150,8 @@ namespace Ui {
         float opacityPixelsToValue = 0.005f;
         float draggedShadowAlpha = 0.22f;
         float borderAlphaScale = 1.35f;
+
+        [[nodiscard]] SlotMetrics scaled(float factor) const;
     };
 
     struct PopupMetrics {
@@ -163,11 +178,15 @@ namespace Ui {
         float swatchOutlineThickness = 1.0f;
         float swatchDisabledSlashInset = 4.0f;
         float swatchDisabledSlashThickness = 1.5f;
+
+        [[nodiscard]] PopupMetrics scaled(float factor) const;
     };
 
     struct BackgroundMetrics {
         int woodSideInset = 31;
         int screwPadding = 2;
+
+        [[nodiscard]] BackgroundMetrics scaled(float factor) const;
     };
 
     struct SectionDividerMetrics {
@@ -178,15 +197,21 @@ namespace Ui {
         float middleStartAlpha = 0.78f;
         float middleEndPosition = 0.74f;
         float middleEndAlpha = 0.26f;
+
+        [[nodiscard]] SectionDividerMetrics scaled(float factor) const;
     };
 
     struct AssetMetrics {
         float rasterScale = 2.0f;
+
+        [[nodiscard]] AssetMetrics scaled(float factor) const;
     };
 
     struct EditorMetrics {
         int initialWidth = 1000;
         int initialHeight = 600;
+
+        [[nodiscard]] EditorMetrics scaled(float factor) const;
     };
 
     struct Metrics {
@@ -202,6 +227,8 @@ namespace Ui {
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;
+
+        [[nodiscard]] Metrics scaled(float factor) const;
     };
 
     struct Theme {
@@ -227,7 +254,7 @@ namespace Ui {
         Metrics metrics;
     };
 
-    Theme makeTheme();
+    Theme makeTheme(UiScalePreset scalePreset = UiScalePreset::x1);
     const Shared::SignalPresetSpec &getSignalPreset(int colourIndex);
     juce::Colour getSignalPresetColour(int colourIndex);
     juce::String getSignalPresetName(int colourIndex);
