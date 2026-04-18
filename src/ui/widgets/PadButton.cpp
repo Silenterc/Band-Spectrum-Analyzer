@@ -132,9 +132,21 @@ void PadButton::setOverlayIcon(const OverlayIcon newOverlayIcon) {
     repaint(padBounds);
 }
 
+void PadButton::mouseDown(const juce::MouseEvent& event) {
+    juce::ignoreUnused(event);
+    armed = true;
+}
+
 void PadButton::mouseUp(const juce::MouseEvent& event) {
-    if (!event.mouseWasDraggedSinceMouseDown() && onClick)
+    const auto shouldTriggerClick = armed && hitTest(event.x, event.y);
+    armed = false;
+
+    if (shouldTriggerClick && onClick)
         onClick();
+}
+
+void PadButton::mouseExit(const juce::MouseEvent& event) {
+    juce::ignoreUnused(event);
 }
 
 const juce::Image& PadButton::getResolvedOnImage() const {

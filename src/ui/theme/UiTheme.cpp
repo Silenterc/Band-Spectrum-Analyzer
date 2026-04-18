@@ -184,9 +184,25 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    PresetHeaderMetrics PresetHeaderMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.topInset = scaleInt(topInset, factor);
+        scaledMetrics.plotGap = scaleInt(plotGap, factor);
+        scaledMetrics.logoHeight = scaleInt(logoHeight, factor);
+        scaledMetrics.logoLeftInset = scaleInt(logoLeftInset, factor);
+        scaledMetrics.logoGap = scaleInt(logoGap, factor);
+        scaledMetrics.displayGap = scaleInt(displayGap, factor);
+        scaledMetrics.groupGap = scaleInt(groupGap, factor);
+        scaledMetrics.actionGap = scaleInt(actionGap, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        return scaledMetrics;
+    }
+
     Metrics Metrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.editor = editor.scaled(factor);
+        scaledMetrics.presetHeader = presetHeader.scaled(factor);
         scaledMetrics.panel = panel.scaled(factor);
         scaledMetrics.meterControls = meterControls.scaled(factor);
         scaledMetrics.analyzerSection = analyzerSection.scaled(factor);

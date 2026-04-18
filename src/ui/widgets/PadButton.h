@@ -45,11 +45,14 @@ private:
     juce::Rectangle<int> getTargetPadBounds(juce::Rectangle<int> availableBounds) const;
     void rebuildCachedPadImages();
 
+    void mouseDown(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
 
     const Ui::Theme& theme;
     juce::String label;
     bool active = false;
+    bool armed = false;
     AssetStyle assetStyle = AssetStyle::standard;
     float scaleMultiplier = 1.0f;
     std::optional<juce::Colour> activeMarkingColourOverride;

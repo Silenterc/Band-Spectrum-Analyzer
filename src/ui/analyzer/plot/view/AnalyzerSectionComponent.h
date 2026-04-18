@@ -10,6 +10,7 @@
 #include "ui/contracts/AnalyzerUiSnapshotSource.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/analyzer/plot/data/AnalyzerViewState.h"
+#include "ui/analyzer/layout/PresetHeaderComponent.h"
 #include "ui/analyzer/plot/logic/AnalyzerViewModel.h"
 #include "ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.h"
 #include "ui/analyzer/plot/view/AnalyzerPlotComponent.h"
@@ -29,12 +30,12 @@ public:
 
 private:
     struct Layout {
+        juce::Rectangle<int> headerBounds;
         juce::Rectangle<int> displayBounds;
     };
 
     void drawAxisLabels(juce::Graphics &g) const;
     void drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const;
-    void drawPlotChrome(juce::Graphics &g) const;
     void rebuildLayout();
     void rebuildCachedBackground();
     void updateHoverPresentation();
@@ -46,6 +47,7 @@ private:
     AnalyzerRawTraceSource &rawTraceSource;
     AnalyzerUiSnapshotSource &snapshotSource;
     const Ui::Theme &theme;
+    PresetHeaderComponent presetHeaderComponent;
     AnalyzerPlotComponent analyzerPlotComponent;
     AnalyzerViewModel viewModel;
     AnalyzerHoverTooltipRenderer hoverTooltipRenderer;

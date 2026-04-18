@@ -31,8 +31,24 @@ namespace Ui {
                 static auto drawable = juce::Drawable::createFromImageData(BinaryData::headphones_svg, BinaryData::headphones_svgSize);
                 return drawable.get();
             }
+            case IconId::left: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::left_svg, BinaryData::left_svgSize);
+                return drawable.get();
+            }
             case IconId::power: {
                 static auto drawable = juce::Drawable::createFromImageData(BinaryData::power_svg, BinaryData::power_svgSize);
+                return drawable.get();
+            }
+            case IconId::reset: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::reset_svg, BinaryData::reset_svgSize);
+                return drawable.get();
+            }
+            case IconId::right: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::right_svg, BinaryData::right_svgSize);
+                return drawable.get();
+            }
+            case IconId::save: {
+                static auto drawable = juce::Drawable::createFromImageData(BinaryData::save_svg, BinaryData::save_svgSize);
                 return drawable.get();
             }
             case IconId::settings: {

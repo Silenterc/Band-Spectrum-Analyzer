@@ -5,11 +5,14 @@
 namespace Ui {
     enum class SharedRasterAssetId {
         background,
+        buttonOff,
+        buttonOn,
         padOff,
         padOn,
         padFreezeOn,
         screen,
         screw,
+        textBox,
     };
 
     enum class AnalyzerRasterAssetId {

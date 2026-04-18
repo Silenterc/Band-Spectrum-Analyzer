@@ -2,20 +2,28 @@ juce_add_binary_data(BsaUiAssets
     SOURCES
         ui/assets/icons/cancel.svg
         ui/assets/icons/headphones.svg
+        ui/assets/icons/left.svg
         ui/assets/icons/power.svg
+        ui/assets/icons/reset.svg
+        ui/assets/icons/right.svg
+        ui/assets/icons/save.svg
         ui/assets/icons/settings.svg
         ui/assets/icons/snowflake.svg
         ui/assets/uikit/background/background.png
         ui/assets/uikit/background/background_2.png
         ui/assets/uikit/background/background_2_version.png
+        ui/assets/uikit/button/button_off.png
+        ui/assets/uikit/button/button_on.png
         ui/assets/uikit/decor_grid.png
+        ui/assets/uikit/logo.svg
         ui/assets/uikit/pad/pad_off.png
         ui/assets/uikit/pad/pad_freeze_on.png
         ui/assets/uikit/pad/pad_on.png
         ui/assets/uikit/screen.png
         ui/assets/uikit/screw.png
         ui/assets/uikit/switch/switch_down.png
-        ui/assets/uikit/switch/switch_up.png)
+        ui/assets/uikit/switch/switch_up.png
+        ui/assets/uikit/text_box.png)
 
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -50,11 +58,13 @@ target_sources(${PROJECT_NAME}
         display/analyzer/thread/AnalyzerDisplayWorker.cpp
         ui/theme/UiIcons.cpp
         ui/theme/UiRasterAssets.cpp
+        ui/widgets/RasterIconButton.cpp
         ui/widgets/PadButton.cpp
         ui/widgets/SectionDividerComponent.cpp
         ui/theme/UiTheme.cpp
         ui/editor/EditorBackgroundComponent.cpp
         ui/analyzer/layout/MainLayoutComponent.cpp
+        ui/analyzer/layout/PresetHeaderComponent.cpp
         ui/analyzer/plot/view/AnalyzerSectionComponent.cpp
         ui/analyzer/plot/view/AnalyzerPlotComponent.cpp
         ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.cpp

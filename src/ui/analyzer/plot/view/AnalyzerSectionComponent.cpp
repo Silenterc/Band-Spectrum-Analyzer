@@ -16,10 +16,12 @@ AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTr
     : rawTraceSource(rawTraceSourceToUse),
       snapshotSource(snapshotSourceToUse),
       theme(themeToUse),
+      presetHeaderComponent(themeToUse),
       analyzerPlotComponent(rawTraceSourceToUse, themeToUse),
       viewModel(themeToUse),
       hoverTooltipRenderer(themeToUse) {
     setOpaque(true);
+    addAndMakeVisible(presetHeaderComponent);
     analyzerPlotComponent.setListener(this);
     addAndMakeVisible(analyzerPlotComponent);
 
@@ -92,24 +94,6 @@ void AnalyzerSectionComponent::drawTopCornerScrews(juce::Graphics &g, const juce
     Ui::drawAssetWithin(g, screw, topRightBounds);
 }
 
-void AnalyzerSectionComponent::drawPlotChrome(juce::Graphics &g) const {
-    const auto &layout = viewModel.getLayout();
-    const auto &plotMetrics = theme.metrics.analyzerPlot;
-    juce::ColourGradient plotGradient(theme.plotBackground.brighter(plotMetrics.gradientTopBrightness),
-                                      layout.plotBounds.getCentreX(),
-                                      layout.plotBounds.getY(),
-                                      theme.plotBackground.darker(plotMetrics.gradientBottomDarkness),
-                                      layout.plotBounds.getCentreX(),
-                                      layout.plotBounds.getBottom(),
-                                      false);
-    plotGradient.addColour(plotMetrics.gradientMidPoint, theme.plotBackground);
-    g.setGradientFill(plotGradient);
-    g.fillRoundedRectangle(layout.plotFrameBounds, plotMetrics.frameCornerRadius);
-
-    g.setColour(theme.gridBorder);
-    g.drawRoundedRectangle(layout.plotFrameBounds, plotMetrics.frameCornerRadius, 1.0f);
-}
-
 void AnalyzerSectionComponent::rebuildLayout() {
     const auto bounds = getLocalBounds();
     if (bounds.isEmpty()) {
@@ -141,6 +125,7 @@ void AnalyzerSectionComponent::rebuildLayout() {
                            uiSnapshot.gridStepDb,
                            bounds.toFloat(),
                            layout.displayBounds.toFloat());
+    presetHeaderComponent.setBounds(layout.headerBounds);
     analyzerPlotComponent.setBounds(viewModel.getLayout().plotBounds.getSmallestIntegerContainer());
     analyzerPlotComponent.setLayout(viewModel.getLayout());
     rebuildCachedBackground();
@@ -169,7 +154,6 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
                        backgroundImage.getHeight());
 
     drawTopCornerScrews(graphics, bounds);
-    drawPlotChrome(graphics);
     drawAxisLabels(graphics);
 }
 
@@ -185,7 +169,16 @@ void AnalyzerSectionComponent::updateHoverPresentation() {
 
 AnalyzerSectionComponent::Layout AnalyzerSectionComponent::computeLayout() const {
     Layout layout;
-    const auto targetPlotBounds = getLocalBounds().reduced(theme.metrics.analyzerSection.plotInset);
+    const auto originalTargetPlotBounds = getLocalBounds().reduced(theme.metrics.analyzerSection.plotInset);
+    auto targetPlotBounds = originalTargetPlotBounds;
+    const auto& headerMetrics = theme.metrics.presetHeader;
+    layout.headerBounds = juce::Rectangle<int>(targetPlotBounds.getX(),
+                                               headerMetrics.topInset,
+                                               targetPlotBounds.getWidth(),
+                                               headerMetrics.height);
+    const auto plotTop = layout.headerBounds.getBottom() + headerMetrics.plotGap;
+    const auto topReduction = juce::jmax(0, plotTop - originalTargetPlotBounds.getY());
+    targetPlotBounds.removeFromTop(topReduction);
     const auto &plotMargins = theme.metrics.analyzerPlot;
     layout.displayBounds = juce::Rectangle<int>(juce::roundToInt(targetPlotBounds.getX() - plotMargins.plotMarginLeft),
                                                 juce::roundToInt(targetPlotBounds.getY() - plotMargins.plotMarginTop),

@@ -10,6 +10,20 @@ namespace {
         return image;
     }
 
+    const juce::Image &getButtonOff() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::button_off_png,
+                                                                  static_cast<size_t>(BinaryData::button_off_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image &getButtonOn() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::button_on_png,
+                                                                  static_cast<size_t>(BinaryData::button_on_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
     const juce::Image &getBackground2() {
         static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::background_2_png,
                                                                   static_cast<size_t>(BinaryData::background_2_pngSize));
@@ -66,6 +80,13 @@ namespace {
         return image;
     }
 
+    const juce::Image &getTextBox() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::text_box_png,
+                                                                  static_cast<size_t>(BinaryData::text_box_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
     const juce::Image &getSwitchDown() {
         static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::switch_down_png,
                                                                   static_cast<size_t>(BinaryData::switch_down_pngSize));
@@ -86,6 +107,10 @@ namespace Ui {
         switch (assetId) {
             case SharedRasterAssetId::background:
                 return getBackground();
+            case SharedRasterAssetId::buttonOff:
+                return getButtonOff();
+            case SharedRasterAssetId::buttonOn:
+                return getButtonOn();
             case SharedRasterAssetId::padOff:
                 return getPadOff();
             case SharedRasterAssetId::padOn:
@@ -96,6 +121,8 @@ namespace Ui {
                 return getScreen();
             case SharedRasterAssetId::screw:
                 return getScrew();
+            case SharedRasterAssetId::textBox:
+                return getTextBox();
         }
 
         jassertfalse;

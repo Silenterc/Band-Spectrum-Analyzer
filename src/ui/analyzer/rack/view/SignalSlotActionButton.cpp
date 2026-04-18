@@ -55,6 +55,11 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
     g.drawText(style.text, getLocalBounds(), juce::Justification::centred);
 }
 
+void SignalSlotActionButton::mouseDown(const juce::MouseEvent &event) {
+    juce::ignoreUnused(event);
+    armed = true;
+}
+
 void SignalSlotActionButton::mouseEnter(const juce::MouseEvent &) {
     hovered = true;
     repaint();
@@ -66,6 +71,9 @@ void SignalSlotActionButton::mouseExit(const juce::MouseEvent &) {
 }
 
 void SignalSlotActionButton::mouseUp(const juce::MouseEvent &event) {
-    if (!event.mouseWasDraggedSinceMouseDown() && onClick)
+    const auto shouldTriggerClick = armed && getLocalBounds().contains(event.getPosition());
+    armed = false;
+
+    if (shouldTriggerClick && onClick)
         onClick();
 }

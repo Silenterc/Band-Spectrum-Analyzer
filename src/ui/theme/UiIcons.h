@@ -6,7 +6,11 @@ namespace Ui {
     enum class IconId {
         cancel,
         headphones,
+        left,
         power,
+        reset,
+        right,
+        save,
         settings,
         snowflake,
     };

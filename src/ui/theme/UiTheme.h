@@ -51,15 +51,15 @@ namespace Ui {
         float plotMarginLeft = 56.0f;
         float plotMarginRight = 16.0f;
         float plotMarginTop = 16.0f;
-        float plotMarginBottom = 34.0f;
+        float plotMarginBottom = 26.0f;
         int interBandGapPixels = 1;
         float rmsLineThickness = 2.0f;
         float rmsLineWhiteness = 0.42f;
         float rmsLineAlpha = 0.98f;
         float rmsLineUnderlayAlpha = 0.82f;
         float rmsLineUnderlayExtraThickness = 1.6f;
-        float frameExpansion = 1.0f;
-        float frameCornerRadius = 8.0f;
+        float frameExpansion = 0.0f;
+        float frameCornerRadius = 0.0f;
         float gridLabelFontHeight = 12.0f;
         int gridLabelWidth = 48;
         int gridLabelHeight = 14;
@@ -214,8 +214,27 @@ namespace Ui {
         [[nodiscard]] EditorMetrics scaled(float factor) const;
     };
 
+    struct PresetHeaderMetrics {
+        int height = 40;
+        int topInset = 4;
+        int plotGap = 4;
+        int logoHeight = 32;
+        int logoLeftInset = 0;
+        int logoGap = 8;
+        int displayGap = 0;
+        int groupGap = 8;
+        int actionGap = 2;
+        float buttonScale = 1.0f;
+        float buttonIconScaleMultiplier = 1.0f;
+        float textBoxScale = 1.17f;
+        float labelFontHeight = 16.0f;
+
+        [[nodiscard]] PresetHeaderMetrics scaled(float factor) const;
+    };
+
     struct Metrics {
         EditorMetrics editor;
+        PresetHeaderMetrics presetHeader;
         PanelMetrics panel;
         MeterControlsMetrics meterControls;
         AnalyzerSectionMetrics analyzerSection;

@@ -226,6 +226,7 @@ TEST_CASE("Theme preserves current editor sizing and raster scale at 1x", "[ui][
 
     REQUIRE(theme.metrics.editor.initialWidth == 1000);
     REQUIRE(theme.metrics.editor.initialHeight == 600);
+    REQUIRE(theme.metrics.presetHeader.height == 40);
     REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(2.0f));
     REQUIRE(theme.metrics.analyzerSection.plotInset == 36);
     REQUIRE(theme.metrics.meterControls.padTextFontHeight == Catch::Approx(16.0f));
@@ -236,6 +237,7 @@ TEST_CASE("Theme scales dimensional UI metrics and logical raster size at 1.5x",
 
     REQUIRE(theme.metrics.editor.initialWidth == 1500);
     REQUIRE(theme.metrics.editor.initialHeight == 900);
+    REQUIRE(theme.metrics.presetHeader.height == 60);
     REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(4.0f / 3.0f));
     REQUIRE(theme.metrics.analyzerSection.plotInset == 54);
     REQUIRE(theme.metrics.analyzerPlot.gridLabelWidth == 72);
@@ -248,6 +250,7 @@ TEST_CASE("Theme doubles dimensional UI metrics and logical raster size at 2x", 
 
     REQUIRE(theme.metrics.editor.initialWidth == 2000);
     REQUIRE(theme.metrics.editor.initialHeight == 1200);
+    REQUIRE(theme.metrics.presetHeader.height == 80);
     REQUIRE(theme.metrics.assets.rasterScale == Catch::Approx(1.0f));
     REQUIRE(theme.metrics.analyzerSection.plotInset == 72);
     REQUIRE(theme.metrics.analyzerPlot.gridLabelWidth == 96);
