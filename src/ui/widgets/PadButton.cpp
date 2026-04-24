@@ -4,8 +4,11 @@
 #include "../theme/UiRasterAssets.h"
 
 PadButton::PadButton(const Ui::Theme& themeToUse, juce::String labelText)
-    : theme(themeToUse), label(std::move(labelText)) {
+    : juce::Button({}),
+      theme(themeToUse),
+      label(std::move(labelText)) {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    setTriggeredOnMouseDown(false);
 }
 
 int PadButton::getPreferredHeight(const int availableWidth) const {
@@ -18,7 +21,8 @@ bool PadButton::hitTest(const int x, const int y) {
     return (drawsPad ? padBounds : overlayIconBounds).contains(x, y);
 }
 
-void PadButton::paint(juce::Graphics& g) {
+void PadButton::paintButton(juce::Graphics& g, const bool isMouseOverButton, const bool isButtonDown) {
+    juce::ignoreUnused(isMouseOverButton, isButtonDown);
     const auto& padImage = active ? cachedOnImage : cachedOffImage;
     if (drawsPad && padImage.isValid())
         g.drawImageAt(padImage, padBounds.getX(), padBounds.getY());
@@ -130,23 +134,6 @@ void PadButton::setOverlayIcon(const OverlayIcon newOverlayIcon) {
 
     overlayIcon = newOverlayIcon;
     repaint(padBounds);
-}
-
-void PadButton::mouseDown(const juce::MouseEvent& event) {
-    juce::ignoreUnused(event);
-    armed = true;
-}
-
-void PadButton::mouseUp(const juce::MouseEvent& event) {
-    const auto shouldTriggerClick = armed && hitTest(event.x, event.y);
-    armed = false;
-
-    if (shouldTriggerClick && onClick)
-        onClick();
-}
-
-void PadButton::mouseExit(const juce::MouseEvent& event) {
-    juce::ignoreUnused(event);
 }
 
 const juce::Image& PadButton::getResolvedOnImage() const {

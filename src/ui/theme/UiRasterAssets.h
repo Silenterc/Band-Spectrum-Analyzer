@@ -42,4 +42,9 @@ namespace Ui {
     void drawAssetWithin(juce::Graphics &g,
                          const juce::Image &image,
                          const juce::Rectangle<int> &destinationBounds);
+
+    void drawAssetWithin(juce::Graphics& g,
+                         const juce::Image& image,
+                         const juce::Rectangle<int>& destinationBounds,
+                         const juce::Rectangle<int>& sourceBounds);
 }

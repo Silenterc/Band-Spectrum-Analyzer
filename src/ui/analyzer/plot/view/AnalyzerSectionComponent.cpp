@@ -12,11 +12,13 @@ namespace {
 
 AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSourceToUse,
                                                    AnalyzerUiSnapshotSource &snapshotSourceToUse,
+                                                   PresetUiSnapshotSource& presetUiSnapshotSourceToUse,
+                                                   PresetActions& presetActionsToUse,
                                                    const Ui::Theme &themeToUse)
     : rawTraceSource(rawTraceSourceToUse),
       snapshotSource(snapshotSourceToUse),
       theme(themeToUse),
-      presetHeaderComponent(themeToUse),
+      presetHeaderComponent(presetUiSnapshotSourceToUse, presetActionsToUse, themeToUse),
       analyzerPlotComponent(rawTraceSourceToUse, themeToUse),
       viewModel(themeToUse),
       hoverTooltipRenderer(themeToUse) {

@@ -3,8 +3,11 @@
 #include "ui/theme/UiRasterAssets.h"
 
 RasterIconButton::RasterIconButton(const Ui::Theme& themeToUse)
-    : theme(themeToUse) {
+    : juce::Button({}),
+      theme(themeToUse) {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    setTriggeredOnMouseDown(false);
+    setWantsKeyboardFocus(true);
 }
 
 int RasterIconButton::getPreferredSideLength() const {
@@ -49,13 +52,17 @@ void RasterIconButton::setIconScaleMultiplier(const float newScaleMultiplier) {
     repaint();
 }
 
-void RasterIconButton::paint(juce::Graphics& g) {
-    const auto& buttonImage = (active || pressed) ? cachedOnImage : cachedOffImage;
+void RasterIconButton::paintButton(juce::Graphics& g, const bool isMouseOverButton, const bool isButtonDown) {
+    juce::ignoreUnused(isMouseOverButton);
+    const auto& buttonImage = (active || isButtonDown) ? cachedOnImage : cachedOffImage;
+    const auto alpha = isEnabled() ? 1.0f : 0.45f;
+    g.setOpacity(alpha);
     if (buttonImage.isValid())
         g.drawImageAt(buttonImage, imageBounds.getX(), imageBounds.getY());
 
-    const auto iconColour = (active || pressed) ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
+    const auto iconColour = (active || isButtonDown) ? theme.hardwareMarkingDark : theme.hardwareMarkingLight;
     Ui::drawIcon(g, icon, iconBounds.toFloat(), iconColour);
+    g.setOpacity(1.0f);
 }
 
 void RasterIconButton::resized() {
@@ -67,36 +74,14 @@ void RasterIconButton::resized() {
     rebuildCachedImages();
 }
 
-void RasterIconButton::mouseDown(const juce::MouseEvent& event) {
-    juce::ignoreUnused(event);
+void RasterIconButton::buttonStateChanged() {
+    juce::Button::buttonStateChanged();
 
-    if (pressed)
-        return;
+    const auto isCurrentlyDown = isDown();
+    if (!wasDown && isCurrentlyDown && onPressed)
+        onPressed();
 
-    pressed = true;
-    repaint();
-}
-
-void RasterIconButton::mouseUp(const juce::MouseEvent& event) {
-    const auto shouldTriggerClick = !event.mouseWasDraggedSinceMouseDown();
-
-    if (pressed) {
-        pressed = false;
-        repaint();
-    }
-
-    if (shouldTriggerClick && onClick)
-        onClick();
-}
-
-void RasterIconButton::mouseExit(const juce::MouseEvent& event) {
-    juce::ignoreUnused(event);
-
-    if (!pressed)
-        return;
-
-    pressed = false;
-    repaint();
+    wasDown = isCurrentlyDown;
 }
 
 void RasterIconButton::rebuildCachedImages() {

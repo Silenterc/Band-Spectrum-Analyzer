@@ -16,6 +16,7 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/uikit/button/button_on.png
         ui/assets/uikit/decor_grid.png
         ui/assets/uikit/logo.svg
+        plugin/assets/presets/factory_default_preset.xml
         ui/assets/uikit/pad/pad_off.png
         ui/assets/uikit/pad/pad_freeze_on.png
         ui/assets/uikit/pad/pad_on.png
@@ -60,11 +61,20 @@ target_sources(${PROJECT_NAME}
         ui/theme/UiRasterAssets.cpp
         ui/widgets/RasterIconButton.cpp
         ui/widgets/PadButton.cpp
+        ui/widgets/PopupActionButton.cpp
         ui/widgets/SectionDividerComponent.cpp
         ui/theme/UiTheme.cpp
         ui/editor/EditorBackgroundComponent.cpp
         ui/analyzer/layout/MainLayoutComponent.cpp
         ui/analyzer/layout/PresetHeaderComponent.cpp
+        ui/analyzer/layout/PresetHeaderControlsComponent.cpp
+        ui/presets/PresetActionMessageFormatter.cpp
+        ui/presets/PresetBrowserPopupContent.cpp
+        ui/presets/PresetSelectorButton.cpp
+        ui/presets/PresetDeleteConfirmPopupContent.cpp
+        ui/presets/PresetListRowComponent.cpp
+        ui/presets/PresetPopupStatusComponent.cpp
+        ui/presets/PresetSavePopupContent.cpp
         ui/analyzer/plot/view/AnalyzerSectionComponent.cpp
         ui/analyzer/plot/view/AnalyzerPlotComponent.cpp
         ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.cpp
@@ -88,6 +98,12 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/plot/logic/MusicTheory.cpp
         ui/editor/PluginEditor.cpp
         plugin/parameters/ParameterAccess.cpp
+        plugin/presets/FactoryPresetRepository.cpp
+        plugin/presets/PluginStateSerializer.cpp
+        plugin/presets/PresetDocumentSerializer.cpp
+        plugin/presets/PresetSession.cpp
+        plugin/presets/PresetTypes.cpp
+        plugin/presets/UserPresetStore.cpp
         plugin/ProcessorChangeTracker.cpp
         plugin/SignalOutputMixer.cpp
         plugin/PluginProcessor.cpp

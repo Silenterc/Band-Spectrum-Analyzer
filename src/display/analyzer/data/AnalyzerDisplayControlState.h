@@ -11,6 +11,7 @@ struct AnalyzerDisplayControlState {
     Analyzer::MeterSettings meterSettings;
     float floorDb = Defaults::gridMinDb;
     bool globalFrozen = false;
+    std::array<Analyzer::SignalSlotConfiguration, Shared::maxSignalSlots> slotConfigurations{};
     std::array<bool, Shared::maxSignalSlots> slotFrozen{};
     // Contribution flags affect semantic state like hold ownership, not visual styling like order or opacity.
     std::array<bool, Shared::maxSignalSlots> slotContributing{};
@@ -25,6 +26,7 @@ struct AnalyzerDisplayControlState {
                && std::abs(meterSettings.holdDecayDbPerSecond - other.meterSettings.holdDecayDbPerSecond) <= 0.0001f
                && std::abs(floorDb - other.floorDb) <= 0.0001f
                && globalFrozen == other.globalFrozen
+               && slotConfigurations == other.slotConfigurations
                && slotFrozen == other.slotFrozen
                && slotContributing == other.slotContributing;
     }

@@ -185,6 +185,14 @@ TEST_CASE("AnalyzerDisplayControlState equality includes decay settings", "[ui][
     rhs = lhs;
     rhs.meterSettings.holdDecayDbPerSecond = lhs.meterSettings.holdDecayDbPerSecond + 1.0f;
     REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.slotConfigurations[0].enabled = true;
+    REQUIRE(lhs != rhs);
+
+    rhs = lhs;
+    rhs.slotConfigurations[0].mode = Analyzer::SignalMode::side;
+    REQUIRE(lhs != rhs);
 }
 
 TEST_CASE("Visible trace kinds are derived from enabled and visible slots", "[ui][selectors]") {

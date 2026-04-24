@@ -11,11 +11,17 @@
 #include "../ui/contracts/AnalyzerSettingsActions.h"
 #include "../ui/contracts/AnalyzerUiSnapshotSource.h"
 #include "../ui/contracts/EditorPresentationStateSource.h"
+#include "../ui/contracts/PresetActions.h"
+#include "../ui/contracts/PresetUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
 #include "ProcessorChangeTracker.h"
 #include "SignalOutputMixer.h"
 #include "parameters/ParameterAccess.h"
 #include "parameters/ParameterSchema.h"
+#include "presets/FactoryPresetRepository.h"
+#include "presets/PluginStateSerializer.h"
+#include "presets/PresetSession.h"
+#include "presets/UserPresetStore.h"
 #include "state/SignalSlotOrderState.h"
 
 //==============================================================================
@@ -24,6 +30,8 @@ class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
                                              public AnalyzerSettingsActions,
                                              public AnalyzerUiSnapshotSource,
                                              public EditorPresentationStateSource,
+                                             public PresetActions,
+                                             public PresetUiSnapshotSource,
                                              private ProcessorChangeTracker::Listener {
 public:
     //==============================================================================
@@ -94,6 +102,11 @@ public:
     void addEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
     void removeEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
 
+    // PresetUiSnapshotSource
+    PluginPresets::PresetUiSnapshot getPresetUiSnapshot() const override;
+    void addPresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
+    void removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
+
     // AnalyzerRawTraceSource
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
     AnalyzerPublishedTracesView readPublishedTraces() const override;
@@ -122,6 +135,16 @@ public:
     void setVisibleMinFrequencyHz(float frequencyHz) override;
     void setVisibleMaxFrequencyHz(float frequencyHz) override;
 
+    [[nodiscard]] PluginPresets::PresetActionResult loadPreset(const PluginPresets::PresetId& presetId) override;
+    [[nodiscard]] PluginPresets::PresetActionResult loadPreviousPreset() override;
+    [[nodiscard]] PluginPresets::PresetActionResult loadNextPreset() override;
+    [[nodiscard]] PluginPresets::PresetActionResult resetCurrentPreset() override;
+    [[nodiscard]] PluginPresets::PresetActionResult savePresetAs(const juce::String& name) override;
+    [[nodiscard]] PluginPresets::PresetActionResult overwritePreset(const PluginPresets::PresetId& presetId,
+                                                                    const juce::String& name) override;
+    [[nodiscard]] PluginPresets::PresetActionResult deletePreset(const PluginPresets::PresetId& presetId) override;
+    void refreshPresetCatalog() override;
+
 private:
     std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const;
     Shared::SignalSlotOrder getSignalSlotOrder() const;
@@ -137,21 +160,29 @@ private:
     Ui::UiScalePreset getUiScalePreset() const;
     void publishAnalyzerUiSnapshot();
     void publishEditorPresentationState();
+    void publishPresetUiSnapshot();
 
     Analyzer::Engine engine;
     SignalOutputMixer outputMixer;
     juce::AudioProcessorValueTreeState parameters;
     PluginParameters::Access parameterAccess;
     SignalSlotOrderState signalSlotOrderState;
+    PluginStateSerializer pluginStateSerializer;
+    UserPresetStore userPresetStore;
+    FactoryPresetRepository factoryPresetRepository;
+    PresetSession presetSession;
     std::unique_ptr<ProcessorChangeTracker> changeTracker;
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
     std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
     std::optional<Ui::EditorPresentationState> lastPublishedEditorPresentationState;
+    std::optional<PluginPresets::PresetUiSnapshot> lastPublishedPresetUiSnapshot;
     juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
     juce::ListenerList<EditorPresentationStateSource::Listener> editorPresentationStateListeners;
+    juce::ListenerList<PresetUiSnapshotSource::Listener> presetUiSnapshotListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void processorPresetStateChanged() override;
     void processorUiRefreshRequested() override;
 
     //==============================================================================

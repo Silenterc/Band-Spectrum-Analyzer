@@ -7,8 +7,7 @@
 #include "ui/theme/UiIcons.h"
 #include "ui/theme/UiTheme.h"
 
-class RasterIconButton final : public juce::Component,
-                               public juce::SettableTooltipClient {
+class RasterIconButton final : public juce::Button {
 public:
     explicit RasterIconButton(const Ui::Theme& themeToUse);
 
@@ -19,13 +18,11 @@ public:
     void setScaleMultiplier(float newScaleMultiplier);
     void setIconScaleMultiplier(float newScaleMultiplier);
 
-    std::function<void()> onClick;
+    std::function<void()> onPressed;
 
-    void paint(juce::Graphics& g) override;
+    void paintButton(juce::Graphics& g, bool isMouseOverButton, bool isButtonDown) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
+    void buttonStateChanged() override;
 
 private:
     void rebuildCachedImages();
@@ -33,13 +30,13 @@ private:
     const Ui::Theme& theme;
     Ui::IconId icon = Ui::IconId::left;
     bool active = false;
-    bool pressed = false;
     float scaleMultiplier = 1.0f;
     float iconScaleMultiplier = 1.0f;
     juce::Rectangle<int> imageBounds;
     juce::Rectangle<int> iconBounds;
     juce::Image cachedOffImage;
     juce::Image cachedOnImage;
+    bool wasDown = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RasterIconButton)
 };

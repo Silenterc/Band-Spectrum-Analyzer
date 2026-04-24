@@ -15,6 +15,7 @@ public:
     class Listener {
     public:
         virtual ~Listener() = default;
+        virtual void processorPresetStateChanged() = 0;
         virtual void processorUiRefreshRequested() = 0;
     };
 

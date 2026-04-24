@@ -6,8 +6,7 @@
 
 #include "../theme/UiTheme.h"
 
-class PadButton final : public juce::Component,
-                        public juce::SettableTooltipClient {
+class PadButton final : public juce::Button {
 public:
     enum class AssetStyle {
         standard,
@@ -26,7 +25,7 @@ public:
 
     int getPreferredHeight(int availableWidth) const;
     bool hitTest(int x, int y) override;
-    void paint(juce::Graphics& g) override;
+    void paintButton(juce::Graphics& g, bool isMouseOverButton, bool isButtonDown) override;
     void resized() override;
 
     void setActive(bool shouldBeActive);
@@ -38,21 +37,14 @@ public:
     void setLabel(juce::String newLabel);
     void setOverlayIcon(OverlayIcon newOverlayIcon);
 
-    std::function<void()> onClick;
-
 private:
     const juce::Image& getResolvedOnImage() const;
     juce::Rectangle<int> getTargetPadBounds(juce::Rectangle<int> availableBounds) const;
     void rebuildCachedPadImages();
 
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
-
     const Ui::Theme& theme;
     juce::String label;
     bool active = false;
-    bool armed = false;
     AssetStyle assetStyle = AssetStyle::standard;
     float scaleMultiplier = 1.0f;
     std::optional<juce::Colour> activeMarkingColourOverride;

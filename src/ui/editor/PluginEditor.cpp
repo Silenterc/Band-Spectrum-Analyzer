@@ -12,7 +12,7 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(Spect
       audioProcessor(processorToUse),
       theme(Ui::makeTheme(processorToUse.getEditorPresentationState().scale)),
       backgroundComponent(theme),
-      mainLayout(processorToUse, processorToUse, processorToUse, theme) {
+      mainLayout(processorToUse, processorToUse, processorToUse, processorToUse, processorToUse, theme) {
     setOpaque(true);
     addAndMakeVisible(backgroundComponent);
     addAndMakeVisible(mainLayout);

@@ -2,8 +2,7 @@
 #include "../ui/editor/PluginEditor.h"
 
 namespace {
-    // Temporary perf-tuning switch: ignore host/plugin state so new instances always use code defaults.
-    constexpr bool bypassStatePersistence = true;
+    constexpr auto selectedPresetIdProperty = "__selectedPresetId";
 
     std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> makeMixerSlotStates(
         const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &uiSlots) {
@@ -35,7 +34,14 @@ SpectrumAnalyzerAudioProcessor::SpectrumAnalyzerAudioProcessor()
           // TODO: IMPLEMENT UNDO
     ),
       parameters(*this, nullptr, "SpecParams", createParameterLayout()),
-      parameterAccess(parameters) {
+      parameterAccess(parameters),
+      userPresetStore(UserPresetStore::defaultPresetDirectory()),
+      factoryPresetRepository(pluginStateSerializer.captureState(parameters, signalSlotOrderState)),
+      presetSession(parameters,
+                    signalSlotOrderState,
+                    pluginStateSerializer,
+                    factoryPresetRepository,
+                    userPresetStore) {
     parameterAccess.cache();
     changeTracker = std::make_unique<ProcessorChangeTracker>(
         parameters,
@@ -211,40 +217,47 @@ juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
 
 //==============================================================================
 void SpectrumAnalyzerAudioProcessor::getStateInformation(juce::MemoryBlock &destData) {
-    if constexpr (bypassStatePersistence) {
-        destData.reset();
-        return;
-    }
+    auto snapshot = pluginStateSerializer.captureState(parameters, signalSlotOrderState);
+    if (const auto selectedPresetId = presetSession.getSelectedPresetId(); selectedPresetId.has_value())
+        snapshot.state.setProperty(selectedPresetIdProperty, *selectedPresetId, nullptr);
+    else
+        snapshot.state.removeProperty(juce::Identifier(selectedPresetIdProperty), nullptr);
 
-    auto state = parameters.copyState();
-    signalSlotOrderState.writeTo(state);
-
-    if (const auto stateXml = state.createXml())
+    if (const auto stateXml = snapshot.state.createXml())
         copyXmlToBinary(*stateXml, destData);
 }
 
 void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int sizeInBytes) {
-    if constexpr (bypassStatePersistence) {
-        juce::ignoreUnused(data, sizeInBytes);
-        return;
-    }
-
     const auto stateXml = getXmlFromBinary(data, sizeInBytes);
     if (stateXml == nullptr)
         return;
 
-    const auto state = juce::ValueTree::fromXml(*stateXml);
-    if (!state.isValid())
+    PluginPresets::PluginStateSnapshot snapshot;
+    snapshot.state = juce::ValueTree::fromXml(*stateXml);
+    if (!snapshot.isValid())
         return;
 
-    signalSlotOrderState.readFrom(state);
-    parameters.replaceState(state);
-    parameterAccess.cache();
+    std::optional<PluginPresets::PresetId> restoredSelectedPresetId;
+    if (snapshot.state.hasProperty(selectedPresetIdProperty)) {
+        const auto presetId = snapshot.state.getProperty(selectedPresetIdProperty).toString();
+        if (presetId.isNotEmpty())
+            restoredSelectedPresetId = presetId;
 
+        snapshot.state.removeProperty(juce::Identifier(selectedPresetIdProperty), nullptr);
+    }
+
+    if (!pluginStateSerializer.applyState(snapshot, parameters, signalSlotOrderState))
+        return;
+
+    presetSession.markCurrentStateDirty();
+    parameterAccess.cache();
     previousEngineParameters = parameterAccess.readEngineState();
     if (previousEngineParameters.has_value())
         engine.setParameters(*previousEngineParameters);
+
+    presetSession.restoreSelection(restoredSelectedPresetId);
     changeTracker->clearEngineParametersDirty();
+    changeTracker->requestUiRefresh();
 }
 
 std::shared_ptr<const std::vector<Analyzer::BandInfo>> SpectrumAnalyzerAudioProcessor::getBandInfo() const {
@@ -288,6 +301,18 @@ void SpectrumAnalyzerAudioProcessor::addEditorPresentationStateListener(EditorPr
 void SpectrumAnalyzerAudioProcessor::removeEditorPresentationStateListener(
     EditorPresentationStateSource::Listener &listener) {
     editorPresentationStateListeners.remove(&listener);
+}
+
+PluginPresets::PresetUiSnapshot SpectrumAnalyzerAudioProcessor::getPresetUiSnapshot() const {
+    return presetSession.getSnapshot();
+}
+
+void SpectrumAnalyzerAudioProcessor::addPresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) {
+    presetUiSnapshotListeners.add(&listener);
+}
+
+void SpectrumAnalyzerAudioProcessor::removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) {
+    presetUiSnapshotListeners.remove(&listener);
 }
 
 AnalyzerPublishedTracesView SpectrumAnalyzerAudioProcessor::readPublishedTraces() const {
@@ -451,9 +476,82 @@ void SpectrumAnalyzerAudioProcessor::setVisibleMaxFrequencyHz(const float freque
     changeTracker->requestUiRefresh();
 }
 
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreset(const PluginPresets::PresetId& presetId) {
+    const auto result = presetSession.loadPreset(presetId);
+    if (!result.succeeded) {
+        publishPresetUiSnapshot();
+        return result;
+    }
+
+    changeTracker->requestUiRefresh();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreviousPreset() {
+    const auto result = presetSession.loadPreviousPreset();
+    if (!result.succeeded) {
+        publishPresetUiSnapshot();
+        return result;
+    }
+
+    changeTracker->requestUiRefresh();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadNextPreset() {
+    const auto result = presetSession.loadNextPreset();
+    if (!result.succeeded) {
+        publishPresetUiSnapshot();
+        return result;
+    }
+
+    changeTracker->requestUiRefresh();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::resetCurrentPreset() {
+    const auto result = presetSession.resetCurrentPreset();
+    if (!result.succeeded) {
+        publishPresetUiSnapshot();
+        return result;
+    }
+
+    changeTracker->requestUiRefresh();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::savePresetAs(const juce::String& name) {
+    const auto result = presetSession.savePresetAs(name);
+    publishPresetUiSnapshot();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::overwritePreset(const PluginPresets::PresetId& presetId,
+                                                                                  const juce::String& name) {
+    const auto result = presetSession.overwritePreset(presetId, name);
+    publishPresetUiSnapshot();
+    return result;
+}
+
+PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::deletePreset(const PluginPresets::PresetId& presetId) {
+    const auto result = presetSession.deletePreset(presetId);
+    publishPresetUiSnapshot();
+    return result;
+}
+
+void SpectrumAnalyzerAudioProcessor::refreshPresetCatalog() {
+    presetSession.refreshCatalog();
+    publishPresetUiSnapshot();
+}
+
+void SpectrumAnalyzerAudioProcessor::processorPresetStateChanged() {
+    presetSession.markCurrentStateDirty();
+}
+
 void SpectrumAnalyzerAudioProcessor::processorUiRefreshRequested() {
     publishAnalyzerUiSnapshot();
     publishEditorPresentationState();
+    publishPresetUiSnapshot();
 }
 
 void SpectrumAnalyzerAudioProcessor::publishAnalyzerUiSnapshot() {
@@ -475,6 +573,17 @@ void SpectrumAnalyzerAudioProcessor::publishEditorPresentationState() {
     lastPublishedEditorPresentationState = state;
     editorPresentationStateListeners.call([&state](EditorPresentationStateSource::Listener &listener) {
         listener.editorPresentationStateChanged(state);
+    });
+}
+
+void SpectrumAnalyzerAudioProcessor::publishPresetUiSnapshot() {
+    const auto snapshot = getPresetUiSnapshot();
+    if (lastPublishedPresetUiSnapshot.has_value() && *lastPublishedPresetUiSnapshot == snapshot)
+        return;
+
+    lastPublishedPresetUiSnapshot = snapshot;
+    presetUiSnapshotListeners.call([&snapshot](PresetUiSnapshotSource::Listener& listener) {
+        listener.presetUiSnapshotChanged(snapshot);
     });
 }
 

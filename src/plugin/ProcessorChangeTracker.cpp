@@ -64,17 +64,20 @@ void ProcessorChangeTracker::detach() {
 void ProcessorChangeTracker::parameterChanged(const juce::String &parameterID, const float newValue) {
     juce::ignoreUnused(parameterID, newValue);
     engineParametersDirty.store(true, std::memory_order_release);
+    listener.processorPresetStateChanged();
 }
 
 void ProcessorChangeTracker::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                                       const juce::Identifier &property) {
     juce::ignoreUnused(treeWhosePropertyHasChanged, property);
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 
 void ProcessorChangeTracker::valueTreeChildAdded(juce::ValueTree &parentTree,
                                                  juce::ValueTree &childWhichHasBeenAdded) {
     juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 
@@ -82,6 +85,7 @@ void ProcessorChangeTracker::valueTreeChildRemoved(juce::ValueTree &parentTree,
                                                    juce::ValueTree &childWhichHasBeenRemoved,
                                                    const int indexFromWhichChildWasRemoved) {
     juce::ignoreUnused(parentTree, childWhichHasBeenRemoved, indexFromWhichChildWasRemoved);
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 
@@ -89,15 +93,18 @@ void ProcessorChangeTracker::valueTreeChildOrderChanged(juce::ValueTree &parentT
                                                         const int oldIndex,
                                                         const int newIndex) {
     juce::ignoreUnused(parentTreeWhoseChildrenHaveMoved, oldIndex, newIndex);
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 
 void ProcessorChangeTracker::valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) {
     juce::ignoreUnused(treeWhoseParentHasChanged);
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 
 void ProcessorChangeTracker::signalSlotOrderChanged() {
+    listener.processorPresetStateChanged();
     requestUiRefresh();
 }
 

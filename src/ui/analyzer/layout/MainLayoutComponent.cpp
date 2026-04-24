@@ -2,10 +2,16 @@
 
 MainLayoutComponent::MainLayoutComponent(AnalyzerRawTraceSource& rawTraceSourceToUse,
                                          AnalyzerUiSnapshotSource& snapshotSourceToUse,
+                                         PresetUiSnapshotSource& presetUiSnapshotSourceToUse,
                                          AnalyzerSettingsActions& settingsActionsToUse,
+                                         PresetActions& presetActionsToUse,
                                          const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      analyzerSectionComponent(rawTraceSourceToUse, snapshotSourceToUse, themeToUse),
+      analyzerSectionComponent(rawTraceSourceToUse,
+                               snapshotSourceToUse,
+                               presetUiSnapshotSourceToUse,
+                               presetActionsToUse,
+                               themeToUse),
       signalRackComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
       meterControlsComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
       verticalSectionDivider(themeToUse, SectionDividerComponent::Orientation::vertical),

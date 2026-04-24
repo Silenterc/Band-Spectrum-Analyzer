@@ -1,5 +1,12 @@
 #include "display/analyzer/thread/AnalyzerDisplayWorker.h"
 
+namespace {
+    const std::vector<Analyzer::RawTrace>& emptyRawTraces() {
+        static const std::vector<Analyzer::RawTrace> traces;
+        return traces;
+    }
+}
+
 AnalyzerDisplayWorker::AnalyzerDisplayWorker(AnalyzerRawTraceSource &rawTraceSourceToUse,
                                              Listener &listenerToUse)
     : juce::Thread("AnalyzerDisplayWorker"),
@@ -96,17 +103,22 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
 
     const auto nextBandInfo = rawTraceSource.getBandInfo();
     const auto bandLayoutChanged = currentBandInfo != nextBandInfo;
-    if (bandLayoutChanged) {
+    const auto slotConfigurationChanged = previousControlState.slotConfigurations != currentControlState.slotConfigurations;
+    if (bandLayoutChanged || slotConfigurationChanged) {
         currentBandInfo = nextBandInfo;
         resetDisplayModels();
     }
     displayFrameModel.syncControlState(previousControlState, currentControlState);
 
     const auto tracesView = rawTraceSource.readPublishedTraces();
+    const auto shouldSuppressPendingTraceUpdate = bandLayoutChanged || slotConfigurationChanged;
+    const auto& tracesToUse = shouldSuppressPendingTraceUpdate ? emptyRawTraces() : tracesView.getTraces();
+    const auto hasTraceUpdate = tracesView.hasUpdate && !shouldSuppressPendingTraceUpdate;
     const auto shouldProcessAnalyzer = rawTraceSource.shouldProcessAnalyzer();
     const auto shouldTick = shouldForceRefresh
                             || bandLayoutChanged
-                            || tracesView.hasUpdate
+                            || slotConfigurationChanged
+                            || hasTraceUpdate
                             || shouldProcessAnalyzer
                             || !meter.isSettledAtFloor(currentControlState.floorDb)
                             || !globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
@@ -115,13 +127,13 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
                      && meter.isSettledAtFloor(currentControlState.floorDb)
                      && globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
 
-    if (!shouldTick && !bandLayoutChanged)
+    if (!shouldTick && !bandLayoutChanged && !slotConfigurationChanged)
         return;
 
     meter.tick(currentBandInfo,
-               tracesView.getTraces(),
-               tracesView.hasUpdate,
-               !shouldProcessAnalyzer && !tracesView.hasUpdate,
+               tracesToUse,
+               hasTraceUpdate,
+               !shouldProcessAnalyzer && !hasTraceUpdate,
                tracesView.hopDurationSeconds,
                currentControlState.meterSettings,
                currentControlState.floorDb,

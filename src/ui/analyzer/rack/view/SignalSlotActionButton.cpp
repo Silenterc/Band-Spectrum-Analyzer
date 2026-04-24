@@ -3,8 +3,10 @@
 #include "ui/theme/UiButtonDrawing.h"
 
 SignalSlotActionButton::SignalSlotActionButton(const Ui::Theme &themeToUse)
-    : theme(themeToUse) {
+    : juce::Button({}),
+      theme(themeToUse) {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    setTriggeredOnMouseDown(false);
 }
 
 void SignalSlotActionButton::setStyle(const Style &styleToUse) {
@@ -12,10 +14,11 @@ void SignalSlotActionButton::setStyle(const Style &styleToUse) {
     repaint();
 }
 
-void SignalSlotActionButton::paint(juce::Graphics &g) {
+void SignalSlotActionButton::paintButton(juce::Graphics &g, const bool isMouseOverButton, const bool isButtonDown) {
+    juce::ignoreUnused(isButtonDown);
     const auto &slotMetrics = theme.metrics.slot;
     const auto bounds = getLocalBounds().toFloat();
-    const auto fill = hovered ? style.hoverFill : style.fill;
+    const auto fill = isMouseOverButton ? style.hoverFill : style.fill;
 
     if (style.content == Content::cancel) {
         if (style.drawsBackground) {
@@ -53,27 +56,4 @@ void SignalSlotActionButton::paint(juce::Graphics &g) {
     g.setColour(style.foreground);
     g.setFont(style.fontHeight);
     g.drawText(style.text, getLocalBounds(), juce::Justification::centred);
-}
-
-void SignalSlotActionButton::mouseDown(const juce::MouseEvent &event) {
-    juce::ignoreUnused(event);
-    armed = true;
-}
-
-void SignalSlotActionButton::mouseEnter(const juce::MouseEvent &) {
-    hovered = true;
-    repaint();
-}
-
-void SignalSlotActionButton::mouseExit(const juce::MouseEvent &) {
-    hovered = false;
-    repaint();
-}
-
-void SignalSlotActionButton::mouseUp(const juce::MouseEvent &event) {
-    const auto shouldTriggerClick = armed && getLocalBounds().contains(event.getPosition());
-    armed = false;
-
-    if (shouldTriggerClick && onClick)
-        onClick();
 }

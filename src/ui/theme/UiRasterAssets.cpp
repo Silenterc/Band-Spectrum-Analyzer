@@ -184,14 +184,24 @@ namespace Ui {
     void drawAssetWithin(juce::Graphics &g,
                          const juce::Image &image,
                          const juce::Rectangle<int> &destinationBounds) {
+        drawAssetWithin(g,
+                        image,
+                        destinationBounds,
+                        {0, 0, image.getWidth(), image.getHeight()});
+    }
+
+    void drawAssetWithin(juce::Graphics& g,
+                         const juce::Image& image,
+                         const juce::Rectangle<int>& destinationBounds,
+                         const juce::Rectangle<int>& sourceBounds) {
         g.drawImage(image,
                     destinationBounds.getX(),
                     destinationBounds.getY(),
                     destinationBounds.getWidth(),
                     destinationBounds.getHeight(),
-                    0,
-                    0,
-                    image.getWidth(),
-                    image.getHeight());
+                    sourceBounds.getX(),
+                    sourceBounds.getY(),
+                    sourceBounds.getWidth(),
+                    sourceBounds.getHeight());
     }
 }

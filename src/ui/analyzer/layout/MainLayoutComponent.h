@@ -5,6 +5,8 @@
 #include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
 #include "ui/contracts/AnalyzerSettingsActions.h"
 #include "ui/contracts/AnalyzerUiSnapshotSource.h"
+#include "ui/contracts/PresetActions.h"
+#include "ui/contracts/PresetUiSnapshotSource.h"
 #include "ui/widgets/SectionDividerComponent.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/analyzer/plot/view/AnalyzerSectionComponent.h"
@@ -15,7 +17,9 @@ class MainLayoutComponent final : public juce::Component {
 public:
     MainLayoutComponent(AnalyzerRawTraceSource& rawTraceSource,
                         AnalyzerUiSnapshotSource& snapshotSource,
+                        PresetUiSnapshotSource& presetUiSnapshotSource,
                         AnalyzerSettingsActions& settingsActions,
+                        PresetActions& presetActions,
                         const Ui::Theme& theme);
     ~MainLayoutComponent() override = default;
 

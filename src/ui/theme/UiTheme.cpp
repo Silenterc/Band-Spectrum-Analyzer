@@ -148,7 +148,16 @@ namespace Ui {
         scaledMetrics.colourGap = scaleFloat(colourGap, factor);
         scaledMetrics.shellCornerRadius = scaleFloat(shellCornerRadius, factor);
         scaledMetrics.rowCornerRadius = scaleFloat(rowCornerRadius, factor);
+        scaledMetrics.rowOutlineInset = scaleFloat(rowOutlineInset, factor);
+        scaledMetrics.rowOutlineThickness = scaleFloat(rowOutlineThickness, factor);
         scaledMetrics.rowTextFontHeight = scaleFloat(rowTextFontHeight, factor);
+        scaledMetrics.buttonPrimaryFillBrightness = scaleFloat(buttonPrimaryFillBrightness, factor);
+        scaledMetrics.buttonSecondaryFillBrightness = scaleFloat(buttonSecondaryFillBrightness, factor);
+        scaledMetrics.buttonHoverBrightness = scaleFloat(buttonHoverBrightness, factor);
+        scaledMetrics.buttonPressedDarkness = scaleFloat(buttonPressedDarkness, factor);
+        scaledMetrics.buttonDisabledFillAlpha = scaleFloat(buttonDisabledFillAlpha, factor);
+        scaledMetrics.buttonSecondaryTextBrightness = scaleFloat(buttonSecondaryTextBrightness, factor);
+        scaledMetrics.buttonDisabledTextOpacity = scaleFloat(buttonDisabledTextOpacity, factor);
         scaledMetrics.swatchInset = scaleFloat(swatchInset, factor);
         scaledMetrics.swatchHoverInset = scaleFloat(swatchHoverInset, factor);
         scaledMetrics.swatchSelectedOutlineThickness = scaleFloat(swatchSelectedOutlineThickness, factor);
@@ -196,6 +205,42 @@ namespace Ui {
         scaledMetrics.groupGap = scaleInt(groupGap, factor);
         scaledMetrics.actionGap = scaleInt(actionGap, factor);
         scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        scaledMetrics.selectorFocusOutlineInset = scaleFloat(selectorFocusOutlineInset, factor);
+        scaledMetrics.selectorFocusCornerRadius = scaleFloat(selectorFocusCornerRadius, factor);
+        scaledMetrics.selectorFocusOutlineThickness = scaleFloat(selectorFocusOutlineThickness, factor);
+        return scaledMetrics;
+    }
+
+    PresetPopupMetrics PresetPopupMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.browserWidth = scaleInt(browserWidth, factor);
+        scaledMetrics.maxVisibleRows = scaleInt(maxVisibleRows, factor);
+        scaledMetrics.deleteIconSize = scaleInt(deleteIconSize, factor);
+        scaledMetrics.deleteIconInset = scaleInt(deleteIconInset, factor);
+        scaledMetrics.savePopupWidth = scaleInt(savePopupWidth, factor);
+        scaledMetrics.saveEditorHeight = scaleInt(saveEditorHeight, factor);
+        scaledMetrics.saveEditorTextIndentX = scaleInt(saveEditorTextIndentX, factor);
+        scaledMetrics.saveEditorTextIndentTop = scaleInt(saveEditorTextIndentTop, factor);
+        scaledMetrics.saveButtonHeight = scaleInt(saveButtonHeight, factor);
+        scaledMetrics.saveButtonWidth = scaleInt(saveButtonWidth, factor);
+        scaledMetrics.saveButtonGap = scaleInt(saveButtonGap, factor);
+        scaledMetrics.confirmPopupWidth = scaleInt(confirmPopupWidth, factor);
+        scaledMetrics.confirmPopupHeight = scaleInt(confirmPopupHeight, factor);
+        scaledMetrics.browserRowTextInset = scaleInt(browserRowTextInset, factor);
+        scaledMetrics.titleFontHeight = scaleFloat(titleFontHeight, factor);
+        scaledMetrics.saveTitleBrightness = scaleFloat(saveTitleBrightness, factor);
+        scaledMetrics.confirmTitleBrightness = scaleFloat(confirmTitleBrightness, factor);
+        scaledMetrics.editorOutlineAlpha = scaleFloat(editorOutlineAlpha, factor);
+        scaledMetrics.editorFocusOutlineAlpha = scaleFloat(editorFocusOutlineAlpha, factor);
+        scaledMetrics.currentRowOutlineAlpha = scaleFloat(currentRowOutlineAlpha, factor);
+        scaledMetrics.browserRowFillBrightness = scaleFloat(browserRowFillBrightness, factor);
+        scaledMetrics.factoryPresetTextBrightness = scaleFloat(factoryPresetTextBrightness, factor);
+        scaledMetrics.deleteIconIdleAlpha = scaleFloat(deleteIconIdleAlpha, factor);
+        scaledMetrics.titleTopGap = scaleInt(titleTopGap, factor);
+        scaledMetrics.titleBottomGap = scaleInt(titleBottomGap, factor);
+        scaledMetrics.statusTopGap = scaleInt(statusTopGap, factor);
+        scaledMetrics.statusMinHeight = scaleInt(statusMinHeight, factor);
+        scaledMetrics.statusFontHeight = scaleFloat(statusFontHeight, factor);
         return scaledMetrics;
     }
 
@@ -203,6 +248,7 @@ namespace Ui {
         auto scaledMetrics = *this;
         scaledMetrics.editor = editor.scaled(factor);
         scaledMetrics.presetHeader = presetHeader.scaled(factor);
+        scaledMetrics.presetPopup = presetPopup.scaled(factor);
         scaledMetrics.panel = panel.scaled(factor);
         scaledMetrics.meterControls = meterControls.scaled(factor);
         scaledMetrics.analyzerSection = analyzerSection.scaled(factor);
@@ -236,6 +282,9 @@ namespace Ui {
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
         theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(58, 72, 82);
+        theme.textSelectionFill = juce::Colour::fromRGB(74, 132, 255);
+        theme.textSelectionText = juce::Colour::fromRGB(250, 248, 244);
+        theme.presetPopupStatusText = juce::Colour::fromRGB(214, 180, 144);
         theme.sectionDividerShadow = juce::Colour::fromRGBA(18, 15, 13, 205);
         theme.sectionDividerHighlight = juce::Colour::fromFloatRGBA(0.39f, 0.35f, 0.31f, 0.76f);
         theme.metrics = theme.metrics.scaled(scaleFactorForPreset(scalePreset));

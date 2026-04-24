@@ -6,8 +6,7 @@
 
 #include "ui/theme/UiTheme.h"
 
-class SignalSlotActionButton final : public juce::Component,
-                                     public juce::SettableTooltipClient {
+class SignalSlotActionButton final : public juce::Button {
 public:
     enum class Content {
         text,
@@ -30,17 +29,9 @@ public:
 
     void setStyle(const Style &styleToUse);
 
-    std::function<void()> onClick;
-
-    void paint(juce::Graphics &g) override;
-    void mouseDown(const juce::MouseEvent &event) override;
-    void mouseEnter(const juce::MouseEvent &) override;
-    void mouseExit(const juce::MouseEvent &) override;
-    void mouseUp(const juce::MouseEvent &event) override;
+    void paintButton(juce::Graphics &g, bool isMouseOverButton, bool isButtonDown) override;
 
 private:
     const Ui::Theme &theme;
     Style style;
-    bool armed = false;
-    bool hovered = false;
 };

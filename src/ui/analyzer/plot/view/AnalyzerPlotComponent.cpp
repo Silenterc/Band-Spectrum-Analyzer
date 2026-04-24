@@ -265,6 +265,7 @@ AnalyzerDisplayControlState AnalyzerPlotComponent::makeDisplayControlState(const
 
     for (size_t slotIndex = 0; slotIndex < snapshot.signalSlots.size(); ++slotIndex) {
         const auto &slot = snapshot.signalSlots[slotIndex];
+        controlState.slotConfigurations[slotIndex] = slot.configuration;
         controlState.slotFrozen[slotIndex] = slot.configuration.enabled && slot.frozen;
         controlState.slotContributing[slotIndex] = slot.configuration.enabled && slot.visible;
     }

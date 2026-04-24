@@ -168,8 +168,17 @@ namespace Ui {
         float shellBorderAlpha = 0.45f;
         float rowCornerRadius = 4.0f;
         float rowOutlineAlpha = 0.35f;
+        float rowOutlineInset = 0.5f;
+        float rowOutlineThickness = 1.0f;
         float rowDisabledAlpha = 0.45f;
         float rowTextFontHeight = 14.0f;
+        float buttonPrimaryFillBrightness = 0.18f;
+        float buttonSecondaryFillBrightness = 0.92f;
+        float buttonHoverBrightness = 0.08f;
+        float buttonPressedDarkness = 0.12f;
+        float buttonDisabledFillAlpha = 0.45f;
+        float buttonSecondaryTextBrightness = 0.15f;
+        float buttonDisabledTextOpacity = 0.5f;
         float swatchInset = 4.0f;
         float swatchHoverInset = 2.0f;
         float swatchHoverAlpha = 0.12f;
@@ -218,7 +227,7 @@ namespace Ui {
         int height = 40;
         int topInset = 4;
         int plotGap = 4;
-        int logoHeight = 32;
+        int logoHeight = 24;
         int logoLeftInset = 0;
         int logoGap = 8;
         int displayGap = 0;
@@ -228,13 +237,51 @@ namespace Ui {
         float buttonIconScaleMultiplier = 1.0f;
         float textBoxScale = 1.17f;
         float labelFontHeight = 16.0f;
+        float selectorFocusOutlineAlpha = 0.9f;
+        float selectorFocusOutlineInset = 0.5f;
+        float selectorFocusCornerRadius = 6.0f;
+        float selectorFocusOutlineThickness = 1.0f;
 
         [[nodiscard]] PresetHeaderMetrics scaled(float factor) const;
+    };
+
+    struct PresetPopupMetrics {
+        int browserWidth = 228;
+        int maxVisibleRows = 6;
+        int deleteIconSize = 12;
+        int deleteIconInset = 8;
+        int savePopupWidth = 232;
+        int saveEditorHeight = 28;
+        int saveEditorTextIndentX = 6;
+        int saveEditorTextIndentTop = 4;
+        int saveButtonHeight = 22;
+        int saveButtonWidth = 74;
+        int saveButtonGap = 6;
+        int confirmPopupWidth = 156;
+        int confirmPopupHeight = 58;
+        int browserRowTextInset = 10;
+        float titleFontHeight = 15.0f;
+        float saveTitleBrightness = 0.16f;
+        float confirmTitleBrightness = 0.18f;
+        float editorOutlineAlpha = 0.45f;
+        float editorFocusOutlineAlpha = 0.65f;
+        float currentRowOutlineAlpha = 0.95f;
+        float browserRowFillBrightness = 0.94f;
+        float factoryPresetTextBrightness = 0.12f;
+        float deleteIconIdleAlpha = 0.72f;
+        int titleTopGap = 6;
+        int titleBottomGap = 4;
+        int statusTopGap = 6;
+        int statusMinHeight = 18;
+        float statusFontHeight = 13.0f;
+
+        [[nodiscard]] PresetPopupMetrics scaled(float factor) const;
     };
 
     struct Metrics {
         EditorMetrics editor;
         PresetHeaderMetrics presetHeader;
+        PresetPopupMetrics presetPopup;
         PanelMetrics panel;
         MeterControlsMetrics meterControls;
         AnalyzerSectionMetrics analyzerSection;
@@ -268,6 +315,9 @@ namespace Ui {
         juce::Colour hardwareMarkingLight;
         juce::Colour hardwareMarkingDark;
         juce::Colour hardwareMarkingCoolDark;
+        juce::Colour textSelectionFill;
+        juce::Colour textSelectionText;
+        juce::Colour presetPopupStatusText;
         juce::Colour sectionDividerShadow;
         juce::Colour sectionDividerHighlight;
         Metrics metrics;

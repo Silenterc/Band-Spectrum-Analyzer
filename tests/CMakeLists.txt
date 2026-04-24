@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
+    plugin/PresetSessionTests.cpp
     plugin/SignalOutputMixerTests.cpp
     ui/AnalyzerUiModelTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
@@ -24,6 +25,12 @@ add_executable(band-spectrum-analyzer-tests
     ../src/display/analyzer/logic/AnalyzerMeter.cpp
     ../src/plugin/SignalOutputMixer.cpp
     ../src/plugin/parameters/ParameterAccess.cpp
+    ../src/plugin/presets/FactoryPresetRepository.cpp
+    ../src/plugin/presets/PluginStateSerializer.cpp
+    ../src/plugin/presets/PresetDocumentSerializer.cpp
+    ../src/plugin/presets/PresetSession.cpp
+    ../src/plugin/presets/PresetTypes.cpp
+    ../src/plugin/presets/UserPresetStore.cpp
     ../src/ui/theme/UiTheme.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerGeometry.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerHoverModel.cpp
@@ -46,6 +53,7 @@ target_compile_definitions(band-spectrum-analyzer-tests
 
 target_link_libraries(band-spectrum-analyzer-tests
     PRIVATE
+        BsaUiAssets
         Catch2::Catch2WithMain
         juce::juce_audio_processors
         juce::juce_dsp

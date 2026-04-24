@@ -8,6 +8,8 @@
 
 #include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
 #include "ui/contracts/AnalyzerUiSnapshotSource.h"
+#include "ui/contracts/PresetActions.h"
+#include "ui/contracts/PresetUiSnapshotSource.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/analyzer/plot/data/AnalyzerViewState.h"
 #include "ui/analyzer/layout/PresetHeaderComponent.h"
@@ -21,6 +23,8 @@ class AnalyzerSectionComponent final : public juce::Component,
 public:
     AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSource,
                              AnalyzerUiSnapshotSource &snapshotSource,
+                             PresetUiSnapshotSource& presetUiSnapshotSource,
+                             PresetActions& presetActions,
                              const Ui::Theme &theme);
     ~AnalyzerSectionComponent() override;
 
