@@ -6,9 +6,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "dsp/core/AnalyzerData.h"
-#include "ui/analyzer/plot/data/AnalyzerSectionLayout.h"
+#include "ui/analyzer/plot/state/AnalyzerSectionLayout.h"
 #include "ui/theme/UiTheme.h"
-#include "ui/analyzer/plot/data/AnalyzerViewState.h"
+#include "ui/analyzer/plot/state/AnalyzerViewState.h"
 #include "ui/analyzer/plot/logic/AnalyzerGeometry.h"
 #include "ui/analyzer/plot/logic/AnalyzerHoverModel.h"
 #include "ui/analyzer/plot/logic/FrequencyFormatter.h"

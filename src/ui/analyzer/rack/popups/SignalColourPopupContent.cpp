@@ -51,15 +51,19 @@ namespace {
 
 SignalColourPopupContent::SignalColourPopupContent(const Ui::Theme &themeToUse,
                                                    std::function<void(int)> onSelectToUse,
-                                                   std::function<void()> onDismissToUse)
-    : onSelect(std::move(onSelectToUse)),
-      theme(themeToUse),
-      onDismiss(std::move(onDismissToUse)) {
+    std::function<void()> onCloseRequestedToUse,
+    std::function<void()> onDismissedToUse)
+    : theme(themeToUse),
+      onSelect(std::move(onSelectToUse)),
+      onCloseRequested(std::move(onCloseRequestedToUse)),
+      onDismissed(std::move(onDismissedToUse)) {
+    jassert(onSelect != nullptr);
+    jassert(onCloseRequested != nullptr);
+    jassert(onDismissed != nullptr);
 }
 
 SignalColourPopupContent::~SignalColourPopupContent() {
-    if (onDismiss)
-        onDismiss();
+    onDismissed();
 }
 
 void SignalColourPopupContent::paint(juce::Graphics &g) {
@@ -73,13 +77,8 @@ void SignalColourPopupContent::addColourButton(const juce::Colour colour,
     auto button = std::make_unique<SignalColourButton>(theme, colour, selected);
     button->setEnabled(enabled);
     button->onClick = [this, colourIndex] {
-        if (!onSelect)
-            return;
-
         onSelect(colourIndex);
-
-        if (auto *callout = findParentComponentOfClass<juce::CallOutBox>())
-            callout->dismiss();
+        onCloseRequested();
     };
     addAndMakeVisible(*button);
     colourButtons.push_back(std::move(button));

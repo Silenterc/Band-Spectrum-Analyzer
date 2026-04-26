@@ -13,6 +13,7 @@ add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
     plugin/PresetSessionTests.cpp
     plugin/SignalOutputMixerTests.cpp
+    ui/UiArchitectureRulesTests.cpp
     ui/AnalyzerUiModelTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
     ../src/dsp/filterbank/FilterBank.cpp
@@ -47,6 +48,7 @@ target_include_directories(band-spectrum-analyzer-tests
 
 target_compile_definitions(band-spectrum-analyzer-tests
     PRIVATE
+        BSA_REPO_ROOT="${CMAKE_SOURCE_DIR}"
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)

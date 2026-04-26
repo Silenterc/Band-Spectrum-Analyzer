@@ -5,7 +5,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "ui/state/SignalSlotUiState.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
+#include "ui/widgets/CalloutPresenter.h"
 #include "ui/widgets/PopupLookAndFeel.h"
 #include "ui/widgets/PadButton.h"
 #include "ui/theme/UiTheme.h"
@@ -33,10 +34,9 @@ public:
         virtual void signalSlotReorderDragEnded(float xPosition) = 0;
     };
 
-    explicit SignalSlotComponent(const Ui::Theme &themeToUse);
+    SignalSlotComponent(const Ui::Theme &themeToUse, Listener& listenerToUse);
     ~SignalSlotComponent() override;
 
-    void setListener(Listener *listenerToUse);
     void setSlot(size_t slotIndexToUse, const Ui::SignalSlotState &settingsToUse,
                  const std::vector<int> &usedColoursToUse,
                  const std::vector<Ui::SignalSlotKey> &usedSignalConfigsToUse);
@@ -95,7 +95,7 @@ private:
     float getParentRelativeX(const juce::MouseEvent &event) const;
 
     const Ui::Theme &theme;
-    Listener *listener = nullptr;
+    Listener& listener;
     size_t slotIndex = 0;
     Ui::SignalSlotState settings;
     std::vector<int> usedColours;
@@ -107,10 +107,10 @@ private:
     bool suppressNextModeButtonClick = false;
     bool suppressNextSwatchClick = false;
     OpenPopupMenu openPopupMenu = OpenPopupMenu::none;
-    juce::Component::SafePointer<juce::CallOutBox> activeCallout;
     juce::Image cachedBackground;
     juce::Point<float> mouseDownPosition;
     PopupLookAndFeel popupLookAndFeel;
+    Ui::CalloutPresenter calloutPresenter;
     SignalSlotSourceToggle sourceToggle;
     SignalSlotModeButton modeButton;
     SignalSlotSwatchButton swatchButton;

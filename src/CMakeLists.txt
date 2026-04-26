@@ -61,24 +61,26 @@ target_sources(${PROJECT_NAME}
         ui/theme/UiRasterAssets.cpp
         ui/widgets/RasterIconButton.cpp
         ui/widgets/PadButton.cpp
+        ui/widgets/CalloutPresenter.cpp
         ui/widgets/PopupActionButton.cpp
         ui/widgets/SectionDividerComponent.cpp
         ui/theme/UiTheme.cpp
-        ui/editor/EditorBackgroundComponent.cpp
-        ui/analyzer/layout/MainLayoutComponent.cpp
-        ui/analyzer/layout/PresetHeaderComponent.cpp
-        ui/analyzer/layout/PresetHeaderControlsComponent.cpp
-        ui/presets/PresetActionMessageFormatter.cpp
-        ui/presets/PresetBrowserPopupContent.cpp
-        ui/presets/PresetSelectorButton.cpp
-        ui/presets/PresetDeleteConfirmPopupContent.cpp
-        ui/presets/PresetListRowComponent.cpp
-        ui/presets/PresetPopupStatusComponent.cpp
-        ui/presets/PresetSavePopupContent.cpp
+        ui/editor/view/EditorBackgroundComponent.cpp
+        ui/editor/layout/MainLayoutComponent.cpp
+        ui/presets/view/PresetHeaderComponent.cpp
+        ui/presets/view/PresetHeaderControlsComponent.cpp
+        ui/presets/view/PresetBrowserPopupComponent.cpp
+        ui/presets/model/PresetActionMessageFormatter.cpp
+        ui/presets/popups/PresetBrowserPopupContent.cpp
+        ui/presets/view/PresetSelectorButton.cpp
+        ui/presets/popups/PresetDeleteConfirmPopupContent.cpp
+        ui/presets/view/PresetListRowComponent.cpp
+        ui/presets/popups/PresetPopupStatusComponent.cpp
+        ui/presets/popups/PresetSavePopupContent.cpp
         ui/analyzer/plot/view/AnalyzerSectionComponent.cpp
         ui/analyzer/plot/view/AnalyzerPlotComponent.cpp
         ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.cpp
-        ui/analyzer/controls/AnalyzerMeterControlsComponent.cpp
+        ui/analyzer/controls/view/AnalyzerMeterControlsComponent.cpp
         ui/analyzer/rack/view/SignalRackComponent.cpp
         ui/analyzer/rack/view/SignalSlotActionButton.cpp
         ui/analyzer/rack/view/SignalSlotComponent.cpp
@@ -96,7 +98,7 @@ target_sources(${PROJECT_NAME}
         ui/analyzer/rack/interaction/SignalRackLayoutEngine.cpp
         ui/analyzer/plot/logic/FrequencyFormatter.cpp
         ui/analyzer/plot/logic/MusicTheory.cpp
-        ui/editor/PluginEditor.cpp
+        ui/editor/view/PluginEditor.cpp
         plugin/parameters/ParameterAccess.cpp
         plugin/presets/FactoryPresetRepository.cpp
         plugin/presets/PluginStateSerializer.cpp

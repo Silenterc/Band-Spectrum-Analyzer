@@ -82,11 +82,11 @@ namespace {
             return document;
         }
 
-        PluginPresets::PresetActionResult saveCurrentStateAs(const juce::String& name) {
+        Ui::Presets::PresetActionResult saveCurrentStateAs(const juce::String& name) {
             return presetSession.savePresetAs(name);
         }
 
-        PluginPresets::PresetActionResult deletePreset(const PluginPresets::PresetId& presetId) {
+        Ui::Presets::PresetActionResult deletePreset(const Ui::Presets::PresetId& presetId) {
             return presetSession.deletePreset(presetId);
         }
     };
@@ -168,12 +168,12 @@ TEST_CASE("PresetSession saves, navigates, deletes, and reports dirty state", "[
 
     auto snapshot = context.presetSession.getSnapshot();
     REQUIRE(snapshot.selectedPresetName == "Default");
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedClean);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedClean);
 
     context.parameterAccess.writeFreeze(true);
     context.presetSession.markCurrentStateDirty();
     snapshot = context.presetSession.getSnapshot();
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedDirty);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedDirty);
 
     REQUIRE(context.saveCurrentStateAs("Zulu").succeeded);
     REQUIRE(context.saveCurrentStateAs("Alpha").succeeded);
@@ -185,7 +185,7 @@ TEST_CASE("PresetSession saves, navigates, deletes, and reports dirty state", "[
     REQUIRE(snapshot.presets[2].name == "Zulu");
     REQUIRE(snapshot.selectedPresetName == "Alpha");
     REQUIRE(snapshot.isSelectedPresetUser);
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedClean);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedClean);
 
     REQUIRE(context.presetSession.loadPreviousPreset().succeeded);
     REQUIRE(context.presetSession.getSnapshot().selectedPresetName == "Default");
@@ -199,7 +199,7 @@ TEST_CASE("PresetSession saves, navigates, deletes, and reports dirty state", "[
     context.presetSession.markCurrentStateDirty();
     REQUIRE(context.presetSession.overwritePreset(*context.presetSession.getSelectedPresetId(), "Alpha").succeeded);
     REQUIRE_FALSE(context.parameterAccess.readFreeze());
-    REQUIRE(context.presetSession.getSnapshot().selectionStatus == PluginPresets::PresetSelectionStatus::selectedClean);
+    REQUIRE(context.presetSession.getSnapshot().selectionStatus == Ui::Presets::PresetSelectionStatus::selectedClean);
 
     const auto currentPresetId = context.presetSession.getSnapshot().selectedPresetId;
     REQUIRE(currentPresetId.has_value());
@@ -208,12 +208,12 @@ TEST_CASE("PresetSession saves, navigates, deletes, and reports dirty state", "[
     snapshot = context.presetSession.getSnapshot();
     REQUIRE(snapshot.selectedPresetId.has_value());
     REQUIRE(snapshot.selectedPresetName == "Default");
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedClean);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedClean);
 
     REQUIRE(context.presetSession.resetCurrentPreset().succeeded);
     snapshot = context.presetSession.getSnapshot();
     REQUIRE(snapshot.selectedPresetName == "Default");
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedClean);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedClean);
 }
 
 TEST_CASE("PresetSession overwrites factory presets through user shadow overrides", "[preset][session]") {
@@ -227,7 +227,7 @@ TEST_CASE("PresetSession overwrites factory presets through user shadow override
     REQUIRE(snapshot.presets.size() == 1);
     REQUIRE(snapshot.presets.front().id == "factory-default");
     REQUIRE(snapshot.presets.front().name == "Default");
-    REQUIRE(snapshot.presets.front().origin == PluginPresets::PresetOrigin::user);
+    REQUIRE(snapshot.presets.front().origin == Ui::Presets::PresetOrigin::user);
     REQUIRE(snapshot.presets.front().shadowsFactoryPreset);
     REQUIRE(snapshot.presets.front().isDeletable);
 
@@ -238,7 +238,7 @@ TEST_CASE("PresetSession overwrites factory presets through user shadow override
     REQUIRE(context.deletePreset("factory-default").succeeded);
     snapshot = context.presetSession.getSnapshot();
     REQUIRE(snapshot.presets.size() == 1);
-    REQUIRE(snapshot.presets.front().origin == PluginPresets::PresetOrigin::factory);
+    REQUIRE(snapshot.presets.front().origin == Ui::Presets::PresetOrigin::factory);
     REQUIRE_FALSE(snapshot.presets.front().isDeletable);
 
     REQUIRE(context.presetSession.resetCurrentPreset().succeeded);
@@ -306,12 +306,12 @@ TEST_CASE("PresetSession restores explicit preset selection when multiple preset
 
     context.presetSession.restoreSelection(alphaId);
     auto restoredSnapshot = context.presetSession.getSnapshot();
-    REQUIRE(restoredSnapshot.selectedPresetId == std::optional<PluginPresets::PresetId>(alphaId));
+    REQUIRE(restoredSnapshot.selectedPresetId == std::optional<Ui::Presets::PresetId>(alphaId));
     REQUIRE(restoredSnapshot.selectedPresetName == "Alpha");
 
     context.presetSession.restoreSelection(bravoId);
     restoredSnapshot = context.presetSession.getSnapshot();
-    REQUIRE(restoredSnapshot.selectedPresetId == std::optional<PluginPresets::PresetId>(bravoId));
+    REQUIRE(restoredSnapshot.selectedPresetId == std::optional<Ui::Presets::PresetId>(bravoId));
     REQUIRE(restoredSnapshot.selectedPresetName == "Bravo");
 }
 
@@ -336,7 +336,7 @@ TEST_CASE("PresetSession keeps the selected preset during refresh when dirty sta
     const auto snapshot = context.presetSession.getSnapshot();
     REQUIRE(snapshot.selectedPresetId == betaPresetId);
     REQUIRE(snapshot.selectedPresetName == "Beta");
-    REQUIRE(snapshot.selectionStatus == PluginPresets::PresetSelectionStatus::selectedDirty);
+    REQUIRE(snapshot.selectionStatus == Ui::Presets::PresetSelectionStatus::selectedDirty);
 }
 
 TEST_CASE("PresetSession save and delete actions return validation errors without mutating selection state",

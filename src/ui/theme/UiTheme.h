@@ -4,8 +4,8 @@
 
 #include <juce_graphics/juce_graphics.h>
 
-#include "ui/editor/EditorPresentationState.h"
-#include "../state/SignalSlotUiState.h"
+#include "shared/UiScalePreset.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
 #include "../../shared/SignalPresetCatalog.h"
 
 namespace Ui {

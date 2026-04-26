@@ -15,7 +15,8 @@ public:
                                     Analyzer::SignalSource currentSourceToUse,
                                     Analyzer::SignalMode currentModeToUse,
                                     std::function<void(Analyzer::SignalMode)> onSelectToUse,
-                                    std::function<void()> onDismissToUse);
+                                    std::function<void()> onCloseRequestedToUse,
+                                    std::function<void()> onDismissedToUse);
     ~SignalModeSelectionPopupContent() override;
 
     void setAvailability(const std::function<bool(Analyzer::SignalMode)> &isAvailable);
@@ -32,5 +33,6 @@ private:
     Analyzer::SignalSource currentSource = Analyzer::SignalSource::main;
     std::array<std::unique_ptr<juce::Button>, Ui::signalSlotOptions.size()> buttons;
     std::function<void(Analyzer::SignalMode)> onSelect;
-    std::function<void()> onDismiss;
+    std::function<void()> onCloseRequested;
+    std::function<void()> onDismissed;
 };

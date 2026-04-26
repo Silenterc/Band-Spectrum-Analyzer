@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "dsp/core/AnalyzerData.h"
-#include "ui/state/SignalSlotUiState.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
 
 class SignalSlotOrderModel final {
 public:

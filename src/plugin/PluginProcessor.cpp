@@ -1,5 +1,5 @@
 #include "PluginProcessor.h"
-#include "../ui/editor/PluginEditor.h"
+#include "../ui/editor/view/PluginEditor.h"
 
 namespace {
     constexpr auto selectedPresetIdProperty = "__selectedPresetId";
@@ -212,7 +212,7 @@ bool SpectrumAnalyzerAudioProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
-    return new SpectrumAnalyzerAudioProcessorEditor(*this);
+    return new SpectrumAnalyzerAudioProcessorEditor(*this, *this, *this, *this, *this, *this, *this);
 }
 
 //==============================================================================
@@ -237,7 +237,7 @@ void SpectrumAnalyzerAudioProcessor::setStateInformation(const void *data, int s
     if (!snapshot.isValid())
         return;
 
-    std::optional<PluginPresets::PresetId> restoredSelectedPresetId;
+    std::optional<Ui::Presets::PresetId> restoredSelectedPresetId;
     if (snapshot.state.hasProperty(selectedPresetIdProperty)) {
         const auto presetId = snapshot.state.getProperty(selectedPresetIdProperty).toString();
         if (presetId.isNotEmpty())
@@ -303,7 +303,7 @@ void SpectrumAnalyzerAudioProcessor::removeEditorPresentationStateListener(
     editorPresentationStateListeners.remove(&listener);
 }
 
-PluginPresets::PresetUiSnapshot SpectrumAnalyzerAudioProcessor::getPresetUiSnapshot() const {
+Ui::Presets::PresetUiSnapshot SpectrumAnalyzerAudioProcessor::getPresetUiSnapshot() const {
     return presetSession.getSnapshot();
 }
 
@@ -476,7 +476,7 @@ void SpectrumAnalyzerAudioProcessor::setVisibleMaxFrequencyHz(const float freque
     changeTracker->requestUiRefresh();
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreset(const PluginPresets::PresetId& presetId) {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreset(const Ui::Presets::PresetId& presetId) {
     const auto result = presetSession.loadPreset(presetId);
     if (!result.succeeded) {
         publishPresetUiSnapshot();
@@ -487,7 +487,7 @@ PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreset(con
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreviousPreset() {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreviousPreset() {
     const auto result = presetSession.loadPreviousPreset();
     if (!result.succeeded) {
         publishPresetUiSnapshot();
@@ -498,7 +498,7 @@ PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadPreviousPr
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadNextPreset() {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadNextPreset() {
     const auto result = presetSession.loadNextPreset();
     if (!result.succeeded) {
         publishPresetUiSnapshot();
@@ -509,7 +509,7 @@ PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::loadNextPreset
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::resetCurrentPreset() {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::resetCurrentPreset() {
     const auto result = presetSession.resetCurrentPreset();
     if (!result.succeeded) {
         publishPresetUiSnapshot();
@@ -520,20 +520,20 @@ PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::resetCurrentPr
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::savePresetAs(const juce::String& name) {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::savePresetAs(const juce::String& name) {
     const auto result = presetSession.savePresetAs(name);
     publishPresetUiSnapshot();
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::overwritePreset(const PluginPresets::PresetId& presetId,
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::overwritePreset(const Ui::Presets::PresetId& presetId,
                                                                                   const juce::String& name) {
     const auto result = presetSession.overwritePreset(presetId, name);
     publishPresetUiSnapshot();
     return result;
 }
 
-PluginPresets::PresetActionResult SpectrumAnalyzerAudioProcessor::deletePreset(const PluginPresets::PresetId& presetId) {
+Ui::Presets::PresetActionResult SpectrumAnalyzerAudioProcessor::deletePreset(const Ui::Presets::PresetId& presetId) {
     const auto result = presetSession.deletePreset(presetId);
     publishPresetUiSnapshot();
     return result;

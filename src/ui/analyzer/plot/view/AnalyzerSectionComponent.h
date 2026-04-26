@@ -7,12 +7,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
-#include "ui/contracts/AnalyzerUiSnapshotSource.h"
-#include "ui/contracts/PresetActions.h"
-#include "ui/contracts/PresetUiSnapshotSource.h"
+#include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
 #include "ui/theme/UiTheme.h"
-#include "ui/analyzer/plot/data/AnalyzerViewState.h"
-#include "ui/analyzer/layout/PresetHeaderComponent.h"
+#include "ui/analyzer/plot/state/AnalyzerViewState.h"
 #include "ui/analyzer/plot/logic/AnalyzerViewModel.h"
 #include "ui/analyzer/plot/view/AnalyzerHoverTooltipRenderer.h"
 #include "ui/analyzer/plot/view/AnalyzerPlotComponent.h"
@@ -23,10 +20,10 @@ class AnalyzerSectionComponent final : public juce::Component,
 public:
     AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSource,
                              AnalyzerUiSnapshotSource &snapshotSource,
-                             PresetUiSnapshotSource& presetUiSnapshotSource,
-                             PresetActions& presetActions,
                              const Ui::Theme &theme);
     ~AnalyzerSectionComponent() override;
+
+    void setTopReservedHeight(int height);
 
     void paint(juce::Graphics &g) override;
     void paintOverChildren(juce::Graphics &g) override;
@@ -34,7 +31,6 @@ public:
 
 private:
     struct Layout {
-        juce::Rectangle<int> headerBounds;
         juce::Rectangle<int> displayBounds;
     };
 
@@ -51,7 +47,6 @@ private:
     AnalyzerRawTraceSource &rawTraceSource;
     AnalyzerUiSnapshotSource &snapshotSource;
     const Ui::Theme &theme;
-    PresetHeaderComponent presetHeaderComponent;
     AnalyzerPlotComponent analyzerPlotComponent;
     AnalyzerViewModel viewModel;
     AnalyzerHoverTooltipRenderer hoverTooltipRenderer;
@@ -60,4 +55,5 @@ private:
     std::shared_ptr<const std::vector<Analyzer::BandInfo>> currentBandInfo;
     std::optional<juce::Point<float>> hoverPosition;
     juce::Image cachedBackground;
+    int topReservedHeight = 0;
 };

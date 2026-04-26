@@ -12,7 +12,8 @@ class SignalColourPopupContent final : public juce::Component {
 public:
     SignalColourPopupContent(const Ui::Theme &themeToUse,
                              std::function<void(int)> onSelectToUse,
-                             std::function<void()> onDismissToUse);
+                             std::function<void()> onCloseRequestedToUse,
+                             std::function<void()> onDismissedToUse);
     ~SignalColourPopupContent() override;
 
     void addColourButton(juce::Colour colour, bool selected, bool enabled, int colourIndex);
@@ -23,10 +24,10 @@ public:
     int getPreferredWidth() const;
     int getPreferredHeight() const;
 
-    std::function<void(int)> onSelect;
-
 private:
     const Ui::Theme &theme;
     std::vector<std::unique_ptr<juce::Button>> colourButtons;
-    std::function<void()> onDismiss;
+    std::function<void(int)> onSelect;
+    std::function<void()> onCloseRequested;
+    std::function<void()> onDismissed;
 };

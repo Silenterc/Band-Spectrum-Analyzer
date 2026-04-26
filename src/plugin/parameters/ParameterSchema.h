@@ -8,8 +8,8 @@
 #include "../../dsp/core/BandMode.h"
 #include "../../shared/DefaultParameterValues.h"
 #include "../../shared/SignalPresetCatalog.h"
-#include "../../ui/editor/EditorPresentationState.h"
-#include "../../ui/state/SignalSlotUiState.h"
+#include "../../shared/UiScalePreset.h"
+#include "../../ui/analyzer/rack/state/SignalSlotUiState.h"
 
 namespace PluginParameters::Schema {
     inline constexpr int parameterVersionHint = 1;

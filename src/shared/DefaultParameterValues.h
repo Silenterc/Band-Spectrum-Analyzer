@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../dsp/core/BandMode.h"
-#include "../ui/editor/EditorPresentationState.h"
 #include "SignalSlotConfiguration.h"
+#include "UiScalePreset.h"
 
 namespace Defaults {
     // Global analyzer parameter defaults

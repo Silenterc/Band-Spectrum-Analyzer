@@ -37,10 +37,12 @@ The intent is simple:
 - composition root only
 - owns APVTS, serialization, and listener wiring
 - implements contracts exposed to `display` and `ui`
+- may depend on UI contract/state headers to publish UI-facing snapshots
 - bridges parameter state into:
   - engine-facing DSP state
   - UI-facing snapshot state
   - worker-facing semantic display control state
+- maps plugin-domain persistence/session data into UI-domain snapshots/results
 
 ### `src/ui/`
 
@@ -48,11 +50,13 @@ The intent is simple:
 - no DSP processing logic
 - no worker-owned time evolution
 - no APVTS access
+- no includes from `src/plugin/`
 - may consume immutable display frames and immutable UI snapshots
+- owns UI-facing state/contract types used by UI features
 
 ## Contract Rules
 
-There are now three analyzer read/write channels and they must stay separate.
+Analyzer channels and UI feature channels must stay separate.
 
 ### 1. DSP-to-display raw trace channel
 
@@ -76,6 +80,18 @@ There are now three analyzer read/write channels and they must stay separate.
 - contract: `AnalyzerSettingsActions`
 - views dispatch intents only
 - views must not know parameter ids or APVTS details
+
+### 4. Preset UI channels
+
+- contracts:
+  - `PresetUiSnapshotSource`
+  - `PresetActions`
+- payloads:
+  - `Ui::Presets::PresetUiSnapshot`
+  - `Ui::Presets::PresetActionResult`
+- plugin preset documents, XML, file stores, and APVTS snapshots remain plugin-domain types
+- UI must not include `plugin/presets/*`
+- UI contracts live with their feature, not in a central `src/ui/contracts/` folder
 
 ## Ownership Rules
 
@@ -133,6 +149,8 @@ Rules:
 - do not introduce a parallel mutable UI state model for the same data
 - if state can be derived from the snapshot and the latest display frame, do not store a competing writable copy
 - cross-thread semantic state for the worker must use `AnalyzerDisplayControlState`, not `AnalyzerUiSnapshot`
+- feature snapshots should live with their UI feature state, such as `Ui::Presets::PresetUiSnapshot`
+- plugin code may map plugin-domain state into UI snapshots, but UI code must not consume plugin-domain state directly
 
 `AnalyzerDisplayControlState` exists because the worker needs a reduced semantic view of UI state:
 
@@ -186,19 +204,82 @@ It must not grow presentation-only fields such as:
 - no hold evolution
 - no refresh cadence state machine
 
+### `src/ui/analyzer/plot/state/`
+
+- plot UI constants, view state, and immutable layout result structs
+- no JUCE `Component` classes
+- do not add `src/ui/analyzer/plot/data/`
+
 ### `src/ui/analyzer/plot/view/`
 
 - JUCE `Component` classes only
 - consume immutable frames and snapshots
 - dispatch actions through contracts
 
+### `src/ui/analyzer/controls/view/`
+
+- analyzer control-strip components only
+- no direct `.h` or `.cpp` files under `src/ui/analyzer/controls/`
+
+### `src/ui/editor/view/`
+
+- editor root and background JUCE components
+- no direct `.h` or `.cpp` files under `src/ui/editor/`
+
+### UI feature folders
+
+Each UI feature should use the same responsibility split:
+
+- `state/`: immutable UI snapshots, descriptors, view state, and action results
+- `contracts/`: read-only snapshot sources and write-only action interfaces
+- `model/` or `logic/`: pure selectors, layout math, formatting, and availability rules
+- `interaction/`: transient state machines such as drag sessions or keyboard selection
+- `view/`: JUCE components only
+- `popups/`: popup content only
+
+Small features may omit empty folders, but they must not merge plugin persistence, component ownership, and interaction policy into the same file.
+
+Legacy central UI folders are not allowed for new or moved feature code:
+
+- do not add `src/ui/contracts/`
+- do not add `src/ui/state/`
+- keep analyzer contracts under `src/ui/analyzer/contracts/`
+- keep preset contracts under `src/ui/presets/contracts/`
+- keep editor contracts under `src/ui/editor/contracts/`
+
+### `src/ui/widgets/`
+
+- shared UI primitives and popup/callout helpers
+- no analyzer-specific or preset-persistence policy
+- callout lifetime, look-and-feel cleanup, and common launch/dismiss behavior should be centralized here
+
+### `src/shared/`
+
+- cross-layer value types and defaults only
+- must not include `src/ui/*`
+- if plugin and UI both need a small value enum, put that value type here and let UI feature state compose it
+
 ## Source Of Truth Rules
 
 - repeated labels, options, and mappings must be defined once
 - appearance, geometry, and repeated interaction metrics must come from theme/config ownership
 - analyzer-specific policy must not leak into generic shared UI modules
+- popup content must not dismiss `juce::CallOutBox` directly
+- popup owners/presenters own launch, dismissal, focus return, and look-and-feel cleanup
 - worker semantic state must not be duplicated in UI view code
 - hold overlays must remain their own semantic output, not be modeled as fake slot traces
+- plugin-domain preset documents and serialized state must not leak into UI contracts or views
+
+## Optimistic Local Echo Rules
+
+Direct controls may update their own visual state immediately after user input, then reconcile with the next authoritative snapshot.
+
+Rules:
+
+- local echo is component-local and temporary
+- the next snapshot from the source wins
+- local echo must not be published as a separate mutable feature state model
+- use it only for direct interaction feedback, such as slot toggles, colour/mode selection, and successful popup row removal
 
 ## Change Rules
 
@@ -209,6 +290,10 @@ Examples of suspicious changes:
 - adding slot order to `AnalyzerDisplayControlState`
 - adding hover state to `src/display/`
 - adding APVTS knowledge to `src/ui/`
+- including `src/plugin/*` from `src/ui/`
+- including `src/ui/*` from `src/shared/`
+- exposing plugin preset documents through `PresetUiSnapshotSource`
+- calling `findParentComponentOfClass<juce::CallOutBox>()` from popup content
 - adding JUCE geometry types to worker data structs
 - adding colour/opacity handling to the display worker
 - adding hold logic back into `AnalyzerPlotComponent`

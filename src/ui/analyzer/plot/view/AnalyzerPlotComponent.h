@@ -11,7 +11,7 @@
 #include "display/analyzer/data/AnalyzerDisplayControlState.h"
 #include "display/analyzer/data/AnalyzerDisplayFrame.h"
 #include "display/analyzer/thread/AnalyzerDisplayWorker.h"
-#include "ui/analyzer/plot/data/AnalyzerSectionLayout.h"
+#include "ui/analyzer/plot/state/AnalyzerSectionLayout.h"
 #include "ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.h"
 #include "ui/analyzer/state/AnalyzerUiSnapshot.h"
 #include "ui/theme/UiTheme.h"

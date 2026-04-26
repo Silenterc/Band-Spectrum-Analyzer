@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <optional>
 
-#include "ui/state/SignalSlotUiState.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
 #include "SignalSlotOptions.h"
 
 namespace Ui {

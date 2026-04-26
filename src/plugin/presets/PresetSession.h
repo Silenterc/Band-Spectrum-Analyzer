@@ -9,6 +9,7 @@
 #include "FactoryPresetRepository.h"
 #include "PluginStateSerializer.h"
 #include "UserPresetStore.h"
+#include "ui/presets/state/PresetUiState.h"
 
 class PresetSession final {
 public:
@@ -18,19 +19,19 @@ public:
                   FactoryPresetRepository& factoryRepositoryToUse,
                   UserPresetStore& userPresetStoreToUse);
 
-    [[nodiscard]] const PluginPresets::PresetUiSnapshot& getSnapshot() const;
-    [[nodiscard]] std::optional<PluginPresets::PresetId> getSelectedPresetId() const noexcept;
+    [[nodiscard]] const Ui::Presets::PresetUiSnapshot& getSnapshot() const;
+    [[nodiscard]] std::optional<Ui::Presets::PresetId> getSelectedPresetId() const noexcept;
 
-    [[nodiscard]] PluginPresets::PresetActionResult loadPreset(const PluginPresets::PresetId& presetId);
-    [[nodiscard]] PluginPresets::PresetActionResult loadPreviousPreset();
-    [[nodiscard]] PluginPresets::PresetActionResult loadNextPreset();
-    [[nodiscard]] PluginPresets::PresetActionResult resetCurrentPreset();
-    [[nodiscard]] PluginPresets::PresetActionResult savePresetAs(const juce::String& name);
-    [[nodiscard]] PluginPresets::PresetActionResult overwritePreset(const PluginPresets::PresetId& presetId,
-                                                                    const juce::String& name);
-    [[nodiscard]] PluginPresets::PresetActionResult deletePreset(const PluginPresets::PresetId& presetId);
+    [[nodiscard]] Ui::Presets::PresetActionResult loadPreset(const Ui::Presets::PresetId& presetId);
+    [[nodiscard]] Ui::Presets::PresetActionResult loadPreviousPreset();
+    [[nodiscard]] Ui::Presets::PresetActionResult loadNextPreset();
+    [[nodiscard]] Ui::Presets::PresetActionResult resetCurrentPreset();
+    [[nodiscard]] Ui::Presets::PresetActionResult savePresetAs(const juce::String& name);
+    [[nodiscard]] Ui::Presets::PresetActionResult overwritePreset(const Ui::Presets::PresetId& presetId,
+                                                                  const juce::String& name);
+    [[nodiscard]] Ui::Presets::PresetActionResult deletePreset(const Ui::Presets::PresetId& presetId);
     void refreshCatalog();
-    void restoreSelection(const std::optional<PluginPresets::PresetId>& presetId);
+    void restoreSelection(const std::optional<Ui::Presets::PresetId>& presetId);
     void markCurrentStateDirty() noexcept;
 
 private:
@@ -40,16 +41,16 @@ private:
     void rebuildMergedCatalog() const;
     [[nodiscard]] std::optional<PluginPresets::PresetDocument> findPresetById(
         const std::vector<PluginPresets::PresetDocument>& catalog,
-        const PluginPresets::PresetId& presetId) const;
+        const Ui::Presets::PresetId& presetId) const;
     [[nodiscard]] std::optional<size_t> findPresetIndex(
         const std::vector<PluginPresets::PresetDocument>& catalog,
-        const PluginPresets::PresetId& presetId) const;
+        const Ui::Presets::PresetId& presetId) const;
     [[nodiscard]] std::optional<PluginPresets::PresetDocument> findExistingUserPresetByName(
         const std::vector<PluginPresets::PresetDocument>& catalog,
         const juce::String& name) const;
     [[nodiscard]] std::optional<PluginPresets::PresetDocument> findFactoryPresetById(
         const std::vector<PluginPresets::PresetDocument>& catalog,
-        const PluginPresets::PresetId& presetId) const;
+        const Ui::Presets::PresetId& presetId) const;
     [[nodiscard]] std::optional<PluginPresets::PresetDocument> findFactoryPresetByName(
         const std::vector<PluginPresets::PresetDocument>& catalog,
         const juce::String& name) const;
@@ -57,7 +58,7 @@ private:
         const std::vector<PluginPresets::PresetDocument>& catalog) const;
     void resolveSelectionFromCurrentState();
     void markSnapshotDirty() noexcept;
-    [[nodiscard]] PluginPresets::PresetUiSnapshot buildSnapshot(
+    [[nodiscard]] Ui::Presets::PresetUiSnapshot buildSnapshot(
         const std::vector<PluginPresets::PresetDocument>& catalog,
         const PluginPresets::PluginStateSnapshot& currentState) const;
 
@@ -70,7 +71,7 @@ private:
     mutable bool mergedCatalogDirty = true;
     mutable std::optional<PluginPresets::PluginStateSnapshot> currentStateSnapshotCache;
     mutable std::atomic<bool> currentStateSnapshotDirty { true };
-    mutable std::optional<PluginPresets::PresetUiSnapshot> snapshotCache;
+    mutable std::optional<Ui::Presets::PresetUiSnapshot> snapshotCache;
     mutable std::atomic<bool> snapshotDirty { true };
-    std::optional<PluginPresets::PresetId> selectedPresetId;
+    std::optional<Ui::Presets::PresetId> selectedPresetId;
 };

@@ -12,18 +12,14 @@ namespace {
 
 AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSourceToUse,
                                                    AnalyzerUiSnapshotSource &snapshotSourceToUse,
-                                                   PresetUiSnapshotSource& presetUiSnapshotSourceToUse,
-                                                   PresetActions& presetActionsToUse,
                                                    const Ui::Theme &themeToUse)
     : rawTraceSource(rawTraceSourceToUse),
       snapshotSource(snapshotSourceToUse),
       theme(themeToUse),
-      presetHeaderComponent(presetUiSnapshotSourceToUse, presetActionsToUse, themeToUse),
       analyzerPlotComponent(rawTraceSourceToUse, themeToUse),
       viewModel(themeToUse),
       hoverTooltipRenderer(themeToUse) {
     setOpaque(true);
-    addAndMakeVisible(presetHeaderComponent);
     analyzerPlotComponent.setListener(this);
     addAndMakeVisible(analyzerPlotComponent);
 
@@ -47,6 +43,15 @@ void AnalyzerSectionComponent::paintOverChildren(juce::Graphics &g) {
 }
 
 void AnalyzerSectionComponent::resized() {
+    rebuildLayout();
+}
+
+void AnalyzerSectionComponent::setTopReservedHeight(const int height) {
+    const auto nextHeight = juce::jmax(0, height);
+    if (topReservedHeight == nextHeight)
+        return;
+
+    topReservedHeight = nextHeight;
     rebuildLayout();
 }
 
@@ -127,7 +132,6 @@ void AnalyzerSectionComponent::rebuildLayout() {
                            uiSnapshot.gridStepDb,
                            bounds.toFloat(),
                            layout.displayBounds.toFloat());
-    presetHeaderComponent.setBounds(layout.headerBounds);
     analyzerPlotComponent.setBounds(viewModel.getLayout().plotBounds.getSmallestIntegerContainer());
     analyzerPlotComponent.setLayout(viewModel.getLayout());
     rebuildCachedBackground();
@@ -173,14 +177,7 @@ AnalyzerSectionComponent::Layout AnalyzerSectionComponent::computeLayout() const
     Layout layout;
     const auto originalTargetPlotBounds = getLocalBounds().reduced(theme.metrics.analyzerSection.plotInset);
     auto targetPlotBounds = originalTargetPlotBounds;
-    const auto& headerMetrics = theme.metrics.presetHeader;
-    layout.headerBounds = juce::Rectangle<int>(targetPlotBounds.getX(),
-                                               headerMetrics.topInset,
-                                               targetPlotBounds.getWidth(),
-                                               headerMetrics.height);
-    const auto plotTop = layout.headerBounds.getBottom() + headerMetrics.plotGap;
-    const auto topReduction = juce::jmax(0, plotTop - originalTargetPlotBounds.getY());
-    targetPlotBounds.removeFromTop(topReduction);
+    targetPlotBounds.removeFromTop(juce::jmax(0, topReservedHeight - originalTargetPlotBounds.getY()));
     const auto &plotMargins = theme.metrics.analyzerPlot;
     layout.displayBounds = juce::Rectangle<int>(juce::roundToInt(targetPlotBounds.getX() - plotMargins.plotMarginLeft),
                                                 juce::roundToInt(targetPlotBounds.getY() - plotMargins.plotMarginTop),

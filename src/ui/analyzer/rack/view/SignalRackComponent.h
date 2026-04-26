@@ -6,9 +6,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "ui/state/SignalSlotUiState.h"
-#include "ui/contracts/AnalyzerSettingsActions.h"
-#include "ui/contracts/AnalyzerUiSnapshotSource.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
+#include "ui/analyzer/contracts/AnalyzerSettingsActions.h"
+#include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
 #include "ui/widgets/SectionDividerComponent.h"
 #include "ui/theme/UiTheme.h"
 #include "SignalSlotActionButton.h"

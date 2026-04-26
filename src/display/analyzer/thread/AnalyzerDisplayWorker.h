@@ -10,7 +10,7 @@
 #include "display/analyzer/logic/AnalyzerGlobalHoldModel.h"
 #include "display/analyzer/logic/AnalyzerMeter.h"
 #include "display/analyzer/thread/AnalyzerDisplayFrameBuffer.h"
-#include "ui/analyzer/plot/data/AnalyzerUiConstants.h"
+#include "ui/analyzer/plot/state/AnalyzerUiConstants.h"
 
 class AnalyzerDisplayWorker final : private juce::Thread {
 public:

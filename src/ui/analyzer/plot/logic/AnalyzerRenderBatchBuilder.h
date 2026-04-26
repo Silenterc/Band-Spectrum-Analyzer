@@ -7,7 +7,7 @@
 #include "display/analyzer/data/AnalyzerDisplayFrame.h"
 #include "display/analyzer/data/AnalyzerMeterData.h"
 #include "ui/analyzer/plot/logic/AnalyzerVisibleBandLayout.h"
-#include "ui/state/SignalSlotUiState.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
 #include "ui/theme/UiTheme.h"
 
 class AnalyzerRenderBatchBuilder final {

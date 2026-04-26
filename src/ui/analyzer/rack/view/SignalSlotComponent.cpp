@@ -13,9 +13,11 @@ namespace {
     }
 }
 
-SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
+SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse, Listener& listenerToUse)
     : theme(themeToUse),
+      listener(listenerToUse),
       popupLookAndFeel(themeToUse),
+      calloutPresenter(popupLookAndFeel),
       sourceToggle(themeToUse),
       modeButton(themeToUse),
       swatchButton(themeToUse),
@@ -65,15 +67,7 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse)
 }
 
 SignalSlotComponent::~SignalSlotComponent() {
-    if (activeCallout != nullptr) {
-        activeCallout->setLookAndFeel(nullptr);
-        activeCallout->dismiss();
-        activeCallout = nullptr;
-    }
-}
-
-void SignalSlotComponent::setListener(Listener *listenerToUse) {
-    listener = listenerToUse;
+    dismissOpenMenu();
 }
 
 void SignalSlotComponent::setSlot(const size_t slotIndexToUse,
@@ -321,37 +315,22 @@ void SignalSlotComponent::dismissOpenMenu() {
         return;
 
     openPopupMenu = OpenPopupMenu::none;
-    if (activeCallout != nullptr) {
-        activeCallout->setLookAndFeel(nullptr);
-        activeCallout->dismiss();
-    }
-
-    activeCallout = nullptr;
+    calloutPresenter.dismiss();
 }
 
 void SignalSlotComponent::launchCallout(std::unique_ptr<juce::Component> content,
                                         const OpenPopupMenu kind,
                                         const juce::Rectangle<int> &anchorBounds) {
-    auto *parentComponent = getTopLevelComponent();
-    if (parentComponent == nullptr)
-        parentComponent = getParentComponent();
-
+    auto *parentComponent = Ui::findCalloutParentComponent(*this);
     if (parentComponent == nullptr)
         return;
 
     openPopupMenu = kind;
-    auto &callout = juce::CallOutBox::launchAsynchronously(std::move(content), anchorBounds, parentComponent);
-    callout.setLookAndFeel(&popupLookAndFeel);
-    callout.lookAndFeelChanged();
-    callout.setDismissalMouseClicksAreAlwaysConsumed(false);
-    activeCallout = &callout;
+    calloutPresenter.launch(std::move(content), anchorBounds, *parentComponent);
 }
 
 void SignalSlotComponent::showModeMenu() {
-    auto *parentComponent = getTopLevelComponent();
-    if (parentComponent == nullptr)
-        parentComponent = getParentComponent();
-
+    auto *parentComponent = Ui::findCalloutParentComponent(*this);
     if (parentComponent == nullptr)
         return;
 
@@ -369,15 +348,20 @@ void SignalSlotComponent::showModeMenu() {
             safeThis->settings.configuration.mode = mode;
             safeThis->refreshChildState();
 
-            if (safeThis->listener != nullptr)
-                safeThis->listener->signalSlotModeSelected(safeThis->slotIndex, mode);
+            safeThis->listener.signalSlotModeSelected(safeThis->slotIndex, mode);
+        },
+        [safeThis] {
+            if (safeThis == nullptr)
+                return;
+
+            safeThis->dismissOpenMenu();
         },
         [safeThis] {
             if (safeThis == nullptr)
                 return;
 
             safeThis->openPopupMenu = OpenPopupMenu::none;
-            safeThis->activeCallout = nullptr;
+            safeThis->calloutPresenter.forget();
         });
 
     content->setAvailability([this](const Analyzer::SignalMode mode) {
@@ -391,10 +375,7 @@ void SignalSlotComponent::showModeMenu() {
 }
 
 void SignalSlotComponent::showColourMenu() {
-    auto *parentComponent = getTopLevelComponent();
-    if (parentComponent == nullptr)
-        parentComponent = getParentComponent();
-
+    auto *parentComponent = Ui::findCalloutParentComponent(*this);
     if (parentComponent == nullptr)
         return;
 
@@ -410,15 +391,20 @@ void SignalSlotComponent::showColourMenu() {
             safeThis->settings.colourIndex = selectedColourIndex;
             safeThis->refreshChildState();
 
-            if (safeThis->listener != nullptr)
-                safeThis->listener->signalSlotColourSelected(safeThis->slotIndex, selectedColourIndex);
+            safeThis->listener.signalSlotColourSelected(safeThis->slotIndex, selectedColourIndex);
+        },
+        [safeThis] {
+            if (safeThis == nullptr)
+                return;
+
+            safeThis->dismissOpenMenu();
         },
         [safeThis] {
             if (safeThis == nullptr)
                 return;
 
             safeThis->openPopupMenu = OpenPopupMenu::none;
-            safeThis->activeCallout = nullptr;
+            safeThis->calloutPresenter.forget();
         });
 
     for (int colourIndex = 0; colourIndex < Ui::signalPresetCount; ++colourIndex) {
@@ -442,8 +428,7 @@ void SignalSlotComponent::handleSourceSelected(const Analyzer::SignalSource sour
     settings.configuration.source = source;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotSourceSelected(slotIndex, source);
+    listener.signalSlotSourceSelected(slotIndex, source);
 }
 
 void SignalSlotComponent::handleModePressed() {
@@ -467,29 +452,25 @@ void SignalSlotComponent::handleSoloClicked() {
     settings.solo = !settings.solo;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotSoloChanged(slotIndex, settings.solo);
+    listener.signalSlotSoloChanged(slotIndex, settings.solo);
 }
 
 void SignalSlotComponent::handleVisibilityClicked() {
     settings.visible = !settings.visible;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotVisibilityChanged(slotIndex, settings.visible);
+    listener.signalSlotVisibilityChanged(slotIndex, settings.visible);
 }
 
 void SignalSlotComponent::handleFreezeClicked() {
     settings.frozen = !settings.frozen;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotFrozenChanged(slotIndex, settings.frozen);
+    listener.signalSlotFrozenChanged(slotIndex, settings.frozen);
 }
 
 void SignalSlotComponent::handleRemoveClicked() {
-    if (listener != nullptr)
-        listener->signalSlotRemoveRequested(slotIndex);
+    listener.signalSlotRemoveRequested(slotIndex);
 }
 
 void SignalSlotComponent::handleSwatchClicked() {
@@ -505,16 +486,14 @@ void SignalSlotComponent::handleOpacityChanged(const float opacity) {
     settings.opacity = opacity;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotOpacityChanged(slotIndex, opacity);
+    listener.signalSlotOpacityChanged(slotIndex, opacity);
 }
 
 void SignalSlotComponent::handleOpacityReset() {
     settings.opacity = Ui::defaultSignalOpacity;
     refreshChildState();
 
-    if (listener != nullptr)
-        listener->signalSlotOpacityChanged(slotIndex, settings.opacity);
+    listener.signalSlotOpacityChanged(slotIndex, settings.opacity);
 }
 
 void SignalSlotComponent::mouseDown(const juce::MouseEvent &event) {
@@ -550,18 +529,15 @@ void SignalSlotComponent::mouseUp(const juce::MouseEvent &event) {
 }
 
 void SignalSlotComponent::handleReorderDragStarted(const float parentX) {
-    if (listener != nullptr)
-        listener->signalSlotReorderDragStarted(slotIndex, parentX);
+    listener.signalSlotReorderDragStarted(slotIndex, parentX);
 }
 
 void SignalSlotComponent::handleReorderDragged(const float parentX) {
-    if (listener != nullptr)
-        listener->signalSlotReorderDragged(parentX);
+    listener.signalSlotReorderDragged(parentX);
 }
 
 void SignalSlotComponent::handleReorderDragEnded(const float parentX) {
-    if (listener != nullptr)
-        listener->signalSlotReorderDragEnded(parentX);
+    listener.signalSlotReorderDragEnded(parentX);
 }
 
 float SignalSlotComponent::getParentRelativeX(const juce::MouseEvent &event) const {

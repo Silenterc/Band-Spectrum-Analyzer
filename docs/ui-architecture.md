@@ -1,11 +1,38 @@
 # UI Architecture
 
-This document describes the current UI architecture after the analyzer split into:
+The UI layer is message-thread presentation and interaction code. It owns UI-facing state types, UI contracts, layout, painting, popups, and transient interaction state. It does not own APVTS, preset persistence, DSP computation, or worker-thread display evolution.
 
-- a DSP raw-trace channel
-- a worker-thread display channel
-- a low-frequency immutable UI snapshot channel
-- a write-only action channel
+## Standard Feature Shape
+
+Every UI feature should follow the same shape. Small features may omit folders that would be empty, but responsibilities should remain distinct.
+
+- `state/`
+  - immutable UI snapshots, descriptors, action results, and view-state structs
+  - no APVTS, filesystem, preset document XML, or plugin persistence types
+- `contracts/`
+  - read-only snapshot sources and write-only action interfaces
+  - contracts use UI/shared types only
+- `model/` or `logic/`
+  - pure selectors, option derivation, formatting, availability rules, layout math, and paint-batch preparation
+  - no component ownership or async popup lifetime management
+- `interaction/`
+  - transient interaction state machines such as drag sessions, keyboard selection, and preview ordering
+- `view/`
+  - JUCE `Component` classes
+  - consume snapshots, render state, and dispatch intents through contracts
+- `popups/`
+  - popup content components
+  - use shared popup/callout helpers instead of duplicating callout lifetime policy
+
+The preset feature is the reference for cross-layer UI state:
+
+- UI-facing preset state lives in `src/ui/presets/state/PresetUiState.h`.
+- UI preset contracts live in `src/ui/presets/contracts/`.
+- UI preset view components live in `src/ui/presets/view/`.
+- UI preset popup content lives in `src/ui/presets/popups/`.
+- UI preset formatting/model helpers live in `src/ui/presets/model/`.
+- Plugin preset documents, stores, serializers, and APVTS snapshots stay in `src/plugin/presets/`.
+- The plugin maps plugin-domain preset data into `Ui::Presets` snapshots/results before publishing to UI.
 
 ## Top-Level Flow
 
@@ -15,364 +42,156 @@ flowchart TD
     Editor --> Layout[MainLayoutComponent]
 
     Processor[SpectrumAnalyzerAudioProcessor] --> RawSource[AnalyzerRawTraceSource]
-    Processor --> Snapshot[AnalyzerUiSnapshotSource]
-    Processor --> Actions[AnalyzerSettingsActions]
+    Processor --> AnalyzerSnapshot[AnalyzerUiSnapshotSource]
+    Processor --> AnalyzerActions[AnalyzerSettingsActions]
+    Processor --> PresetSnapshot[PresetUiSnapshotSource]
+    Processor --> PresetActions[PresetActions]
+    Processor --> Presentation[EditorPresentationStateSource]
 
-    RawSource --> AnalyzerSection[AnalyzerSectionComponent]
-    Snapshot --> AnalyzerSection
-    Snapshot --> Rack[SignalRackComponent]
-    Snapshot --> Strip[AnalyzerMeterControlsComponent]
-    Actions --> Rack
-    Actions --> Strip
+    RawSource --> AnalyzerPlot[AnalyzerPlotComponent]
+    AnalyzerSnapshot --> AnalyzerSection[AnalyzerSectionComponent]
+    AnalyzerSnapshot --> Rack[SignalRackComponent]
+    AnalyzerSnapshot --> Strip[AnalyzerMeterControlsComponent]
+    PresetSnapshot --> Header[PresetHeaderComponent]
+    PresetActions --> Header
+    AnalyzerActions --> Rack
+    AnalyzerActions --> Strip
 ```
 
-The editor still owns:
+The editor owns the theme and top-level layout. `MainLayoutComponent` lives under `src/ui/editor/layout/` and owns product/header composition, analyzer section placement, rack placement, and control strip placement.
 
-- theme
-- top-level layout
+`AnalyzerSectionComponent` is analyzer-only:
 
-The processor still owns:
+- static analyzer shell
+- analyzer plot layout
+- axis labels
+- tooltip presentation
+- plot child bounds
 
-- contracts
-- snapshot publication
-- action handling
-
-The analyzer view is now split into:
-
-- `AnalyzerSectionComponent`
-  - static shell, labels, tooltip, and layout ownership
-- `AnalyzerPlotComponent`
-  - exact plot child, opaque hot surface, and worker-frame consumption
-
-Only the plot child repaints at the analyzer frame rate.
+It does not own preset UI, popup actions, worker state, or hot-path plot batching.
 
 ## Read / Write Channels
 
-### 1. Raw Trace Channel
+### Analyzer Raw Trace Channel
 
-`AnalyzerRawTraceSource` owns:
+`AnalyzerRawTraceSource` is the high-frequency DSP-to-display read contract:
 
 - `getBandInfo()`
 - `readPublishedTraces()`
 - `hasRecentSignal()`
+- `shouldProcessAnalyzer()`
 
-Rules:
+This is raw measurement transport, not UI state. The display worker is the primary consumer.
 
-- this is not a UI snapshot channel
-- this is not paint-ready data
-- the message thread should not consume raw traces directly
-- this contract primarily feeds the display worker
+### Display Frame Channel
 
-### 2. Display Frame Channel
-
-This channel is internal to the analyzer section:
+The display worker publishes immutable analyzer display frames to the plot:
 
 - producer: `AnalyzerDisplayWorker`
+- transport: `AnalyzerDisplayFrameBuffer` / `TripleBuffer<AnalyzerDisplayFrame>`
 - consumer: `AnalyzerPlotComponent`
 
-Transport:
+Frames are semantic display state keyed by slot index. They do not contain slot order, colours, hover state, or JUCE component geometry.
 
-- `AnalyzerDisplayFrameBuffer`
-- `TripleBuffer<AnalyzerDisplayFrame>`
+### UI Snapshot Channels
 
-Rules:
+Low-frequency UI state is published through immutable snapshots:
 
-- published frames are immutable
-- frames are semantic display state, not JUCE geometry
-- frames are keyed by slot index, not visual order
+- analyzer: `AnalyzerUiSnapshotSource` -> `Ui::AnalyzerUiSnapshot`
+- presets: `PresetUiSnapshotSource` -> `Ui::Presets::PresetUiSnapshot`
+- editor presentation: `EditorPresentationStateSource` -> `Ui::EditorPresentationState`
 
-### 3. UI Snapshot Channel
+Contracts live with the feature they describe:
 
-`AnalyzerUiSnapshotSource` owns:
+- analyzer contracts: `src/ui/analyzer/contracts/`
+- preset contracts: `src/ui/presets/contracts/`
+- editor contracts: `src/ui/editor/contracts/`
 
-- `getAnalyzerUiSnapshot()`
-- snapshot listener registration
+Snapshots must not carry raw trace payloads, APVTS handles, or plugin persistence documents.
 
-`Ui::AnalyzerUiSnapshot` remains the only low-frequency analyzer UI snapshot type.
+### Action Channels
 
-It contains:
+Views dispatch intents only:
 
-- `signalSlots`
-- `slotOrder`
-- `meterSettings`
-- `frozen`
-- `sidechainAvailable`
-- `gridMinDb`
-- `gridMaxDb`
-- `gridStepDb`
-- `useCustomFrequencyRange`
-- `visibleMinFrequencyHz`
-- `visibleMaxFrequencyHz`
+- analyzer actions: `AnalyzerSettingsActions`
+- preset actions: `PresetActions`
 
-### 4. Action Channel
+Views must not know parameter ids, APVTS details, preset file paths, XML format, or plugin serialization policy.
 
-`AnalyzerSettingsActions` is still the only UI write path.
+## Optimistic Local Echo
+
+Direct controls may update their own local visual state immediately after user input. This is intentional: the UI should feel instant, then reconcile with the next authoritative snapshot.
 
 Rules:
 
-- views dispatch intents only
-- views must not know parameter ids
-- views must not talk to APVTS directly
-
-## Folder Responsibilities
-
-### `src/ui/`
-
-- shared UI primitives
-- theme tokens
-- popup chrome
-- icons and assets
-- no analyzer-specific worker logic
-
-### `src/ui/analyzer/controls/`
-
-- analyzer control strip components only
-- snapshot-driven
-- action-dispatching
-
-### `src/ui/analyzer/layout/`
-
-- top-level analyzer area composition only
-
-### `src/ui/analyzer/plot/view/`
-
-- JUCE `Component` classes only
-- analyzer section container
-- analyzer plot component
-- tooltip helper
-
-### `src/ui/analyzer/plot/logic/`
-
-Now message-thread-only and presentation-only:
-
-- `AnalyzerViewModel`
-  - canonical `AnalyzerSectionLayout`
-  - section-space labels and plot bounds
-  - plot-local band and grid geometry
-  - hover lookup from plot-local cursor input
-- `AnalyzerRenderBatchBuilder`
-  - direct paint-batch generation from immutable display frames
-- `AnalyzerGeometry`
-  - domain-to-screen mapping
-- formatting and hover helpers
-
-This folder no longer owns:
-
-- meter decay
-- display composition
-- global hold evolution
-- refresh cadence
-
-Those moved to `src/display/analyzer/`.
-
-### `src/ui/analyzer/rack/`
-
-- rack interaction
-- rack layout
-- rack popups
-- slot controls and slot visuals
-
-### `src/ui/analyzer/state/`
-
-- immutable analyzer UI snapshot types only
-
-## Analyzer Plot Flow
-
-```mermaid
-flowchart TD
-    SnapshotEvents[AnalyzerUiSnapshotSource listener] --> Snapshot[Ui::AnalyzerUiSnapshot]
-    Worker[AnalyzerDisplayWorker] --> Frame[AnalyzerDisplayFrame]
-    Snapshot --> Section[AnalyzerSectionComponent]
-    Frame --> Plot[AnalyzerPlotComponent]
-    Section --> Layout[AnalyzerViewModel canonical layout]
-    Layout --> Plot
-    Layout --> Tooltip[AnalyzerHoverTooltipRenderer]
-    Snapshot --> Plot
-    Plot --> Batches[AnalyzerRenderBatchBuilder]
-```
-
-Important behavior:
-
-- `AnalyzerSectionComponent` owns layout, static shell repaint policy, and tooltip state
-- `AnalyzerPlotComponent` consumes immutable display frames from the worker
-- snapshot changes are split into:
-  - layout-affecting changes handled by the section shell
-  - plot-only presentation changes handled by the plot child
-- only the opaque plot child redraws bars, hold, and hover highlight every frame
-
-## `AnalyzerSectionComponent` Responsibilities
-
-`AnalyzerSectionComponent` now owns:
-
-- canonical analyzer layout
-- section background cache
-- axis labels and outer plot chrome
-- plot child bounds
-- hover tooltip state
-- plot-local hover to tooltip translation
-
-It does not own:
-
-- analyzer worker state
-- bar/hold batch generation
-- steady-state analyzer repaint cadence
-
-## `AnalyzerPlotComponent` Responsibilities
-
-`AnalyzerPlotComponent` now owns:
-
-- `AnalyzerDisplayWorker`
-- latest consumed display frame pointer
-- opaque plot-base cache
-- dynamic batch rebuilds
-- plot-only repaint decisions
-- in-plot hover highlight
-
-It does not own:
-
-- `AnalyzerMeter`
-- display composition
-- hold evolution
-- refresh cadence state machine
-- copied raw trace vectors
-
-## Presentation vs Semantic State
-
-This split is the most important UI rule in the current design.
-
-### Semantic state
-
-Semantic state affects time-evolving display behavior and is submitted to the worker through `AnalyzerDisplayControlState`.
+- local echo is temporary component-local presentation state
+- the next snapshot from the source is authoritative
+- local echo must not become a second writable domain model
+- local echo should stay near direct input handling, not in shared state structs
 
 Examples:
 
-- global freeze
-- per-slot freeze
-- hold visibility/settings
-- contribution mask derived from slot visibility
-- floor dB
+- rack slot buttons may flip their active visual state immediately
+- colour/mode popups may update the visible slot control immediately
+- preset popups may remove a row after a successful delete action
 
-### Presentation state
+The plugin still owns persistence and parameter writes. The UI echo only bridges the time before the next snapshot publication.
 
-Presentation state stays on the message thread and must not wake the worker.
+## Analyzer Feature
 
-Examples:
+`src/ui/analyzer/plot/view/`
 
-- slot order
-- colour
-- opacity
-- hover
-- zoom / visible frequency range
+- JUCE analyzer section and plot components
+- section owns shell, labels, tooltip, and plot child placement
+- plot owns worker-frame consumption, hot plot repainting, and hover highlight
 
-Practical consequence:
+`src/ui/analyzer/plot/state/`
 
-- opacity drag is UI-only
-- reorder drag is UI-only
-- freeze and hold still go through the worker
+- plot UI constants, section layout structs, and plot view state
+- no JUCE components and no worker-owned display evolution
 
-## Static Layout vs Dynamic Batching
+`src/ui/analyzer/plot/logic/`
 
-The plot code is now split into two presentation stages.
+- message-thread layout, geometry, hover lookup, formatting, and paint batching
+- no meter decay, hold evolution, or refresh-cadence state machines
 
-### Static layout
+`src/ui/analyzer/rack/`
 
-Owned by `AnalyzerViewModel`.
+- rack `state/` owns slot UI state
+- rack `model/` derives slot defaults and options
+- rack `interaction/` owns reorder drag state and layout preview
+- rack `view/` owns JUCE slot/rack components
+- rack `popups/` owns colour and mode popup content
 
-Inputs:
+`src/ui/analyzer/controls/view/`
 
-- band layout
-- section bounds
-- analyzer display bounds
-- grid min/max/step
-- visible frequency range
+- analyzer control strip components
+- snapshot-driven and action-dispatching
 
-Outputs:
+## Popup Ownership
 
-- `AnalyzerSectionLayout`
-- section-space axis labels
-- section-space plot bounds and frame bounds
-- plot-local visible bands
-- plot-local grid and frequency marker positions
+Popup content belongs to feature folders. Callout lifetime policy belongs to shared UI helpers.
 
-### Dynamic batching
+Use `Ui::CalloutPresenter` for:
 
-Owned by `AnalyzerRenderBatchBuilder`.
+- launch/dismiss
+- look-and-feel assignment/removal
+- active callout tracking
+- async callout cleanup
 
-Inputs:
-
-- latest `AnalyzerDisplayFrame`
-- visible bands
-- slot order
-- slot colour / opacity
-- meter visibility
-- plot bounds
-
-Outputs:
-
-- rectangle batches for bars
-- rectangle batches for hold
-- rectangle batches for hover highlight
-
-This removes the old extra pass that built full intermediate trace/bar models every frame.
-
-## Hover Split
-
-Hover is now split across the shell and the plot child.
-
-`AnalyzerPlotComponent` owns:
-
-- hovered-band highlight batches
-- plot-only dirty repaint bounds
-- raw mouse tracking inside the exact plot rect
-
-`AnalyzerHoverTooltipRenderer` remains a lightweight helper owned by `AnalyzerSectionComponent`.
-
-It owns:
-
-- tooltip chrome and glyphs
-
-It consumes:
-
-- hover info from `AnalyzerViewModel`
-
-It does not own analyzer semantics.
+Popup content reports intent through callbacks. It must not find or dismiss its parent `juce::CallOutBox` directly. Feature components may still keep feature-specific popup state such as which menu is open or which trigger should regain focus.
 
 ## Theme Ownership
 
-`Ui::Theme` remains the owner of visual tokens and repeated interaction metrics.
+`Ui::Theme` owns visual tokens and repeated interaction metrics.
 
-Important groups:
+If a literal affects appearance, geometry, or repeated interaction behavior, it belongs in theme/config rather than a view file.
 
-- `metrics.editor`
-- `metrics.popup`
-- `metrics.analyzerPlot`
-- `metrics.tooltip`
-- `metrics.slot`
-- `metrics.sectionDivider`
+## Source Of Truth
 
-Rule:
-
-- if a literal affects appearance, geometry, or repeated interaction behavior, it belongs in theme/config, not in a view file
-
-## Triple Buffer Boundary
-
-The UI now consumes the second triple-buffer boundary, not the first one.
-
-- DSP triple buffer
-  - raw traces
-  - reader: display worker
-- display triple buffer
-  - display frames
-  - reader: message thread
-
-UI snapshots remain separate from both.
-
-## Current State
-
-- analyzer plot is no longer timer-driven for semantic recomputation
-- worker thread owns display-rate analyzer state
-- section shell owns static layout and tooltip presentation
-- opaque plot child owns hot-path plotting work
-- slot order, colour, and opacity are UI-only concerns
-- hold and freeze semantics are worker-owned concerns
-- analyzer docs and code now align on the explicit `dsp / display / ui` split
+- plugin owns APVTS, persistence, and cross-layer wiring
+- display owns worker-thread analyzer display state
+- UI owns presentation state, interaction state, and component layout
+- `shared` may define cross-layer value types/defaults, but must not include `src/ui`
+- snapshots are the authoritative UI state from plugin to UI
+- direct local echo is temporary and must reconcile with snapshots

@@ -34,7 +34,7 @@ std::vector<PluginPresets::PresetDocument> UserPresetStore::loadAll() const {
     return documents;
 }
 
-std::optional<PluginPresets::PresetDocument> UserPresetStore::load(const PluginPresets::PresetId& presetId) const {
+std::optional<PluginPresets::PresetDocument> UserPresetStore::load(const juce::String& presetId) const {
     const auto storedDocuments = loadStoredDocuments();
     const auto iterator = std::find_if(storedDocuments.begin(), storedDocuments.end(),
                                        [&presetId](const StoredDocument& storedDocument) {
@@ -83,7 +83,7 @@ bool UserPresetStore::save(const PluginPresets::PresetDocument& document) const 
     return true;
 }
 
-bool UserPresetStore::remove(const PluginPresets::PresetId& presetId) const {
+bool UserPresetStore::remove(const juce::String& presetId) const {
     const auto storedDocuments = loadStoredDocuments();
     const auto iterator = std::find_if(storedDocuments.begin(), storedDocuments.end(),
                                        [&presetId](const StoredDocument& storedDocument) {

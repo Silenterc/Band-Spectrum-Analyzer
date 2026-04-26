@@ -60,11 +60,16 @@ SignalModeSelectionPopupContent::SignalModeSelectionPopupContent(
     const Analyzer::SignalSource currentSourceToUse,
     const Analyzer::SignalMode currentModeToUse,
     std::function<void(Analyzer::SignalMode)> onSelectToUse,
-    std::function<void()> onDismissToUse)
+    std::function<void()> onCloseRequestedToUse,
+    std::function<void()> onDismissedToUse)
     : theme(themeToUse),
       currentSource(currentSourceToUse),
       onSelect(std::move(onSelectToUse)),
-      onDismiss(std::move(onDismissToUse)) {
+      onCloseRequested(std::move(onCloseRequestedToUse)),
+      onDismissed(std::move(onDismissedToUse)) {
+    jassert(onSelect != nullptr);
+    jassert(onCloseRequested != nullptr);
+    jassert(onDismissed != nullptr);
     for (size_t index = 0; index < Ui::signalSlotOptions.size(); ++index) {
         const auto &option = Ui::signalSlotOptions[index];
         auto button = std::make_unique<SignalSelectionRowButton>(
@@ -79,19 +84,15 @@ SignalModeSelectionPopupContent::SignalModeSelectionPopupContent(
             if (!buttonPtr->isEnabled())
                 return;
 
-            if (onSelect)
-                onSelect(buttonPtr->mode);
-
-            if (auto *callout = findParentComponentOfClass<juce::CallOutBox>())
-                callout->dismiss();
+            onSelect(buttonPtr->mode);
+            onCloseRequested();
         };
         buttons[index] = std::move(button);
     }
 }
 
 SignalModeSelectionPopupContent::~SignalModeSelectionPopupContent() {
-    if (onDismiss)
-        onDismiss();
+    onDismissed();
 }
 
 void SignalModeSelectionPopupContent::paint(juce::Graphics &g) {

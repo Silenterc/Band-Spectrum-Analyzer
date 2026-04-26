@@ -7,7 +7,7 @@
 #include "display/analyzer/logic/AnalyzerDisplayFrameModel.h"
 #include "display/analyzer/logic/AnalyzerGlobalHoldModel.h"
 #include "ui/theme/UiTheme.h"
-#include "ui/analyzer/plot/data/AnalyzerViewState.h"
+#include "ui/analyzer/plot/state/AnalyzerViewState.h"
 #include "ui/analyzer/plot/logic/AnalyzerGeometry.h"
 #include "ui/analyzer/plot/logic/AnalyzerHoverModel.h"
 #include "ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.h"

@@ -10,7 +10,7 @@
 #include "dsp/core/AnalyzerEngine.h"
 #include "display/analyzer/logic/AnalyzerMeter.h"
 #include "shared/DefaultParameterValues.h"
-#include "ui/analyzer/plot/data/AnalyzerUiConstants.h"
+#include "ui/analyzer/plot/state/AnalyzerUiConstants.h"
 
 namespace {
     constexpr double sampleRate = 48000.0;

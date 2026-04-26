@@ -6,8 +6,8 @@
 
 #include "../../display/analyzer/data/AnalyzerMeterData.h"
 #include "../../dsp/core/EngineParameterState.h"
-#include "../../ui/editor/EditorPresentationState.h"
-#include "../../ui/state/SignalSlotUiState.h"
+#include "../../shared/UiScalePreset.h"
+#include "../../ui/analyzer/rack/state/SignalSlotUiState.h"
 #include "ParameterSchema.h"
 
 namespace PluginParameters {

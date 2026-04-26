@@ -8,11 +8,11 @@
 
 #include "../display/analyzer/contracts/AnalyzerRawTraceSource.h"
 #include "../dsp/core/EngineParameterState.h"
-#include "../ui/contracts/AnalyzerSettingsActions.h"
-#include "../ui/contracts/AnalyzerUiSnapshotSource.h"
-#include "../ui/contracts/EditorPresentationStateSource.h"
-#include "../ui/contracts/PresetActions.h"
-#include "../ui/contracts/PresetUiSnapshotSource.h"
+#include "../ui/analyzer/contracts/AnalyzerSettingsActions.h"
+#include "../ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
+#include "../ui/editor/contracts/EditorPresentationStateSource.h"
+#include "../ui/presets/contracts/PresetActions.h"
+#include "../ui/presets/contracts/PresetUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
 #include "ProcessorChangeTracker.h"
 #include "SignalOutputMixer.h"
@@ -103,7 +103,7 @@ public:
     void removeEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
 
     // PresetUiSnapshotSource
-    PluginPresets::PresetUiSnapshot getPresetUiSnapshot() const override;
+    Ui::Presets::PresetUiSnapshot getPresetUiSnapshot() const override;
     void addPresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
     void removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
 
@@ -135,14 +135,14 @@ public:
     void setVisibleMinFrequencyHz(float frequencyHz) override;
     void setVisibleMaxFrequencyHz(float frequencyHz) override;
 
-    [[nodiscard]] PluginPresets::PresetActionResult loadPreset(const PluginPresets::PresetId& presetId) override;
-    [[nodiscard]] PluginPresets::PresetActionResult loadPreviousPreset() override;
-    [[nodiscard]] PluginPresets::PresetActionResult loadNextPreset() override;
-    [[nodiscard]] PluginPresets::PresetActionResult resetCurrentPreset() override;
-    [[nodiscard]] PluginPresets::PresetActionResult savePresetAs(const juce::String& name) override;
-    [[nodiscard]] PluginPresets::PresetActionResult overwritePreset(const PluginPresets::PresetId& presetId,
+    [[nodiscard]] Ui::Presets::PresetActionResult loadPreset(const Ui::Presets::PresetId& presetId) override;
+    [[nodiscard]] Ui::Presets::PresetActionResult loadPreviousPreset() override;
+    [[nodiscard]] Ui::Presets::PresetActionResult loadNextPreset() override;
+    [[nodiscard]] Ui::Presets::PresetActionResult resetCurrentPreset() override;
+    [[nodiscard]] Ui::Presets::PresetActionResult savePresetAs(const juce::String& name) override;
+    [[nodiscard]] Ui::Presets::PresetActionResult overwritePreset(const Ui::Presets::PresetId& presetId,
                                                                     const juce::String& name) override;
-    [[nodiscard]] PluginPresets::PresetActionResult deletePreset(const PluginPresets::PresetId& presetId) override;
+    [[nodiscard]] Ui::Presets::PresetActionResult deletePreset(const Ui::Presets::PresetId& presetId) override;
     void refreshPresetCatalog() override;
 
 private:
@@ -176,7 +176,7 @@ private:
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
     std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
     std::optional<Ui::EditorPresentationState> lastPublishedEditorPresentationState;
-    std::optional<PluginPresets::PresetUiSnapshot> lastPublishedPresetUiSnapshot;
+    std::optional<Ui::Presets::PresetUiSnapshot> lastPublishedPresetUiSnapshot;
     juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
     juce::ListenerList<EditorPresentationStateSource::Listener> editorPresentationStateListeners;
     juce::ListenerList<PresetUiSnapshotSource::Listener> presetUiSnapshotListeners;

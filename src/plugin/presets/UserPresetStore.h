@@ -14,9 +14,9 @@ public:
     [[nodiscard]] static juce::File defaultPresetDirectory();
 
     [[nodiscard]] std::vector<PluginPresets::PresetDocument> loadAll() const;
-    [[nodiscard]] std::optional<PluginPresets::PresetDocument> load(const PluginPresets::PresetId& presetId) const;
+    [[nodiscard]] std::optional<PluginPresets::PresetDocument> load(const juce::String& presetId) const;
     bool save(const PluginPresets::PresetDocument& document) const;
-    bool remove(const PluginPresets::PresetId& presetId) const;
+    bool remove(const juce::String& presetId) const;
 
 private:
     struct StoredDocument {

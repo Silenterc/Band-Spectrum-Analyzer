@@ -4,8 +4,8 @@
 #include <cmath>
 
 #include "display/analyzer/data/AnalyzerMeterData.h"
-#include "ui/analyzer/plot/data/AnalyzerUiConstants.h"
-#include "ui/state/SignalSlotUiState.h"
+#include "ui/analyzer/plot/state/AnalyzerUiConstants.h"
+#include "ui/analyzer/rack/state/SignalSlotUiState.h"
 
 namespace Ui {
     inline bool meterSettingsEqual(const Analyzer::MeterSettings &lhs, const Analyzer::MeterSettings &rhs) {

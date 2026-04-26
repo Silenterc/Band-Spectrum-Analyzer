@@ -31,9 +31,10 @@ SignalRackComponent::SignalRackComponent(AnalyzerUiSnapshotSource &uiSnapshotSou
     }
 
     for (auto &slotComponent: slotComponents) {
-        slotComponent = std::make_unique<SignalSlotComponent>(theme);
+        slotComponent = std::make_unique<SignalSlotComponent>(
+            theme,
+            static_cast<SignalSlotComponent::Listener&>(*this));
         addAndMakeVisible(*slotComponent);
-        slotComponent->setListener(static_cast<SignalSlotComponent::Listener *>(this));
     }
 
     addAndMakeVisible(addButton);
