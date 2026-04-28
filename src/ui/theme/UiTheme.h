@@ -227,8 +227,9 @@ namespace Ui {
         int height = 40;
         int topInset = 4;
         int plotGap = 4;
-        int logoHeight = 24;
+        int logoHeight = 28;
         int logoLeftInset = 0;
+        int logoOpticalYOffset = 4;
         int logoGap = 8;
         int displayGap = 0;
         int groupGap = 8;

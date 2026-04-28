@@ -70,5 +70,6 @@ juce::Rectangle<int> PresetHeaderComponent::getLogoBounds(const juce::Rectangle<
     const auto logoWidth = juce::jmax(1, juce::roundToInt(static_cast<float>(logoHeight) * getLogoAspectRatio()));
     return juce::Rectangle<int>(logoWidth, logoHeight)
         .withX(availableBounds.getX())
-        .withCentre({availableBounds.getX() + logoWidth / 2, availableBounds.getCentreY()});
+        .withCentre({availableBounds.getX() + logoWidth / 2, availableBounds.getCentreY()})
+        .translated(0, theme.metrics.presetHeader.logoOpticalYOffset);
 }

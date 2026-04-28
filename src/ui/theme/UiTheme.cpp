@@ -200,6 +200,7 @@ namespace Ui {
         scaledMetrics.plotGap = scaleInt(plotGap, factor);
         scaledMetrics.logoHeight = scaleInt(logoHeight, factor);
         scaledMetrics.logoLeftInset = scaleInt(logoLeftInset, factor);
+        scaledMetrics.logoOpticalYOffset = scaleInt(logoOpticalYOffset, factor);
         scaledMetrics.logoGap = scaleInt(logoGap, factor);
         scaledMetrics.displayGap = scaleInt(displayGap, factor);
         scaledMetrics.groupGap = scaleInt(groupGap, factor);
