@@ -122,3 +122,14 @@ TEST_CASE("Analyzer controls and editor components use view folders", "[ui][arch
     REQUIRE(editorDirectory.findChildFiles(juce::File::findFiles, false, "*.h").isEmpty());
     REQUIRE(editorDirectory.findChildFiles(juce::File::findFiles, false, "*.cpp").isEmpty());
 }
+
+TEST_CASE("Settings feature starts with view-only folder structure", "[ui][architecture]") {
+    const auto settingsDirectory = juce::File(BSA_REPO_ROOT)
+                                       .getChildFile("src")
+                                       .getChildFile("ui")
+                                       .getChildFile("settings");
+    REQUIRE(settingsDirectory.isDirectory());
+    REQUIRE(settingsDirectory.getChildFile("view").isDirectory());
+    REQUIRE(settingsDirectory.findChildFiles(juce::File::findFiles, false, "*.h").isEmpty());
+    REQUIRE(settingsDirectory.findChildFiles(juce::File::findFiles, false, "*.cpp").isEmpty());
+}

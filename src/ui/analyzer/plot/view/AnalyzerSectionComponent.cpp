@@ -87,20 +87,6 @@ void AnalyzerSectionComponent::drawAxisLabels(juce::Graphics &g) const {
     }
 }
 
-void AnalyzerSectionComponent::drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const {
-    const auto &screw = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto screwPadding = theme.metrics.background.screwPadding;
-    const auto topLeftBounds = Ui::getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
-    const auto topRightBounds = Ui::getLogicalAssetBounds(
-        screw,
-        rasterScale,
-        {bounds.getWidth() - screwPadding - topLeftBounds.getWidth(), screwPadding});
-
-    Ui::drawAssetWithin(g, screw, topLeftBounds);
-    Ui::drawAssetWithin(g, screw, topRightBounds);
-}
-
 void AnalyzerSectionComponent::rebuildLayout() {
     const auto bounds = getLocalBounds();
     if (bounds.isEmpty()) {
@@ -159,7 +145,7 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
                        backgroundImage.getWidth(),
                        backgroundImage.getHeight());
 
-    drawTopCornerScrews(graphics, bounds);
+    Ui::drawTopCornerScrews(graphics, bounds, theme);
     drawAxisLabels(graphics);
 }
 

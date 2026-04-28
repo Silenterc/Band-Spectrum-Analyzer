@@ -1,5 +1,7 @@
 #include "UiRasterAssets.h"
 
+#include "UiTheme.h"
+
 #include <BinaryData.h>
 
 namespace {
@@ -203,5 +205,21 @@ namespace Ui {
                     sourceBounds.getY(),
                     sourceBounds.getWidth(),
                     sourceBounds.getHeight());
+    }
+
+    void drawTopCornerScrews(juce::Graphics &g,
+                             const juce::Rectangle<int> bounds,
+                             const Theme &theme) {
+        const auto& screw = getSharedRasterAsset(SharedRasterAssetId::screw);
+        const auto rasterScale = theme.metrics.assets.rasterScale;
+        const auto screwPadding = theme.metrics.background.screwPadding;
+        const auto topLeftBounds = getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
+        const auto topRightBounds = getLogicalAssetBounds(
+            screw,
+            rasterScale,
+            {bounds.getWidth() - screwPadding - topLeftBounds.getWidth(), screwPadding});
+
+        drawAssetWithin(g, screw, topLeftBounds);
+        drawAssetWithin(g, screw, topRightBounds);
     }
 }

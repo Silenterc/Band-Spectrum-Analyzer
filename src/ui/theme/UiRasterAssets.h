@@ -3,6 +3,8 @@
 #include <juce_graphics/juce_graphics.h>
 
 namespace Ui {
+    struct Theme;
+
     enum class SharedRasterAssetId {
         background,
         buttonOff,
@@ -47,4 +49,8 @@ namespace Ui {
                          const juce::Image& image,
                          const juce::Rectangle<int>& destinationBounds,
                          const juce::Rectangle<int>& sourceBounds);
+
+    void drawTopCornerScrews(juce::Graphics &g,
+                             juce::Rectangle<int> bounds,
+                             const Theme &theme);
 }

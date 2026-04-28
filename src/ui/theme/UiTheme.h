@@ -315,6 +315,7 @@ namespace Ui {
         juce::Colour tooltipText;
         juce::Colour hardwareMarkingLight;
         juce::Colour hardwareMarkingDark;
+        juce::Colour hardwareMarkingActiveLight;
         juce::Colour hardwareMarkingCoolDark;
         juce::Colour textSelectionFill;
         juce::Colour textSelectionText;

@@ -282,6 +282,7 @@ namespace Ui {
         theme.tooltipText = juce::Colour::fromRGB(229, 212, 186);
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
+        theme.hardwareMarkingActiveLight = juce::Colour::fromRGB(255, 220, 126);
         theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(58, 72, 82);
         theme.textSelectionFill = juce::Colour::fromRGB(74, 132, 255);
         theme.textSelectionText = juce::Colour::fromRGB(250, 248, 244);

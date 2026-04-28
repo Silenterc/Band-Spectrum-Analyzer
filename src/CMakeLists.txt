@@ -67,6 +67,7 @@ target_sources(${PROJECT_NAME}
         ui/theme/UiTheme.cpp
         ui/editor/view/EditorBackgroundComponent.cpp
         ui/editor/layout/MainLayoutComponent.cpp
+        ui/settings/view/SettingsPageComponent.cpp
         ui/presets/view/PresetHeaderComponent.cpp
         ui/presets/view/PresetHeaderControlsComponent.cpp
         ui/presets/view/PresetBrowserPopupComponent.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <functional>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -20,6 +21,10 @@ public:
     void resized() override;
     void paint(juce::Graphics &g) override;
 
+    void setSettingsPageActive(bool isActive);
+
+    std::function<void()> onSettingsClicked;
+
 private:
     void analyzerUiSnapshotChanged(const Ui::AnalyzerUiSnapshot &snapshot) override;
     void syncButtonStates(const Ui::AnalyzerUiSnapshot &snapshot);
@@ -38,4 +43,5 @@ private:
     juce::Rectangle<int> decorBounds;
     juce::Image cachedDecorImage;
     Ui::AnalyzerUiSnapshot currentSnapshot;
+    bool settingsPageActive = false;
 };

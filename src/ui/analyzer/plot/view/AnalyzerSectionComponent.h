@@ -35,7 +35,6 @@ private:
     };
 
     void drawAxisLabels(juce::Graphics &g) const;
-    void drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const;
     void rebuildLayout();
     void rebuildCachedBackground();
     void updateHoverPresentation();
