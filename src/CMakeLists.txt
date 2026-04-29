@@ -15,6 +15,8 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/uikit/button/button_off.png
         ui/assets/uikit/button/button_on.png
         ui/assets/uikit/decor_grid.png
+        ui/assets/uikit/knob_small/Knob_small.png
+        ui/assets/uikit/knob_small/scale_small_knob.png
         ui/assets/uikit/logo.svg
         plugin/assets/presets/factory_default_preset.xml
         ui/assets/uikit/pad/pad_off.png
@@ -60,6 +62,8 @@ target_sources(${PROJECT_NAME}
         ui/theme/UiIcons.cpp
         ui/theme/UiRasterAssets.cpp
         ui/widgets/RasterIconButton.cpp
+        ui/widgets/RasterFilmstrip.cpp
+        ui/widgets/RasterKnobComponent.cpp
         ui/widgets/PadButton.cpp
         ui/widgets/CalloutPresenter.cpp
         ui/widgets/PopupActionButton.cpp

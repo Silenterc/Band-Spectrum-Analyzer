@@ -191,6 +191,27 @@ namespace Ui {
         [[nodiscard]] PopupMetrics scaled(float factor) const;
     };
 
+    struct KnobMetrics {
+        int width = 104;
+        int height = 146;
+        int scaleWidth = 56;
+        int scaleHeight = 49;
+        int scaleOffsetY = -8;
+        int knobSide = 60;
+        int valueWidth = 78;
+        int valueHeight = 20;
+        int valueEditorTextIndentX = 6;
+        int valueEditorTextIndentTop = 2;
+        float labelFontHeight = 13.0f;
+        float valueFontHeight = 13.5f;
+        int labelHeight = 18;
+        int labelToScaleGap = 4;
+        int scaleToValueGap = 6;
+        float dragPixelsForFullRange = 180.0f;
+
+        [[nodiscard]] KnobMetrics scaled(float factor) const;
+    };
+
     struct BackgroundMetrics {
         int woodSideInset = 31;
         int screwPadding = 2;
@@ -291,6 +312,7 @@ namespace Ui {
         RackMetrics rack;
         SlotMetrics slot;
         PopupMetrics popup;
+        KnobMetrics knob;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

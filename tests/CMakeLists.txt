@@ -15,6 +15,7 @@ add_executable(band-spectrum-analyzer-tests
     plugin/SignalOutputMixerTests.cpp
     ui/UiArchitectureRulesTests.cpp
     ui/AnalyzerUiModelTests.cpp
+    ui/RasterKnobTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
     ../src/dsp/filterbank/FilterBank.cpp
     ../src/dsp/filterbank/SIMDBPFilter.cpp
@@ -33,6 +34,7 @@ add_executable(band-spectrum-analyzer-tests
     ../src/plugin/presets/PresetTypes.cpp
     ../src/plugin/presets/UserPresetStore.cpp
     ../src/ui/theme/UiTheme.cpp
+    ../src/ui/widgets/RasterFilmstrip.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerGeometry.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerHoverModel.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.cpp

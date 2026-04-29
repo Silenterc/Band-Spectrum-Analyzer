@@ -167,6 +167,27 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    KnobMetrics KnobMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.scaleWidth = scaleInt(scaleWidth, factor);
+        scaledMetrics.scaleHeight = scaleInt(scaleHeight, factor);
+        scaledMetrics.scaleOffsetY = scaleInt(scaleOffsetY, factor);
+        scaledMetrics.knobSide = scaleInt(knobSide, factor);
+        scaledMetrics.valueWidth = scaleInt(valueWidth, factor);
+        scaledMetrics.valueHeight = scaleInt(valueHeight, factor);
+        scaledMetrics.valueEditorTextIndentX = scaleInt(valueEditorTextIndentX, factor);
+        scaledMetrics.valueEditorTextIndentTop = scaleInt(valueEditorTextIndentTop, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        scaledMetrics.valueFontHeight = scaleFloat(valueFontHeight, factor);
+        scaledMetrics.labelHeight = scaleInt(labelHeight, factor);
+        scaledMetrics.labelToScaleGap = scaleInt(labelToScaleGap, factor);
+        scaledMetrics.scaleToValueGap = scaleInt(scaleToValueGap, factor);
+        scaledMetrics.dragPixelsForFullRange = scaleFloat(dragPixelsForFullRange, factor);
+        return scaledMetrics;
+    }
+
     BackgroundMetrics BackgroundMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.woodSideInset = scaleInt(woodSideInset, factor);
@@ -258,6 +279,7 @@ namespace Ui {
         scaledMetrics.rack = rack.scaled(factor);
         scaledMetrics.slot = slot.scaled(factor);
         scaledMetrics.popup = popup.scaled(factor);
+        scaledMetrics.knob = knob.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

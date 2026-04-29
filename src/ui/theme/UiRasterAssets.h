@@ -25,8 +25,14 @@ namespace Ui {
         switchUp,
     };
 
+    enum class ControlRasterAssetId {
+        knobSmallFilmstrip,
+        knobSmallScale,
+    };
+
     const juce::Image &getSharedRasterAsset(SharedRasterAssetId assetId);
     const juce::Image &getAnalyzerRasterAsset(AnalyzerRasterAssetId assetId);
+    const juce::Image &getControlRasterAsset(ControlRasterAssetId assetId);
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,
                                                float rasterScale,

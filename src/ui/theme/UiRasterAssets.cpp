@@ -102,6 +102,20 @@ namespace {
         jassert(image.isValid());
         return image;
     }
+
+    const juce::Image &getKnobSmallFilmstrip() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::Knob_small_png,
+                                                                  static_cast<size_t>(BinaryData::Knob_small_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image &getKnobSmallScale() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::scale_small_knob_png,
+                                                                  static_cast<size_t>(BinaryData::scale_small_knob_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
 }
 
 namespace Ui {
@@ -147,6 +161,18 @@ namespace Ui {
 
         jassertfalse;
         return getBackground2();
+    }
+
+    const juce::Image &getControlRasterAsset(const ControlRasterAssetId assetId) {
+        switch (assetId) {
+            case ControlRasterAssetId::knobSmallFilmstrip:
+                return getKnobSmallFilmstrip();
+            case ControlRasterAssetId::knobSmallScale:
+                return getKnobSmallScale();
+        }
+
+        jassertfalse;
+        return getKnobSmallFilmstrip();
     }
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,
