@@ -7,8 +7,9 @@
 
 class PluginStateSerializer final {
 public:
+    // Non-const parameters because juce::AudioProcessorValueTreeState::copyState() locks internally.
     [[nodiscard]] PluginPresets::PluginStateSnapshot captureState(
-        const juce::AudioProcessorValueTreeState& parameters,
+        juce::AudioProcessorValueTreeState& parameters,
         const SignalSlotOrderState& signalSlotOrderState) const;
 
     bool applyState(const PluginPresets::PluginStateSnapshot& snapshot,

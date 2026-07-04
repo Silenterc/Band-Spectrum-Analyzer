@@ -17,7 +17,7 @@ SettingsPageComponent::SettingsPageComponent(const Ui::Theme& themeToUse)
     knobConfig.formatter = [](const float value) {
         return juce::String(juce::roundToInt(value)) + " ms";
     };
-    knobConfig.parser = [](const juce::String text) -> std::optional<float> {
+    knobConfig.parser = [](const juce::String &text) -> std::optional<float> {
         return Ui::RasterFilmstrip::parseNumericText(text, "ms");
     };
     mockHoldTimeKnob.setConfig(std::move(knobConfig));

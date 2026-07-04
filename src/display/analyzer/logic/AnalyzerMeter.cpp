@@ -1,5 +1,7 @@
 #include "display/analyzer/logic/AnalyzerMeter.h"
 
+#include "display/analyzer/data/AnalyzerDisplayTuning.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -10,11 +12,11 @@ namespace {
     constexpr float discardedPeakDb = -std::numeric_limits<float>::infinity();
 
     float snapRmsToDisplayFloor(const float valueDb, const float floorDb) {
-        return valueDb <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb ? floorDb : valueDb;
+        return valueDb <= floorDb + Display::analyzerMeterTuning.settleToleranceDb ? floorDb : valueDb;
     }
 
     void discardPeakIfBelowFloor(float &peakDb, float &lastPeakInputDb, const float floorDb) {
-        if (peakDb > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
+        if (peakDb > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
             return;
 
         peakDb = discardedPeakDb;
@@ -121,12 +123,12 @@ const Analyzer::MeterData &AnalyzerMeter::getMeterData() const {
 bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
     for (const auto &trace: meterData.traces) {
         for (const auto value: trace.frame.rmsDb) {
-            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
+            if (value > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
 
         for (const auto value: trace.frame.peakDb) {
-            if (value > floorDb + Ui::analyzerMeterTuning.settleToleranceDb)
+            if (value > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
                 return false;
         }
     }
@@ -134,37 +136,26 @@ bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
     return true;
 }
 
-void AnalyzerMeter::ensureTraceState(const Analyzer::TraceKind kind, const size_t bandCount, const float floorDb) {
+AnalyzerMeter::TraceState &AnalyzerMeter::getOrCreateTraceState(const Analyzer::TraceKind kind,
+                                                                const size_t bandCount,
+                                                                const float floorDb) {
     auto traceStateIterator = std::find_if(traceStates.begin(), traceStates.end(),
                                            [kind](const TraceState &traceState) { return traceState.kind == kind; });
 
     if (traceStateIterator == traceStates.end()) {
-        TraceState traceState;
-        traceState.kind = kind;
-        traceStates.push_back(std::move(traceState));
+        traceStates.push_back({.kind = kind});
         traceStateIterator = std::prev(traceStates.end());
     }
 
     auto &traceState = *traceStateIterator;
-    if (traceState.peakDb.size() == bandCount)
-        return;
+    if (traceState.peakDb.size() != bandCount) {
+        traceState.rmsDb.assign(bandCount, floorDb);
+        traceState.peakDb.assign(bandCount, discardedPeakDb);
+        traceState.lastPeakInputDb.assign(bandCount, discardedPeakDb);
+        traceState.rmsWindows.assign(bandCount, {});
+    }
 
-    traceState.rmsDb.assign(bandCount, floorDb);
-    traceState.peakDb.assign(bandCount, discardedPeakDb);
-    traceState.lastPeakInputDb.assign(bandCount, discardedPeakDb);
-    traceState.rmsWindows.assign(bandCount, {});
-}
-
-AnalyzerMeter::TraceState &AnalyzerMeter::getOrCreateTraceState(const Analyzer::TraceKind kind,
-                                                                const size_t bandCount,
-                                                                const float floorDb) {
-    ensureTraceState(kind, bandCount, floorDb);
-
-    const auto traceStateIterator = std::find_if(traceStates.begin(), traceStates.end(),
-                                                 [kind](const TraceState &traceState) {
-                                                     return traceState.kind == kind;
-                                                 });
-    return *traceStateIterator;
+    return traceState;
 }
 
 float AnalyzerMeter::getPeakDb(const Analyzer::BandMeasurements &measurements, const float floorDb) {

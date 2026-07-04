@@ -117,11 +117,6 @@ namespace PluginParameters::Schema {
     }
 
     template<typename Enum, size_t Size>
-    constexpr int choiceCount(const std::array<EnumChoice<Enum>, Size> &choices) {
-        return static_cast<int>(choices.size());
-    }
-
-    template<typename Enum, size_t Size>
     constexpr int indexForValue(const Enum value, const std::array<EnumChoice<Enum>, Size> &choices) {
         for (size_t index = 0; index < choices.size(); ++index) {
             if (choices[index].value == value)
@@ -183,54 +178,27 @@ namespace PluginParameters::Schema {
                                               Defaults::visibleMaxFrequencyHzStep);
     }
 
-    inline juce::String slotParameterId(const SlotField field, const size_t slotIndex) {
-        const auto slot = juce::String(static_cast<int>(slotIndex));
-
+    inline constexpr const char *slotFieldSuffix(const SlotField field) {
         switch (field) {
-            case SlotField::enabled:
-                return "signalSlot" + slot + "Enabled";
-            case SlotField::solo:
-                return "signalSlot" + slot + "Solo";
-            case SlotField::visible:
-                return "signalSlot" + slot + "Visible";
-            case SlotField::frozen:
-                return "signalSlot" + slot + "Frozen";
-            case SlotField::source:
-                return "signalSlot" + slot + "Source";
-            case SlotField::mode:
-                return "signalSlot" + slot + "Mode";
-            case SlotField::colour:
-                return "signalSlot" + slot + "Colour";
-            case SlotField::opacity:
-                return "signalSlot" + slot + "Opacity";
+            case SlotField::enabled: return "Enabled";
+            case SlotField::solo: return "Solo";
+            case SlotField::visible: return "Visible";
+            case SlotField::frozen: return "Frozen";
+            case SlotField::source: return "Source";
+            case SlotField::mode: return "Mode";
+            case SlotField::colour: return "Colour";
+            case SlotField::opacity: return "Opacity";
         }
 
-        return {};
+        return "";
+    }
+
+    inline juce::String slotParameterId(const SlotField field, const size_t slotIndex) {
+        return "signalSlot" + juce::String(static_cast<int>(slotIndex)) + slotFieldSuffix(field);
     }
 
     inline juce::String slotParameterName(const SlotField field, const size_t slotIndex) {
-        const auto prefix = "Signal " + juce::String(static_cast<int>(slotIndex + 1)) + " ";
-
-        switch (field) {
-            case SlotField::enabled:
-                return prefix + "Enabled";
-            case SlotField::solo:
-                return prefix + "Solo";
-            case SlotField::visible:
-                return prefix + "Visible";
-            case SlotField::frozen:
-                return prefix + "Frozen";
-            case SlotField::source:
-                return prefix + "Source";
-            case SlotField::mode:
-                return prefix + "Mode";
-            case SlotField::colour:
-                return prefix + "Colour";
-            case SlotField::opacity:
-                return prefix + "Opacity";
-        }
-
-        return {};
+        return "Signal " + juce::String(static_cast<int>(slotIndex + 1)) + " " + slotFieldSuffix(field);
     }
 
     inline std::unique_ptr<juce::RangedAudioParameter> makeSlotParameter(const SlotField field, const size_t slotIndex) {

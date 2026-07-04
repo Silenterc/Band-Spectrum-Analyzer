@@ -273,7 +273,7 @@ void RasterKnobComponent::updateValueEditorText() {
 
 void RasterKnobComponent::setValueInternal(const float newValue, const juce::NotificationType notificationType) {
     const auto nextValue = snapAndClamp(newValue);
-    if (std::abs(value - nextValue) <= 0.0001f)
+    if (juce::approximatelyEqual(value, nextValue))
         return;
 
     value = nextValue;
@@ -294,7 +294,7 @@ juce::String RasterKnobComponent::formatValue(const float plainValue) const {
     return juce::String(plainValue, 1) + (config.suffix.isNotEmpty() ? " " + config.suffix : juce::String{});
 }
 
-std::optional<float> RasterKnobComponent::parseValue(const juce::String text) const {
+std::optional<float> RasterKnobComponent::parseValue(const juce::String &text) const {
     if (config.parser != nullptr)
         return config.parser(text);
 

@@ -11,7 +11,6 @@
 #include "ui/analyzer/plot/logic/AnalyzerGeometry.h"
 #include "ui/analyzer/plot/logic/AnalyzerHoverModel.h"
 #include "ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.h"
-#include "ui/analyzer/plot/logic/AnalyzerMeterTuning.h"
 #include "ui/analyzer/plot/logic/AnalyzerUiSelectors.h"
 #include "ui/analyzer/state/AnalyzerUiSnapshot.h"
 #include "ui/analyzer/plot/logic/AnalyzerViewModel.h"

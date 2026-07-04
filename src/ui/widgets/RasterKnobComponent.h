@@ -17,7 +17,7 @@ public:
         float step = 0.0f;
         juce::String suffix;
         std::function<juce::String(float)> formatter;
-        std::function<std::optional<float>(juce::String)> parser;
+        std::function<std::optional<float>(const juce::String &)> parser;
     };
 
     explicit RasterKnobComponent(const Ui::Theme& themeToUse);
@@ -75,7 +75,7 @@ private:
     void setValueInternal(float newValue, juce::NotificationType notificationType);
     [[nodiscard]] float snapAndClamp(float plainValue) const;
     [[nodiscard]] juce::String formatValue(float plainValue) const;
-    [[nodiscard]] std::optional<float> parseValue(juce::String text) const;
+    [[nodiscard]] std::optional<float> parseValue(const juce::String &text) const;
     [[nodiscard]] int getFrameIndex() const;
 
     const Ui::Theme& theme;

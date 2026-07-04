@@ -1,5 +1,7 @@
 #include "display/analyzer/thread/AnalyzerDisplayWorker.h"
 
+#include "display/analyzer/data/AnalyzerDisplayTuning.h"
+
 namespace {
     const std::vector<Analyzer::RawTrace>& emptyRawTraces() {
         static const std::vector<Analyzer::RawTrace> traces;
@@ -57,8 +59,8 @@ void AnalyzerDisplayWorker::run() {
         }
 
         const auto waitMs = shouldCompute ? 0 : (useIdlePolling
-                                                     ? Ui::AnalyzerConstants::idleMeterPollIntervalMs
-                                                     : Ui::AnalyzerConstants::meterPollIntervalMs);
+                                                     ? Display::idleMeterPollIntervalMs
+                                                     : Display::meterPollIntervalMs);
 
         if (!shouldCompute)
             wakeEvent.wait(waitMs);

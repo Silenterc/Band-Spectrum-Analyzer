@@ -52,10 +52,6 @@ namespace Analyzer {
             return state == State::active;
         }
 
-        [[nodiscard]] float getPeakAbs() const {
-            return lastPeakAbs;
-        }
-
     private:
         enum class State {
             active,

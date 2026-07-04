@@ -7,7 +7,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
+#include "dsp/core/AnalyzerRawTraceSource.h"
 #include "display/analyzer/data/AnalyzerDisplayControlState.h"
 #include "display/analyzer/data/AnalyzerDisplayFrame.h"
 #include "display/analyzer/thread/AnalyzerDisplayWorker.h"

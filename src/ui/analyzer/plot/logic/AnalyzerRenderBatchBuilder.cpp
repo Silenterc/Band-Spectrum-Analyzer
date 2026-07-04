@@ -108,9 +108,6 @@ namespace {
 }
 
 void AnalyzerRenderBatchBuilder::reset() {
-    for (auto &batch: batches)
-        batch.rectangles.clear();
-
     batches.clear();
     pathBatches.clear();
 }
@@ -292,13 +289,12 @@ juce::Colour AnalyzerRenderBatchBuilder::getTraceColour(const Ui::SignalSlotStat
 juce::Colour AnalyzerRenderBatchBuilder::makeGlobalHoldColour(
     const std::optional<Analyzer::TraceKind> &ownerKind,
     const std::array<Ui::SignalSlotState, Shared::maxSignalSlots> &signalSlots) const {
-    juce::Colour baseColour = juce::Colours::white;
+    auto baseColour = juce::Colours::white;
 
     if (ownerKind.has_value()) {
-        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(*ownerKind); slotIndex.has_value()) {
-            const auto &slot = signalSlots[*slotIndex];
-            baseColour = getTraceColour(slot);
-        }
+        const auto slotIndex = Analyzer::slotIndexForTraceKind(*ownerKind);
+        if (slotIndex < signalSlots.size())
+            baseColour = getTraceColour(signalSlots[slotIndex]);
     }
 
     return Ui::makeHoldIndicatorColour(baseColour, theme);

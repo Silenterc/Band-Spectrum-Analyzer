@@ -49,10 +49,14 @@ flowchart TD
     Processor --> ParamSchema[ParameterSchema]
     Processor --> ParamAccess[ParameterAccess]
     Processor --> Engine[Analyzer::Engine]
-    Processor --> RawTraceSource[AnalyzerRawTraceSource]
-    Processor --> SnapshotSource[AnalyzerUiSnapshotSource]
-    Processor --> Settings[AnalyzerSettingsActions]
     Processor --> SlotOrderState[SignalSlotOrderState]
+    Processor --> Bridge[PluginUiBridge]
+
+    Engine --> RawTraceSource[AnalyzerRawTraceSource]
+    Bridge --> SnapshotSource[AnalyzerUiSnapshotSource]
+    Bridge --> Settings[AnalyzerSettingsActions]
+    Bridge --> PresetChannels[PresetActions / PresetUiSnapshotSource]
+    Bridge --> Presentation[EditorPresentationStateSource]
 
     ParamSchema --> APVTS
     APVTS --> ParamAccess
@@ -64,22 +68,27 @@ flowchart TD
     ParamAccess --> ViewRange[visible frequency range]
 ```
 
-`SpectrumAnalyzerAudioProcessor` is still the composition root.
+`SpectrumAnalyzerAudioProcessor` is the composition root.
 
 It owns:
 
 - APVTS
 - parameter schema and typed parameter access
 - persistent slot order state
-- analyzer engine
-- UI snapshot publication
-- UI action handling
+- analyzer engine and output mixer
+- state serialization and preset session
+- `PluginUiBridge` and the change tracker
 
-It now also implements `AnalyzerRawTraceSource`, which exposes:
+`PluginUiBridge` implements every UI-facing contract (`AnalyzerSettingsActions`, `AnalyzerUiSnapshotSource`, `EditorPresentationStateSource`, `PresetActions`, `PresetUiSnapshotSource`). It owns snapshot listener lists, last-published dedup caches, and message-thread marshalling of refreshes. The processor must not implement UI contracts directly.
+
+`Analyzer::Engine` implements `AnalyzerRawTraceSource` (owned by `src/dsp/core/`), which exposes:
 
 - `getBandInfo()`
 - `readPublishedTraces()`
 - `hasRecentSignal()`
+- `shouldProcessAnalyzer()`
+
+`createEditor()` assembles a `Ui::EditorContext` pointing the raw trace channel at the engine and every other contract at the bridge.
 
 The processor does not own the display worker. The worker is editor-side and is owned by `AnalyzerPlotComponent`.
 

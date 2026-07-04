@@ -4,13 +4,12 @@
 
 #include <juce_core/juce_core.h>
 
-#include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
+#include "dsp/core/AnalyzerRawTraceSource.h"
 #include "display/analyzer/data/AnalyzerDisplayControlState.h"
 #include "display/analyzer/logic/AnalyzerDisplayFrameModel.h"
 #include "display/analyzer/logic/AnalyzerGlobalHoldModel.h"
 #include "display/analyzer/logic/AnalyzerMeter.h"
 #include "display/analyzer/thread/AnalyzerDisplayFrameBuffer.h"
-#include "ui/analyzer/plot/state/AnalyzerUiConstants.h"
 
 class AnalyzerDisplayWorker final : private juce::Thread {
 public:

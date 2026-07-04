@@ -8,6 +8,7 @@
 #include "../../dsp/core/EngineParameterState.h"
 #include "../../shared/UiScalePreset.h"
 #include "../../ui/analyzer/rack/state/SignalSlotUiState.h"
+#include "../SignalOutputMixer.h"
 #include "ParameterSchema.h"
 
 namespace PluginParameters {
@@ -18,6 +19,7 @@ namespace PluginParameters {
         void cache();
 
         Analyzer::EngineParameterState readEngineState() const;
+        std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> readMixerSlots() const;
         std::array<Ui::SignalSlotState, Shared::maxSignalSlots> readUiSlots() const;
         Ui::SignalSlotState readUiSlot(size_t slotIndex) const;
         Analyzer::MeterSettings readMeterSettings() const;
@@ -71,7 +73,6 @@ namespace PluginParameters {
         static float readFloat(std::atomic<float> *parameter);
 
         void writeBool(const juce::String &parameterId, bool value);
-        void writeChoiceIndex(const juce::String &parameterId, int index, int choiceCount);
         void writeFloat(const juce::String &parameterId, float plainValue);
 
         juce::AudioProcessorValueTreeState &parameters;

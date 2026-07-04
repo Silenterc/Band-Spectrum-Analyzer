@@ -41,10 +41,7 @@ namespace Analyzer {
 
     void Engine::reset() {
         inputActivityDetector.reset();
-        frameSlots = {};
-        frameSlots[0].active = true;
-        nextFrameSlotToStart = 1;
-        samplesUntilNextFrameStart = Constants::analysisHopSamples;
+        resetFrameSlots();
         recentSignalActive.store(false, std::memory_order_relaxed);
         processAnalyzerActive.store(false, std::memory_order_relaxed);
         hasPublishedSilenceWhileInactive = false;
@@ -85,10 +82,7 @@ namespace Analyzer {
 
         if (!inputActivityDetector.shouldProcess()) {
             if (!hasPublishedSilenceWhileInactive) {
-                frameSlots = {};
-                frameSlots[0].active = true;
-                nextFrameSlotToStart = 1;
-                samplesUntilNextFrameStart = Constants::analysisHopSamples;
+                resetFrameSlots();
                 publishProcessorState(true);
                 hasPublishedSilenceWhileInactive = true;
             }
@@ -202,6 +196,13 @@ namespace Analyzer {
         }
 
         std::atomic_store(&bandInfo, newBandInfo);
+    }
+
+    void Engine::resetFrameSlots() {
+        frameSlots = {};
+        frameSlots[0].active = true;
+        nextFrameSlotToStart = 1;
+        samplesUntilNextFrameStart = Constants::analysisHopSamples;
     }
 
     void Engine::rebuildProcessors() {

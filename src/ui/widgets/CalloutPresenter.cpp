@@ -47,11 +47,8 @@ namespace Ui {
     }
 
     juce::Component* findCalloutParentComponent(const juce::Component& component) {
-        auto& mutableComponent = const_cast<juce::Component&>(component);
-        if (auto* parentComponent = mutableComponent.getTopLevelComponent())
-            return parentComponent;
-
-        return mutableComponent.getParentComponent();
+        // getTopLevelComponent() returns the component itself when it has no parent, never null.
+        return component.getTopLevelComponent();
     }
 
     juce::Rectangle<int> makePointCalloutAnchor(const juce::Rectangle<int> bounds,

@@ -24,7 +24,6 @@ ProcessorChangeTracker::ProcessorChangeTracker(juce::AudioProcessorValueTreeStat
 
 ProcessorChangeTracker::~ProcessorChangeTracker() {
     detach();
-    cancelPendingUpdate();
 }
 
 bool ProcessorChangeTracker::consumeEngineParametersDirty() {
@@ -33,16 +32,6 @@ bool ProcessorChangeTracker::consumeEngineParametersDirty() {
 
 void ProcessorChangeTracker::clearEngineParametersDirty() {
     engineParametersDirty.store(false, std::memory_order_release);
-}
-
-void ProcessorChangeTracker::requestUiRefresh() {
-    if (const auto *messageManager = juce::MessageManager::getInstanceWithoutCreating();
-        messageManager != nullptr && messageManager->isThisTheMessageThread()) {
-        handleAsyncUpdate();
-        return;
-    }
-
-    triggerAsyncUpdate();
 }
 
 void ProcessorChangeTracker::attach() {
@@ -61,6 +50,11 @@ void ProcessorChangeTracker::detach() {
     parameters.state.removeListener(this);
 }
 
+void ProcessorChangeTracker::notifyStateChanged() {
+    listener.processorPresetStateChanged();
+    listener.processorUiRefreshRequested();
+}
+
 void ProcessorChangeTracker::parameterChanged(const juce::String &parameterID, const float newValue) {
     juce::ignoreUnused(parameterID, newValue);
     engineParametersDirty.store(true, std::memory_order_release);
@@ -70,44 +64,34 @@ void ProcessorChangeTracker::parameterChanged(const juce::String &parameterID, c
 void ProcessorChangeTracker::valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                                       const juce::Identifier &property) {
     juce::ignoreUnused(treeWhosePropertyHasChanged, property);
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
+    notifyStateChanged();
 }
 
 void ProcessorChangeTracker::valueTreeChildAdded(juce::ValueTree &parentTree,
                                                  juce::ValueTree &childWhichHasBeenAdded) {
     juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
+    notifyStateChanged();
 }
 
 void ProcessorChangeTracker::valueTreeChildRemoved(juce::ValueTree &parentTree,
                                                    juce::ValueTree &childWhichHasBeenRemoved,
                                                    const int indexFromWhichChildWasRemoved) {
     juce::ignoreUnused(parentTree, childWhichHasBeenRemoved, indexFromWhichChildWasRemoved);
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
+    notifyStateChanged();
 }
 
 void ProcessorChangeTracker::valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
                                                         const int oldIndex,
                                                         const int newIndex) {
     juce::ignoreUnused(parentTreeWhoseChildrenHaveMoved, oldIndex, newIndex);
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
+    notifyStateChanged();
 }
 
 void ProcessorChangeTracker::valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) {
     juce::ignoreUnused(treeWhoseParentHasChanged);
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
+    notifyStateChanged();
 }
 
 void ProcessorChangeTracker::signalSlotOrderChanged() {
-    listener.processorPresetStateChanged();
-    requestUiRefresh();
-}
-
-void ProcessorChangeTracker::handleAsyncUpdate() {
-    listener.processorUiRefreshRequested();
+    notifyStateChanged();
 }

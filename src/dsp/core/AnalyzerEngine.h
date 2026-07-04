@@ -12,16 +12,17 @@
 #include "../processing/InputActivityDetector.h"
 #include "../sources/AnalysisSourceBuilder.h"
 #include "../util/TripleBuffer.h"
-#include "display/analyzer/contracts/AnalyzerPublishedTracesView.h"
 #include "AnalyzerConstants.h"
 #include "AnalyzerData.h"
+#include "AnalyzerRawTraceSource.h"
 #include "EngineParameterState.h"
 
 namespace Analyzer {
     /**
-     * Owns the filter bank and produces bar data for the UI
+     * Owns the filter bank and produces bar data for the UI.
+     * Implements AnalyzerRawTraceSource, the raw-trace publication contract consumed by the display worker.
      */
-    class Engine {
+    class Engine final : public AnalyzerRawTraceSource {
     public:
         /**
          * Prepares the engine for playback and allocates its state
@@ -53,22 +54,22 @@ namespace Analyzer {
         /**
          * Returns the current immutable band layout
          */
-        std::shared_ptr<const std::vector<BandInfo>> getBandInfo() const;
+        std::shared_ptr<const std::vector<BandInfo>> getBandInfo() const override;
 
         /**
          * Returns a non-owning view of the latest published raw traces.
          */
-        AnalyzerPublishedTracesView readPublishedTraces() const;
+        AnalyzerPublishedTracesView readPublishedTraces() const override;
 
         /**
          * Returns whether the recent input history still counts as active.
          */
-        bool hasRecentSignal() const;
+        bool hasRecentSignal() const override;
 
         /**
          * Returns whether the analyzer should still process input, including silent-hold flushing.
          */
-        bool shouldProcessAnalyzer() const;
+        bool shouldProcessAnalyzer() const override;
 
     private:
         struct FrameSlotState {
@@ -83,6 +84,11 @@ namespace Analyzer {
          * Rebuilds the fractional-octave band layout
          */
         void rebuildBands();
+
+        /**
+         * Restarts the rotating overlapped-frame slots at the beginning of a hop
+         */
+        void resetFrameSlots();
 
         /**
          * Rebuilds the active group processors for the current parameter state
@@ -109,7 +115,8 @@ namespace Analyzer {
         // Latest parameter snapshot pushed into the engine
         EngineParameterState currentParameters{};
 
-        // Static band metadata for the current layout
+        // Static band metadata for the current layout, swapped atomically on rebuild.
+        // Uses the deprecated atomic_load/atomic_store free functions because libc++ lacks atomic<shared_ptr>.
         std::shared_ptr<std::vector<BandInfo> > bandInfo = std::make_shared<std::vector<BandInfo> >();
         // Builds block-local source views and owns derived temp buffers
         AnalysisSourceBuilder sourceBuilder;

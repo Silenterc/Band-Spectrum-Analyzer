@@ -41,12 +41,12 @@ flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Theme[Ui::Theme]
     Editor --> Layout[MainLayoutComponent]
 
-    Processor[SpectrumAnalyzerAudioProcessor] --> RawSource[AnalyzerRawTraceSource]
-    Processor --> AnalyzerSnapshot[AnalyzerUiSnapshotSource]
-    Processor --> AnalyzerActions[AnalyzerSettingsActions]
-    Processor --> PresetSnapshot[PresetUiSnapshotSource]
-    Processor --> PresetActions[PresetActions]
-    Processor --> Presentation[EditorPresentationStateSource]
+    Engine[Analyzer::Engine] --> RawSource[AnalyzerRawTraceSource]
+    Bridge[PluginUiBridge] --> AnalyzerSnapshot[AnalyzerUiSnapshotSource]
+    Bridge --> AnalyzerActions[AnalyzerSettingsActions]
+    Bridge --> PresetSnapshot[PresetUiSnapshotSource]
+    Bridge --> PresetActions[PresetActions]
+    Bridge --> Presentation[EditorPresentationStateSource]
 
     RawSource --> AnalyzerPlot[AnalyzerPlotComponent]
     AnalyzerSnapshot --> AnalyzerSection[AnalyzerSectionComponent]
@@ -57,6 +57,8 @@ flowchart TD
     AnalyzerActions --> Rack
     AnalyzerActions --> Strip
 ```
+
+The editor receives all contracts through one `Ui::EditorContext` struct assembled by the plugin composition root: the raw trace channel resolves to `Analyzer::Engine`, everything else to `PluginUiBridge`.
 
 The editor owns the theme and top-level layout. `MainLayoutComponent` lives under `src/ui/editor/layout/` and owns product/header composition, analyzer section placement, rack placement, and control strip placement.
 

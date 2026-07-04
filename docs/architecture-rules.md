@@ -36,13 +36,14 @@ The intent is simple:
 
 - composition root only
 - owns APVTS, serialization, and listener wiring
-- implements contracts exposed to `display` and `ui`
+- `PluginUiBridge` is the only implementer of UI-facing contracts; `SpectrumAnalyzerAudioProcessor` must not implement them directly
 - may depend on UI contract/state headers to publish UI-facing snapshots
 - bridges parameter state into:
   - engine-facing DSP state
   - UI-facing snapshot state
   - worker-facing semantic display control state
 - maps plugin-domain persistence/session data into UI-domain snapshots/results
+- assembles `Ui::EditorContext` in `createEditor()`; the editor consumes contracts only through it
 
 ### `src/ui/`
 
@@ -60,7 +61,7 @@ Analyzer channels and UI feature channels must stay separate.
 
 ### 1. DSP-to-display raw trace channel
 
-- contract: `AnalyzerRawTraceSource`
+- contract: `AnalyzerRawTraceSource`, owned by `src/dsp/core/` and implemented by `Analyzer::Engine`
 - transport payload:
   - `bandInfo`
   - `AnalyzerPublishedTracesView`
@@ -169,12 +170,6 @@ It must not grow presentation-only fields such as:
 - bounds
 
 ## Folder Rules
-
-### `src/display/analyzer/contracts/`
-
-- contracts between DSP/plugin and the worker
-- non-owning read views only
-- no long-lived worker logic
 
 ### `src/display/analyzer/data/`
 
@@ -290,6 +285,7 @@ Examples of suspicious changes:
 - adding slot order to `AnalyzerDisplayControlState`
 - adding hover state to `src/display/`
 - adding APVTS knowledge to `src/ui/`
+- implementing a UI contract on `SpectrumAnalyzerAudioProcessor` instead of `PluginUiBridge`
 - including `src/plugin/*` from `src/ui/`
 - including `src/ui/*` from `src/shared/`
 - exposing plugin preset documents through `PresetUiSnapshotSource`

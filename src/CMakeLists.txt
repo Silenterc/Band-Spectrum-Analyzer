@@ -112,6 +112,7 @@ target_sources(${PROJECT_NAME}
         plugin/presets/PresetTypes.cpp
         plugin/presets/UserPresetStore.cpp
         plugin/ProcessorChangeTracker.cpp
+        plugin/PluginUiBridge.cpp
         plugin/SignalOutputMixer.cpp
         plugin/PluginProcessor.cpp
         plugin/state/SignalSlotOrderState.cpp)

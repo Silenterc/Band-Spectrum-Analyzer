@@ -4,12 +4,6 @@
 
 #include "ui/theme/UiRasterAssets.h"
 
-namespace {
-    bool nearlyEqual(const float lhs, const float rhs) {
-        return std::abs(lhs - rhs) <= 0.0001f;
-    }
-}
-
 AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSourceToUse,
                                                    AnalyzerUiSnapshotSource &snapshotSourceToUse,
                                                    const Ui::Theme &themeToUse)
@@ -180,12 +174,12 @@ void AnalyzerSectionComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSna
     if (uiSnapshot == snapshot)
         return;
 
-    const auto layoutChanged = !nearlyEqual(uiSnapshot.gridMinDb, snapshot.gridMinDb)
-                               || !nearlyEqual(uiSnapshot.gridMaxDb, snapshot.gridMaxDb)
-                               || !nearlyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb)
+    const auto layoutChanged = !juce::approximatelyEqual(uiSnapshot.gridMinDb, snapshot.gridMinDb)
+                               || !juce::approximatelyEqual(uiSnapshot.gridMaxDb, snapshot.gridMaxDb)
+                               || !juce::approximatelyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb)
                                || uiSnapshot.useCustomFrequencyRange != snapshot.useCustomFrequencyRange
-                               || !nearlyEqual(uiSnapshot.visibleMinFrequencyHz, snapshot.visibleMinFrequencyHz)
-                               || !nearlyEqual(uiSnapshot.visibleMaxFrequencyHz, snapshot.visibleMaxFrequencyHz);
+                               || !juce::approximatelyEqual(uiSnapshot.visibleMinFrequencyHz, snapshot.visibleMinFrequencyHz)
+                               || !juce::approximatelyEqual(uiSnapshot.visibleMaxFrequencyHz, snapshot.visibleMaxFrequencyHz);
     uiSnapshot = snapshot;
     analyzerPlotComponent.setUiSnapshot(uiSnapshot);
 

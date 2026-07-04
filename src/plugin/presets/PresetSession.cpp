@@ -1,5 +1,7 @@
 #include "PresetSession.h"
 
+#include <algorithm>
+
 namespace {
     int comparePresetNames(const PluginPresets::PresetDocument& lhs, const PluginPresets::PresetDocument& rhs) {
         return lhs.name.compareIgnoreCase(rhs.name);
@@ -15,6 +17,51 @@ namespace {
 
         jassertfalse;
         return Ui::Presets::PresetOrigin::factory;
+    }
+
+    // Returned pointers are only valid until the catalog is next rebuilt.
+    template<typename Predicate>
+    const PluginPresets::PresetDocument* findDocument(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                                      Predicate&& matches) {
+        const auto iterator = std::find_if(catalog.begin(), catalog.end(), matches);
+        return iterator != catalog.end() ? &*iterator : nullptr;
+    }
+
+    const PluginPresets::PresetDocument* findPresetById(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                                        const Ui::Presets::PresetId& presetId) {
+        return findDocument(catalog, [&presetId](const PluginPresets::PresetDocument& document) {
+            return document.id == presetId;
+        });
+    }
+
+    const PluginPresets::PresetDocument* findUserPresetByName(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                                              const juce::String& name) {
+        return findDocument(catalog, [&name](const PluginPresets::PresetDocument& document) {
+            return document.origin == PluginPresets::PresetOrigin::user && document.name.equalsIgnoreCase(name);
+        });
+    }
+
+    const PluginPresets::PresetDocument* findFactoryPresetById(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                                               const Ui::Presets::PresetId& presetId) {
+        return findDocument(catalog, [&presetId](const PluginPresets::PresetDocument& document) {
+            return document.origin == PluginPresets::PresetOrigin::factory && document.id == presetId;
+        });
+    }
+
+    const PluginPresets::PresetDocument* findFactoryPresetByName(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                                                 const juce::String& name) {
+        return findDocument(catalog, [&name](const PluginPresets::PresetDocument& document) {
+            return document.origin == PluginPresets::PresetOrigin::factory && document.name.equalsIgnoreCase(name);
+        });
+    }
+
+    std::optional<size_t> findPresetIndex(const std::vector<PluginPresets::PresetDocument>& catalog,
+                                          const Ui::Presets::PresetId& presetId) {
+        const auto* document = findPresetById(catalog, presetId);
+        if (document == nullptr)
+            return std::nullopt;
+
+        return static_cast<size_t>(document - catalog.data());
     }
 }
 
@@ -43,12 +90,11 @@ std::optional<Ui::Presets::PresetId> PresetSession::getSelectedPresetId() const 
 }
 
 Ui::Presets::PresetActionResult PresetSession::loadPreset(const Ui::Presets::PresetId& presetId) {
-    const auto& catalog = getMergedCatalog();
-    const auto document = findPresetById(catalog, presetId);
-    if (!document.has_value() || !document->pluginState.isValid()) {
+    const auto* document = findPresetById(getMergedCatalog(), presetId);
+    if (document == nullptr || !document->pluginState.isValid()) {
         return Ui::Presets::PresetActionResult::failed(
             Ui::Presets::PresetActionErrorCode::presetNotLoadable,
-            document.has_value() ? document->name : juce::String{});
+            document != nullptr ? document->name : juce::String{});
     }
 
     if (!stateSerializer.applyState(document->pluginState, parameters, signalSlotOrderState)) {
@@ -57,10 +103,7 @@ Ui::Presets::PresetActionResult PresetSession::loadPreset(const Ui::Presets::Pre
             document->name);
     }
 
-    currentStateSnapshotCache = document->pluginState;
-    currentStateSnapshotDirty.store(false, std::memory_order_release);
-    selectedPresetId = document->id;
-    markSnapshotDirty();
+    adoptDocumentState(*document);
     return Ui::Presets::PresetActionResult::ok();
 }
 
@@ -107,9 +150,8 @@ Ui::Presets::PresetActionResult PresetSession::savePresetAs(const juce::String& 
     if (trimmedName.isEmpty())
         return Ui::Presets::PresetActionResult::failed(Ui::Presets::PresetActionErrorCode::emptyName);
 
-    const auto& catalog = getMergedCatalog();
-    if (findExistingUserPresetByName(catalog, trimmedName).has_value()
-        || findFactoryPresetByName(factoryCatalog, trimmedName).has_value()) {
+    if (findUserPresetByName(getMergedCatalog(), trimmedName) != nullptr
+        || findFactoryPresetByName(factoryCatalog, trimmedName) != nullptr) {
         return Ui::Presets::PresetActionResult::failed(
             Ui::Presets::PresetActionErrorCode::duplicateUserPresetName,
             trimmedName);
@@ -128,11 +170,8 @@ Ui::Presets::PresetActionResult PresetSession::savePresetAs(const juce::String& 
                                                          document.name);
     }
 
-    currentStateSnapshotCache = document.pluginState;
-    currentStateSnapshotDirty.store(false, std::memory_order_release);
     invalidateMergedCatalog();
-    selectedPresetId = document.id;
-    markSnapshotDirty();
+    adoptDocumentState(document);
     return Ui::Presets::PresetActionResult::ok();
 }
 
@@ -142,10 +181,9 @@ Ui::Presets::PresetActionResult PresetSession::overwritePreset(const Ui::Presets
     if (trimmedName.isEmpty())
         return Ui::Presets::PresetActionResult::failed(Ui::Presets::PresetActionErrorCode::emptyName);
 
-    const auto& catalog = getMergedCatalog();
-    const auto matchingFactoryDocument = findFactoryPresetById(factoryCatalog, presetId);
+    const auto* matchingFactoryDocument = findFactoryPresetById(factoryCatalog, presetId);
 
-    if (matchingFactoryDocument.has_value()) {
+    if (matchingFactoryDocument != nullptr) {
         if (!matchingFactoryDocument->name.equalsIgnoreCase(trimmedName)) {
             return Ui::Presets::PresetActionResult::failed(
                 Ui::Presets::PresetActionErrorCode::invalidOverwriteTarget,
@@ -170,16 +208,13 @@ Ui::Presets::PresetActionResult PresetSession::overwritePreset(const Ui::Presets
                 matchingFactoryDocument->name);
         }
 
-        currentStateSnapshotCache = overrideDocument.pluginState;
-        currentStateSnapshotDirty.store(false, std::memory_order_release);
         invalidateMergedCatalog();
-        selectedPresetId = overrideDocument.id;
-        markSnapshotDirty();
+        adoptDocumentState(overrideDocument);
         return Ui::Presets::PresetActionResult::ok();
     }
 
-    const auto duplicateNameDocument = findExistingUserPresetByName(catalog, trimmedName);
-    if (duplicateNameDocument.has_value() && duplicateNameDocument->id != presetId) {
+    const auto* duplicateNameDocument = findUserPresetByName(getMergedCatalog(), trimmedName);
+    if (duplicateNameDocument != nullptr && duplicateNameDocument->id != presetId) {
         return Ui::Presets::PresetActionResult::failed(
             Ui::Presets::PresetActionErrorCode::duplicateUserPresetName,
             trimmedName);
@@ -201,11 +236,8 @@ Ui::Presets::PresetActionResult PresetSession::overwritePreset(const Ui::Presets
                                                          updatedDocument.name);
     }
 
-    currentStateSnapshotCache = updatedDocument.pluginState;
-    currentStateSnapshotDirty.store(false, std::memory_order_release);
     invalidateMergedCatalog();
-    selectedPresetId = updatedDocument.id;
-    markSnapshotDirty();
+    adoptDocumentState(updatedDocument);
     return Ui::Presets::PresetActionResult::ok();
 }
 
@@ -220,7 +252,7 @@ Ui::Presets::PresetActionResult PresetSession::deletePreset(const Ui::Presets::P
     }
 
     invalidateMergedCatalog();
-    if (selectedPresetId == std::optional<Ui::Presets::PresetId>(presetId))
+    if (selectedPresetId == presetId)
         selectedPresetId.reset();
 
     if (!selectedPresetId.has_value())
@@ -234,7 +266,7 @@ void PresetSession::refreshCatalog() {
     invalidateMergedCatalog();
 
     const auto& catalog = getMergedCatalog();
-    if (selectedPresetId.has_value() && !findPresetById(catalog, *selectedPresetId).has_value())
+    if (selectedPresetId.has_value() && findPresetById(catalog, *selectedPresetId) == nullptr)
         selectedPresetId.reset();
 
     if (!selectedPresetId.has_value())
@@ -245,9 +277,8 @@ void PresetSession::refreshCatalog() {
 
 void PresetSession::restoreSelection(const std::optional<Ui::Presets::PresetId>& presetId) {
     if (presetId.has_value()) {
-        const auto& catalog = getMergedCatalog();
-        const auto selectedDocument = findPresetById(catalog, *presetId);
-        if (selectedDocument.has_value()) {
+        const auto* selectedDocument = findPresetById(getMergedCatalog(), *presetId);
+        if (selectedDocument != nullptr) {
             selectedPresetId = selectedDocument->id;
             markSnapshotDirty();
             return;
@@ -312,96 +343,25 @@ void PresetSession::rebuildMergedCatalog() const {
     mergedCatalogDirty = false;
 }
 
-std::optional<PluginPresets::PresetDocument> PresetSession::findPresetById(
-    const std::vector<PluginPresets::PresetDocument>& catalog,
-    const Ui::Presets::PresetId& presetId) const {
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [&presetId](const PluginPresets::PresetDocument& document) {
-                                           return document.id == presetId;
-                                       });
-    if (iterator == catalog.end())
-        return std::nullopt;
-
-    return *iterator;
-}
-
-std::optional<size_t> PresetSession::findPresetIndex(
-    const std::vector<PluginPresets::PresetDocument>& catalog,
-    const Ui::Presets::PresetId& presetId) const {
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [&presetId](const PluginPresets::PresetDocument& document) {
-                                           return document.id == presetId;
-                                       });
-    if (iterator == catalog.end())
-        return std::nullopt;
-
-    return static_cast<size_t>(std::distance(catalog.begin(), iterator));
-}
-
-std::optional<PluginPresets::PresetDocument> PresetSession::findExistingUserPresetByName(
-    const std::vector<PluginPresets::PresetDocument>& catalog,
-    const juce::String& name) const {
-    const auto trimmedName = name.trim();
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [&trimmedName](const PluginPresets::PresetDocument& document) {
-                                           return document.origin == PluginPresets::PresetOrigin::user
-                                                  && document.name.equalsIgnoreCase(trimmedName);
-                                       });
-    if (iterator == catalog.end())
-        return std::nullopt;
-
-    return *iterator;
-}
-
-std::optional<PluginPresets::PresetDocument> PresetSession::findFactoryPresetById(
-    const std::vector<PluginPresets::PresetDocument>& catalog,
-    const Ui::Presets::PresetId& presetId) const {
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [&presetId](const PluginPresets::PresetDocument& document) {
-                                           return document.origin == PluginPresets::PresetOrigin::factory
-                                                  && document.id == presetId;
-                                       });
-    if (iterator == catalog.end())
-        return std::nullopt;
-
-    return *iterator;
-}
-
-std::optional<PluginPresets::PresetDocument> PresetSession::findFactoryPresetByName(
-    const std::vector<PluginPresets::PresetDocument>& catalog,
-    const juce::String& name) const {
-    const auto trimmedName = name.trim();
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [&trimmedName](const PluginPresets::PresetDocument& document) {
-                                           return document.origin == PluginPresets::PresetOrigin::factory
-                                                  && document.name.equalsIgnoreCase(trimmedName);
-                                       });
-    if (iterator == catalog.end())
-        return std::nullopt;
-
-    return *iterator;
+void PresetSession::adoptDocumentState(const PluginPresets::PresetDocument& document) {
+    currentStateSnapshotCache = document.pluginState;
+    currentStateSnapshotDirty.store(false, std::memory_order_release);
+    selectedPresetId = document.id;
+    markSnapshotDirty();
 }
 
 const PluginPresets::PresetDocument* PresetSession::getSelectedDocument(
     const std::vector<PluginPresets::PresetDocument>& catalog) const {
-    if (!selectedPresetId.has_value())
-        return nullptr;
-
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [this](const PluginPresets::PresetDocument& document) {
-                                           return document.id == *selectedPresetId;
-                                       });
-    return iterator != catalog.end() ? &*iterator : nullptr;
+    return selectedPresetId.has_value() ? findPresetById(catalog, *selectedPresetId) : nullptr;
 }
 
 void PresetSession::resolveSelectionFromCurrentState() {
     const auto& currentState = captureCurrentState();
-    const auto& catalog = getMergedCatalog();
-    const auto iterator = std::find_if(catalog.begin(), catalog.end(),
-                                       [this, &currentState](const PluginPresets::PresetDocument& document) {
-                                           return stateSerializer.statesEqual(currentState, document.pluginState);
-                                       });
-    selectedPresetId = iterator != catalog.end() ? std::optional<Ui::Presets::PresetId>(iterator->id) : std::nullopt;
+    const auto* document = findDocument(getMergedCatalog(),
+                                        [this, &currentState](const PluginPresets::PresetDocument& candidate) {
+                                            return stateSerializer.statesEqual(currentState, candidate.pluginState);
+                                        });
+    selectedPresetId = document != nullptr ? std::optional<Ui::Presets::PresetId>(document->id) : std::nullopt;
 }
 
 void PresetSession::markSnapshotDirty() noexcept {
@@ -420,7 +380,7 @@ Ui::Presets::PresetUiSnapshot PresetSession::buildSnapshot(
             document.name,
             toUiPresetOrigin(document.origin),
             document.origin == PluginPresets::PresetOrigin::user,
-            findFactoryPresetById(factoryCatalog, document.id).has_value()
+            findFactoryPresetById(factoryCatalog, document.id) != nullptr
                 && document.origin == PluginPresets::PresetOrigin::user
         });
     }

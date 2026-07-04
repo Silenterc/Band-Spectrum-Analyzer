@@ -52,6 +52,21 @@ namespace PluginParameters {
         return state;
     }
 
+    std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> Access::readMixerSlots() const {
+        std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> slots{};
+
+        for (size_t slotIndex = 0; slotIndex < slots.size(); ++slotIndex) {
+            const auto &parameterRefs = slotParams[slotIndex];
+            auto &slot = slots[slotIndex];
+            slot.enabled = readBool(parameterRefs.enabled);
+            slot.solo = readBool(parameterRefs.solo);
+            slot.source = readChoice(parameterRefs.source, Schema::signalSourceChoices);
+            slot.mode = readChoice(parameterRefs.mode, Schema::signalModeChoices);
+        }
+
+        return slots;
+    }
+
     std::array<Ui::SignalSlotState, Shared::maxSignalSlots> Access::readUiSlots() const {
         std::array<Ui::SignalSlotState, Shared::maxSignalSlots> slots{};
 
@@ -140,12 +155,10 @@ namespace PluginParameters {
     }
 
     void Access::writeSlotSignal(const size_t slotIndex, const Analyzer::SignalSource source, const Analyzer::SignalMode mode) {
-        writeChoiceIndex(Schema::slotParameterId(Schema::SlotField::source, slotIndex),
-                         Schema::indexForValue(source, Schema::signalSourceChoices),
-                         Schema::choiceCount(Schema::signalSourceChoices));
-        writeChoiceIndex(Schema::slotParameterId(Schema::SlotField::mode, slotIndex),
-                         Schema::indexForValue(mode, Schema::signalModeChoices),
-                         Schema::choiceCount(Schema::signalModeChoices));
+        writeFloat(Schema::slotParameterId(Schema::SlotField::source, slotIndex),
+                   static_cast<float>(Schema::indexForValue(source, Schema::signalSourceChoices)));
+        writeFloat(Schema::slotParameterId(Schema::SlotField::mode, slotIndex),
+                   static_cast<float>(Schema::indexForValue(mode, Schema::signalModeChoices)));
     }
 
     void Access::writeSlotEnabled(const size_t slotIndex, const bool value) {
@@ -165,9 +178,8 @@ namespace PluginParameters {
     }
 
     void Access::writeSlotColour(const size_t slotIndex, const int colourIndex) {
-        writeChoiceIndex(Schema::slotParameterId(Schema::SlotField::colour, slotIndex),
-                         juce::jlimit(0, Shared::signalPresetCount - 1, colourIndex),
-                         Shared::signalPresetCount);
+        writeFloat(Schema::slotParameterId(Schema::SlotField::colour, slotIndex),
+                   static_cast<float>(juce::jlimit(0, Shared::signalPresetCount - 1, colourIndex)));
     }
 
     void Access::writeSlotOpacity(const size_t slotIndex, const float opacity) {
@@ -219,17 +231,6 @@ namespace PluginParameters {
         if (auto *parameter = parameters.getParameter(parameterId)) {
             parameter->beginChangeGesture();
             parameter->setValueNotifyingHost(value ? 1.0f : 0.0f);
-            parameter->endChangeGesture();
-        }
-    }
-
-    void Access::writeChoiceIndex(const juce::String &parameterId, const int index, const int choiceCount) {
-        if (auto *parameter = parameters.getParameter(parameterId)) {
-            const auto normalisedValue = choiceCount > 1
-                                             ? static_cast<float>(index) / static_cast<float>(choiceCount - 1)
-                                             : 0.0f;
-            parameter->beginChangeGesture();
-            parameter->setValueNotifyingHost(normalisedValue);
             parameter->endChangeGesture();
         }
     }

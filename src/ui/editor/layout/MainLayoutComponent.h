@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
+#include "dsp/core/AnalyzerRawTraceSource.h"
 #include "ui/analyzer/contracts/AnalyzerSettingsActions.h"
 #include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
 #include "ui/presets/contracts/PresetActions.h"

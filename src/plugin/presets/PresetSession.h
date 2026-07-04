@@ -39,21 +39,7 @@ private:
     [[nodiscard]] const std::vector<PluginPresets::PresetDocument>& getMergedCatalog() const;
     void invalidateMergedCatalog();
     void rebuildMergedCatalog() const;
-    [[nodiscard]] std::optional<PluginPresets::PresetDocument> findPresetById(
-        const std::vector<PluginPresets::PresetDocument>& catalog,
-        const Ui::Presets::PresetId& presetId) const;
-    [[nodiscard]] std::optional<size_t> findPresetIndex(
-        const std::vector<PluginPresets::PresetDocument>& catalog,
-        const Ui::Presets::PresetId& presetId) const;
-    [[nodiscard]] std::optional<PluginPresets::PresetDocument> findExistingUserPresetByName(
-        const std::vector<PluginPresets::PresetDocument>& catalog,
-        const juce::String& name) const;
-    [[nodiscard]] std::optional<PluginPresets::PresetDocument> findFactoryPresetById(
-        const std::vector<PluginPresets::PresetDocument>& catalog,
-        const Ui::Presets::PresetId& presetId) const;
-    [[nodiscard]] std::optional<PluginPresets::PresetDocument> findFactoryPresetByName(
-        const std::vector<PluginPresets::PresetDocument>& catalog,
-        const juce::String& name) const;
+    void adoptDocumentState(const PluginPresets::PresetDocument& document);
     [[nodiscard]] const PluginPresets::PresetDocument* getSelectedDocument(
         const std::vector<PluginPresets::PresetDocument>& catalog) const;
     void resolveSelectionFromCurrentState();

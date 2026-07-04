@@ -64,6 +64,14 @@ SignalSlotComponent::SignalSlotComponent(const Ui::Theme &themeToUse, Listener& 
     freezeButton.setOverlayIconScaleMultiplier(theme.metrics.slot.actionPadIconScaleMultiplier);
     freezeButton.setOverlayIcon(PadButton::OverlayIcon::snowflake);
     freezeButton.setActiveMarkingColour(theme.hardwareMarkingCoolDark);
+
+    SignalSlotActionButton::Style removeStyle;
+    removeStyle.content = SignalSlotActionButton::Content::cancel;
+    removeStyle.fill = juce::Colours::transparentBlack;
+    removeStyle.hoverFill = juce::Colours::transparentBlack;
+    removeStyle.foreground = theme.hardwareMarkingLight;
+    removeStyle.drawsBackground = false;
+    removeButton.setStyle(removeStyle);
 }
 
 SignalSlotComponent::~SignalSlotComponent() {
@@ -238,14 +246,6 @@ void SignalSlotComponent::refreshChildState() {
     soloButton.setActive(settings.solo);
     visibilityButton.setActive(settings.visible);
     freezeButton.setActive(settings.frozen);
-
-    SignalSlotActionButton::Style removeStyle;
-    removeStyle.content = SignalSlotActionButton::Content::cancel;
-    removeStyle.fill = juce::Colours::transparentBlack;
-    removeStyle.hoverFill = juce::Colours::transparentBlack;
-    removeStyle.foreground = theme.hardwareMarkingLight;
-    removeStyle.drawsBackground = false;
-    removeButton.setStyle(removeStyle);
 
     repaint();
 }
@@ -541,7 +541,7 @@ void SignalSlotComponent::handleReorderDragEnded(const float parentX) {
 }
 
 float SignalSlotComponent::getParentRelativeX(const juce::MouseEvent &event) const {
-    if (auto *parent = const_cast<juce::Component *>(getParentComponent()))
+    if (auto *parent = getParentComponent())
         return event.getEventRelativeTo(parent).position.x;
 
     return event.position.x;

@@ -8,21 +8,16 @@
 //==============================================================================
 SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(
     juce::AudioProcessor& processorToUse,
-    AnalyzerRawTraceSource& rawTraceSourceToUse,
-    AnalyzerUiSnapshotSource& analyzerUiSnapshotSourceToUse,
-    PresetUiSnapshotSource& presetUiSnapshotSourceToUse,
-    AnalyzerSettingsActions& analyzerSettingsActionsToUse,
-    PresetActions& presetActionsToUse,
-    EditorPresentationStateSource& editorPresentationStateSourceToUse)
+    const Ui::EditorContext& context)
     : AudioProcessorEditor(&processorToUse),
-      presentationStateSource(editorPresentationStateSourceToUse),
-      theme(Ui::makeTheme(editorPresentationStateSourceToUse.getEditorPresentationState().scale)),
+      presentationStateSource(context.editorPresentationStateSource),
+      theme(Ui::makeTheme(context.editorPresentationStateSource.getEditorPresentationState().scale)),
       backgroundComponent(theme),
-      mainLayout(rawTraceSourceToUse,
-                 analyzerUiSnapshotSourceToUse,
-                 presetUiSnapshotSourceToUse,
-                 analyzerSettingsActionsToUse,
-                 presetActionsToUse,
+      mainLayout(context.rawTraceSource,
+                 context.analyzerUiSnapshotSource,
+                 context.presetUiSnapshotSource,
+                 context.analyzerSettingsActions,
+                 context.presetActions,
                  theme) {
     setOpaque(true);
     addAndMakeVisible(backgroundComponent);
