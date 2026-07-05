@@ -9,7 +9,7 @@ namespace Display {
 
     inline constexpr AnalyzerMeterTuning analyzerMeterTuning{};
 
-    inline constexpr int meterPollIntervalMs = 16; // ~60 Hz
+    inline constexpr int meterPollIntervalMs = 20; // 50 Hz, evenly paced for ProMotion displays
     inline constexpr int idleMeterPollIntervalMs = 120; // ~8 Hz while waiting for signal to return
     inline constexpr float meterPollIntervalSeconds = static_cast<float>(meterPollIntervalMs) * 0.001f;
 }

@@ -40,6 +40,11 @@ void AnalyzerSectionComponent::resized() {
     rebuildLayout();
 }
 
+void AnalyzerSectionComponent::visibilityChanged() {
+    if (isShowing())
+        analyzerPlotComponent.refreshDisplay();
+}
+
 void AnalyzerSectionComponent::setTopReservedHeight(const int height) {
     const auto nextHeight = juce::jmax(0, height);
     if (topReservedHeight == nextHeight)

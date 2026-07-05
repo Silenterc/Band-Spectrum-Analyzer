@@ -29,7 +29,8 @@ public:
 
 private:
     void run() override;
-    void computeFrame(float dtSeconds);
+    /** Returns true when a frame was actually computed and published. */
+    bool computeFrame(float dtSeconds);
     void resetDisplayModels();
 
     AnalyzerRawTraceSource &rawTraceSource;

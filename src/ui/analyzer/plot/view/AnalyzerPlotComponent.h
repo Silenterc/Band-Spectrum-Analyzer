@@ -35,6 +35,8 @@ public:
     void setLayout(const AnalyzerSectionLayout &newLayout);
     void setUiSnapshot(const Ui::AnalyzerUiSnapshot &snapshot);
     void setHoveredBandIndex(const std::optional<size_t> &newHoveredBandIndex);
+    /** Re-consumes the latest display frame, used after the plot becomes visible again. */
+    void refreshDisplay();
 
     void paint(juce::Graphics &g) override;
     void resized() override;

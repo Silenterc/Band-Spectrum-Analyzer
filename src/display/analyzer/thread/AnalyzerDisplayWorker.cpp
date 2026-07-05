@@ -88,12 +88,13 @@ void AnalyzerDisplayWorker::run() {
             continue;
         }
 
-        computeFrame(dtSeconds);
-        lastTickTimeMs = currentTimeMs;
+        // Only reset the delta-time reference when a frame was published, so skipped wakes accumulate.
+        if (computeFrame(dtSeconds))
+            lastTickTimeMs = currentTimeMs;
     }
 }
 
-void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
+bool AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
     AnalyzerDisplayControlState currentControlState;
     bool shouldForceRefresh = false;
     {
@@ -117,20 +118,20 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
     const auto& tracesToUse = shouldSuppressPendingTraceUpdate ? emptyRawTraces() : tracesView.getTraces();
     const auto hasTraceUpdate = tracesView.hasUpdate && !shouldSuppressPendingTraceUpdate;
     const auto shouldProcessAnalyzer = rawTraceSource.shouldProcessAnalyzer();
+    const auto meterSettled = meter.isSettledAtFloor(currentControlState.floorDb);
+    const auto holdSettled = globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
     const auto shouldTick = shouldForceRefresh
                             || bandLayoutChanged
                             || slotConfigurationChanged
                             || hasTraceUpdate
                             || shouldProcessAnalyzer
-                            || !meter.isSettledAtFloor(currentControlState.floorDb)
-                            || !globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
+                            || !meterSettled
+                            || !holdSettled;
 
-    useIdlePolling = !shouldProcessAnalyzer
-                     && meter.isSettledAtFloor(currentControlState.floorDb)
-                     && globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
+    useIdlePolling = !shouldProcessAnalyzer && meterSettled && holdSettled;
 
-    if (!shouldTick && !bandLayoutChanged && !slotConfigurationChanged)
-        return;
+    if (!shouldTick)
+        return false;
 
     meter.tick(currentBandInfo,
                tracesToUse,
@@ -158,6 +159,7 @@ void AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
     frameBuffer.publish();
     previousControlState = currentControlState;
     listener.analyzerDisplayFramePublished();
+    return true;
 }
 
 void AnalyzerDisplayWorker::resetDisplayModels() {

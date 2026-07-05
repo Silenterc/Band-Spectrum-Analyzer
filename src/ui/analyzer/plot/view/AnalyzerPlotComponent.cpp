@@ -280,7 +280,15 @@ juce::Rectangle<int> AnalyzerPlotComponent::getHoverRepaintBounds(const std::opt
     return layout->plotVisibleBands[*bandIndex].hitBounds.getSmallestIntegerContainer().expanded(2);
 }
 
+void AnalyzerPlotComponent::refreshDisplay() {
+    triggerAsyncUpdate();
+}
+
 void AnalyzerPlotComponent::handleAsyncUpdate() {
+    // Skip batch rebuilding while hidden; refreshDisplay() catches the plot up when shown again.
+    if (!isShowing())
+        return;
+
     bool hasUpdate = false;
     const auto *nextFrame = displayWorker.readLatestFrame(hasUpdate);
     if (nextFrame == nullptr || (!hasUpdate && nextFrame->revision == lastConsumedRevision))
