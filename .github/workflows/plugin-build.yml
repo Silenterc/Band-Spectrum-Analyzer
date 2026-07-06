@@ -13,6 +13,14 @@ on:
           - macos
           - windows
           - linux
+      build_type:
+        description: CMake build type
+        required: true
+        default: Release
+        type: choice
+        options:
+          - Release
+          - RelWithDebInfo
 
 permissions:
   contents: write
@@ -27,12 +35,12 @@ jobs:
       matrix:
         include: ${{ fromJson(
           inputs.platforms == 'macos' &&
-          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"}]' ||
+          format('[{{"os":"macos-latest","generator":"Ninja","build_type":"{0}","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"}}]', inputs.build_type) ||
           inputs.platforms == 'windows' &&
-          '[{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
+          format('[{{"os":"windows-2022","generator":"Visual Studio 17 2022","build_type":"{0}","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}}]', inputs.build_type) ||
           inputs.platforms == 'linux' &&
-          '[{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]' ||
-          '[{"os":"macos-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"},{"os":"ubuntu-latest","generator":"Ninja","build_type":"Release","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"},{"os":"windows-latest","generator":"Visual Studio 17 2022","build_type":"Release","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}]'
+          format('[{{"os":"ubuntu-latest","generator":"Ninja","build_type":"{0}","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}}]', inputs.build_type) ||
+          format('[{{"os":"macos-latest","generator":"Ninja","build_type":"{0}","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3 band-spectrum-analyzer_AU"}},{{"os":"ubuntu-latest","generator":"Ninja","build_type":"{0}","multi_config":false,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}},{{"os":"windows-2022","generator":"Visual Studio 17 2022","build_type":"{0}","multi_config":true,"plugin_targets":"band-spectrum-analyzer_Standalone band-spectrum-analyzer_VST3"}}]', inputs.build_type)
           ) }}
 
     steps:
