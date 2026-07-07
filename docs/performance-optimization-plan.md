@@ -17,9 +17,9 @@ different rendering economics and must each be measured before optimized:
 
 - macOS: CoreGraphics drawing is GPU-executed; the cost is CoreAnimation layer/commit churn,
   proportional to invalidation rate × pixel area. Measured.
-- Windows: JUCE 8 renders through Direct2D by default (GPU-backed) — the macOS findings do not
-  transfer; Windows may already have a flat scale curve, or be bottlenecked elsewhere. Measure next
-  (protocol in §6).
+- Windows: JUCE 8 renders through Direct2D by default (GPU-backed) — confirmed in practice
+  (§1b): the scale curve is far flatter than macOS (1.87× at 4× pixels vs 4.2×), rasterization is
+  on the GPU, and the remaining cost is CPU-side paint-pipeline work — W2's territory. Measured.
 - Linux: X11 software rasterization pays full CPU price for drawing complexity and scales with
   pixels at least as badly as macOS. Likely our worst platform. Unmeasured.
 
@@ -72,6 +72,63 @@ Key insights from profiling: CG rasterization is already GPU-executed on modern 
 bill**, and UI scale multiplies pixel area. Frame pacing must stay even — irregular publish
 intervals (hop-synced 16/32 ms alternation) produced visible judder and were rejected. Window
 occlusion suppresses painting, so all benchmarks require fully visible editors.
+
+## 1b. Current State (Windows, measured 2026-07-06)
+
+Machine: desktop i7-8700 (6C/12T; roughly half the single-core speed of the M-series reference
+laptop), GTX 1070 Ti, 1920×1080 @ 143 Hz, Windows 10, display scaling 100% — pixels = points, so
+the UI Scale parameter is the only pixel multiplier (no retina-style DPI trap on this setup).
+Bitwig 5.3.8 with per-plugin sandboxing (`BitwigPluginHost-X64-SSE41.exe`, one PID per plugin),
+CI RelWithDebInfo VST3, JUCE 8.0.12 (Direct2D renderer active — verified, see GPU note below).
+Measured with `scripts/perf/measure-plugin-cpu.ps1` (per-PID `TotalProcessorTime` deltas, 40–60 s
+per point, reported as % of one core), steady loud loop.
+
+In-DAW comparison (Bitwig, one track, editors fully visible, 1 stereo slot, Peak + RMS + Hold, 1x):
+
+| Plugin | CPU (one core) |
+|---|---|
+| band-spectrum-analyzer | ~12.4% |
+| SPAN | ~12.8% |
+| TDR Nova | ~5.0% |
+
+Idle floor (playback stopped, editors visible, 1x): ours ~1.2%, TDR Nova ~0.1%, SPAN 0.0% — SPAN
+stops repainting entirely when its display decays. Context: Bitwig's own UI process runs ~36% of a
+core with three editors open; its audio-engine process ~1.5%.
+
+UI-scale curve (ours via the UI Scale parameter; SPAN and Nova unchanged across runs — valid
+controls):
+
+| Configuration | Pixels vs 1x | CPU (one core) | vs 1x cost |
+|---|---|---|---|
+| 1x | 1× | ~12.4% | 1× |
+| 1.5x | 2.25× | ~15.7% | ~1.27× |
+| 2x | 4× | ~23.2% | ~1.87× |
+
+**The W6 question is answered: Direct2D gives a decisively flatter scale curve than CoreGraphics**
+— 1.87× at 4× pixels vs the 4.2× extrapolated on macOS. W1 Phase 2 does not need a native Windows
+backend. Note the curve is not perfectly flat and steepens between 1.5x and 2x (+2.6 pts per 1x
+area unit on the first segment, +4.3 on the second).
+
+GPU attribution (per-process GPU-engine counters via `typeperf`): our sandbox PID submits real
+3D-engine work — ~1.8% / 2.0% / 2.3% at 1x / 1.5x / 2x — near-flat in pixel area, with huge
+headroom. SPAN and TDR Nova submit zero GPU work (CPU-rendered on Windows too). Our remaining CPU
+cost is therefore paint-pipeline work on the message thread (path building, D2D command
+recording), which scales with stroke complexity, not pixels — W2 is the right lever on Windows.
+
+Windows-specific observations:
+
+- Cost tracks content, not pixels: on dynamic material our cost swung ~2–18% with the music
+  (silent passages draw near-flat, cheap paths). Even on the steady loop we oscillate ±4–5 pts
+  (σ≈4) with a multi-second period — unexplained; first target for the ETW/Superluminal profile.
+- SPAN's repaint-skipping (hard 0% windows mid-song on dynamic material) flatters its averages on
+  real songs; ours keeps painting at ~1.2% when silent. W4's occlusion work could borrow the idea
+  as a silence gate.
+- Absolute numbers do not compare across machines — this core is ~half an M-series core, so our
+  12.4% here is consistent with the 5.6% on macOS. Within-machine ratios are the signal: we tie
+  SPAN at 1x instead of leading 5×, plausibly because 1080p at 100% scaling gives SPAN's software
+  renderer a small pixel bill, while retina charged it 4× that.
+- Not yet measured: editor-closed (engine-only) cost inside the sandbox PID, and the standalone
+  build. The display-pipeline share of the 12.4% needs the editor-closed run or a profiler.
 
 ## 2. Constraints
 
@@ -164,9 +221,12 @@ macOS measured — do this before any Linux-specific rendering work.
   default settings.
 - Budgets (regression gates): macOS 1x total ≤7% in-DAW (measured 5.6%), 1.5x ≤16%; after W1 the
   scale curve must flatten (2x-on-retina ≤1.5× the 1x cost). Idle floor ≤4.5% standalone.
-  Windows/Linux budgets set once their baselines exist.
+  Windows (i7-8700 reference, in-DAW): 1x ≤14% (measured 12.4%), 2x ≤26% (measured 23.2%), idle
+  floor ≤2% (measured 1.2%). Linux budgets set once its baseline exists.
 
-Windows baseline protocol (for the session on the Windows desktop; macOS is done):
+Windows baseline protocol (done 2026-07-06, results in §1b; tooling:
+`scripts/perf/measure-plugin-cpu.ps1`; kept for re-runs — lesson learned: the steady loud loop is
+mandatory, dynamic material drifted run averages by 1.5–2.5 pts and let SPAN idle-skip mid-song):
 
 1. Build the VST3 in RelWithDebInfo (symbols matter for sampling; never benchmark Debug).
 2. Bitwig with per-plugin sandboxing ("individual plug-in processes") — each plugin gets its own
@@ -187,8 +247,8 @@ Windows baseline protocol (for the session on the Windows desktop; macOS is done
 
 ## 4. Sequencing
 
-1. W6 — macOS baseline done (§1). Next: Windows baseline per the W6 protocol, then Linux (1 day
-   each, needs the hardware)
+1. W6 — macOS baseline done (§1), Windows baseline done (§1b, D2D verdict: no native Windows
+   backend needed). Next: Linux (needs the hardware)
 2. W2 + W3 — platform-universal quick wins (one day); larger relative win expected on Linux
 3. W1 Phases 0–1 — renderer seam + GL experiment, measured per platform against the scale curve,
    decision gates (1–2 days)
