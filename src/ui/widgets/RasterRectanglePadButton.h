@@ -1,0 +1,37 @@
+#pragma once
+
+#include <optional>
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "ui/theme/UiTheme.h"
+
+class RasterRectanglePadButton final : public juce::Button {
+public:
+    RasterRectanglePadButton(const Ui::Theme& themeToUse, juce::String labelText);
+    ~RasterRectanglePadButton() override = default;
+
+    [[nodiscard]] juce::Rectangle<int> getPreferredBounds() const;
+    [[nodiscard]] bool isActive() const;
+
+    bool hitTest(int x, int y) override;
+    void paintButton(juce::Graphics& g, bool isMouseOverButton, bool isButtonDown) override;
+    void resized() override;
+
+    void setActive(bool shouldBeActive);
+    void setLabel(juce::String newLabel);
+    void setActiveMarkingColour(juce::Colour newActiveMarkingColour);
+
+private:
+    void rebuildCachedPadImages();
+
+    const Ui::Theme& theme;
+    juce::String label;
+    bool active = false;
+    std::optional<juce::Colour> activeMarkingColourOverride;
+    juce::Rectangle<int> padBounds;
+    juce::Image cachedOffImage;
+    juce::Image cachedOnImage;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RasterRectanglePadButton)
+};

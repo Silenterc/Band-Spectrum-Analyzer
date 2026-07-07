@@ -28,6 +28,9 @@ namespace Ui {
     enum class ControlRasterAssetId {
         knobSmallFilmstrip,
         knobSmallScale,
+        horizontalSliderFilmstrip,
+        rectanglePadOff,
+        rectanglePadOn,
     };
 
     const juce::Image &getSharedRasterAsset(SharedRasterAssetId assetId);

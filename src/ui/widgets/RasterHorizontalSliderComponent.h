@@ -6,9 +6,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "RasterFilmstrip.h"
+#include "RasterSliderValueMapping.h"
 #include "ui/theme/UiTheme.h"
 
-class RasterKnobComponent final : public juce::Component {
+class RasterHorizontalSliderComponent final : public juce::Component {
 public:
     struct Config {
         juce::String label;
@@ -16,12 +17,13 @@ public:
         float maximum = 1.0f;
         float step = 0.0f;
         juce::String suffix;
+        Ui::SliderValueMapping valueMapping = Ui::SliderValueMapping::linear;
         std::function<juce::String(float)> formatter;
-        std::function<std::optional<float>(const juce::String &)> parser;
+        std::function<std::optional<float>(const juce::String&)> parser;
     };
 
-    explicit RasterKnobComponent(const Ui::Theme& themeToUse);
-    ~RasterKnobComponent() override;
+    explicit RasterHorizontalSliderComponent(const Ui::Theme& themeToUse);
+    ~RasterHorizontalSliderComponent() override;
 
     void setConfig(Config newConfig);
     void setValue(float newValue, juce::NotificationType notificationType = juce::dontSendNotification);
@@ -44,22 +46,22 @@ public:
 private:
     class InlineValueEditor final : public juce::TextEditor {
     public:
-        explicit InlineValueEditor(RasterKnobComponent& ownerToUse);
+        explicit InlineValueEditor(RasterHorizontalSliderComponent& ownerToUse);
 
         void focusLost(FocusChangeType cause) override;
 
     private:
-        RasterKnobComponent& owner;
+        RasterHorizontalSliderComponent& owner;
     };
 
     class OutsideClickListener final : public juce::MouseListener {
     public:
-        explicit OutsideClickListener(RasterKnobComponent& ownerToUse);
+        explicit OutsideClickListener(RasterHorizontalSliderComponent& ownerToUse);
 
         void mouseDown(const juce::MouseEvent& event) override;
 
     private:
-        RasterKnobComponent& owner;
+        RasterHorizontalSliderComponent& owner;
     };
 
     void configureEditor();
@@ -78,21 +80,22 @@ private:
     void updateValueEditorText();
     void setValueInternal(float newValue, juce::NotificationType notificationType);
     [[nodiscard]] float snapAndClamp(float plainValue) const;
+    [[nodiscard]] float normaliseValue(float plainValue) const;
+    [[nodiscard]] float denormaliseValue(float normalisedValue) const;
     [[nodiscard]] juce::String formatValue(float plainValue) const;
-    [[nodiscard]] std::optional<float> parseValue(const juce::String &text) const;
+    [[nodiscard]] std::optional<float> parseValue(const juce::String& text) const;
     [[nodiscard]] int getFrameIndex() const;
 
     const Ui::Theme& theme;
     Config config;
     float value = 0.0f;
-    float dragStartValue = 0.0f;
-    float dragStartY = 0.0f;
+    float dragStartNormalised = 0.0f;
+    float dragStartX = 0.0f;
     bool dragging = false;
     bool cancellingEdit = false;
     bool outsideClickListenerAttached = false;
     juce::Rectangle<int> labelBounds;
-    juce::Rectangle<int> scaleBounds;
-    juce::Rectangle<int> knobBounds;
+    juce::Rectangle<int> sliderBounds;
     juce::Rectangle<int> valueBounds;
     InlineValueEditor valueEditor;
     OutsideClickListener outsideClickListener;

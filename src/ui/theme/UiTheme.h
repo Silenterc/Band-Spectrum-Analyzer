@@ -212,6 +212,33 @@ namespace Ui {
         [[nodiscard]] KnobMetrics scaled(float factor) const;
     };
 
+    struct HorizontalSliderMetrics {
+        int width = 240;
+        int height = 102;
+        int sliderWidth = 222;
+        int sliderHeight = 52;
+        int valueWidth = 112;
+        int valueHeight = 20;
+        int valueEditorTextIndentX = 6;
+        int valueEditorTextIndentTop = 2;
+        float labelFontHeight = 13.0f;
+        float valueFontHeight = 13.5f;
+        int labelHeight = 18;
+        int labelToSliderGap = 4;
+        int sliderToValueGap = 6;
+        float dragPixelsForFullRange = 210.0f;
+
+        [[nodiscard]] HorizontalSliderMetrics scaled(float factor) const;
+    };
+
+    struct RectanglePadMetrics {
+        int width = 104;
+        int height = 44;
+        float labelFontHeight = 15.0f;
+
+        [[nodiscard]] RectanglePadMetrics scaled(float factor) const;
+    };
+
     struct BackgroundMetrics {
         int woodSideInset = 31;
         int screwPadding = 2;
@@ -313,6 +340,8 @@ namespace Ui {
         SlotMetrics slot;
         PopupMetrics popup;
         KnobMetrics knob;
+        HorizontalSliderMetrics horizontalSlider;
+        RectanglePadMetrics rectanglePad;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

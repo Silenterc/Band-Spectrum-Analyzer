@@ -188,6 +188,33 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    HorizontalSliderMetrics HorizontalSliderMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.sliderWidth = scaleInt(sliderWidth, factor);
+        scaledMetrics.sliderHeight = scaleInt(sliderHeight, factor);
+        scaledMetrics.valueWidth = scaleInt(valueWidth, factor);
+        scaledMetrics.valueHeight = scaleInt(valueHeight, factor);
+        scaledMetrics.valueEditorTextIndentX = scaleInt(valueEditorTextIndentX, factor);
+        scaledMetrics.valueEditorTextIndentTop = scaleInt(valueEditorTextIndentTop, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        scaledMetrics.valueFontHeight = scaleFloat(valueFontHeight, factor);
+        scaledMetrics.labelHeight = scaleInt(labelHeight, factor);
+        scaledMetrics.labelToSliderGap = scaleInt(labelToSliderGap, factor);
+        scaledMetrics.sliderToValueGap = scaleInt(sliderToValueGap, factor);
+        scaledMetrics.dragPixelsForFullRange = scaleFloat(dragPixelsForFullRange, factor);
+        return scaledMetrics;
+    }
+
+    RectanglePadMetrics RectanglePadMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        return scaledMetrics;
+    }
+
     BackgroundMetrics BackgroundMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.woodSideInset = scaleInt(woodSideInset, factor);
@@ -280,6 +307,8 @@ namespace Ui {
         scaledMetrics.slot = slot.scaled(factor);
         scaledMetrics.popup = popup.scaled(factor);
         scaledMetrics.knob = knob.scaled(factor);
+        scaledMetrics.horizontalSlider = horizontalSlider.scaled(factor);
+        scaledMetrics.rectanglePad = rectanglePad.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

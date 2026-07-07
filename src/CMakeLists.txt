@@ -15,6 +15,7 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/uikit/button/button_off.png
         ui/assets/uikit/button/button_on.png
         ui/assets/uikit/decor_grid.png
+        ui/assets/uikit/hor_slider/Hor_slider.png
         ui/assets/uikit/knob_small/Knob_small.png
         ui/assets/uikit/knob_small/scale_small_knob.png
         ui/assets/uikit/logo.svg
@@ -22,6 +23,8 @@ juce_add_binary_data(BsaUiAssets
         ui/assets/uikit/pad/pad_off.png
         ui/assets/uikit/pad/pad_freeze_on.png
         ui/assets/uikit/pad/pad_on.png
+        ui/assets/uikit/pad_rectangle/pad_rectangle_off.png
+        ui/assets/uikit/pad_rectangle/pad_rectangle_on.png
         ui/assets/uikit/screen.png
         ui/assets/uikit/screw.png
         ui/assets/uikit/switch/switch_down.png
@@ -63,7 +66,10 @@ target_sources(${PROJECT_NAME}
         ui/theme/UiRasterAssets.cpp
         ui/widgets/RasterIconButton.cpp
         ui/widgets/RasterFilmstrip.cpp
+        ui/widgets/RasterSliderValueMapping.cpp
         ui/widgets/RasterKnobComponent.cpp
+        ui/widgets/RasterHorizontalSliderComponent.cpp
+        ui/widgets/RasterRectanglePadButton.cpp
         ui/widgets/PadButton.cpp
         ui/widgets/CalloutPresenter.cpp
         ui/widgets/PopupActionButton.cpp

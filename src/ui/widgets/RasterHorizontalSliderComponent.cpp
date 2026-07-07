@@ -1,37 +1,35 @@
-#include "RasterKnobComponent.h"
-
-#include <cmath>
+#include "RasterHorizontalSliderComponent.h"
 
 #include "ui/theme/UiRasterAssets.h"
 
 namespace {
-    constexpr Ui::RasterFilmstripSpec knobSmallFilmstripSpec{
-        .frameCount = 128,
-        .frameWidth = 120,
-        .frameHeight = 120,
+    constexpr Ui::RasterFilmstripSpec horizontalSliderFilmstripSpec{
+        .frameCount = 256,
+        .frameWidth = 444,
+        .frameHeight = 104,
         .orientation = Ui::FilmstripOrientation::vertical
     };
 }
 
-RasterKnobComponent::InlineValueEditor::InlineValueEditor(RasterKnobComponent& ownerToUse)
+RasterHorizontalSliderComponent::InlineValueEditor::InlineValueEditor(RasterHorizontalSliderComponent& ownerToUse)
     : owner(ownerToUse) {
 }
 
-void RasterKnobComponent::InlineValueEditor::focusLost(const FocusChangeType cause) {
+void RasterHorizontalSliderComponent::InlineValueEditor::focusLost(const FocusChangeType cause) {
     juce::TextEditor::focusLost(cause);
     owner.commitValueEdit();
 }
 
-RasterKnobComponent::OutsideClickListener::OutsideClickListener(RasterKnobComponent& ownerToUse)
+RasterHorizontalSliderComponent::OutsideClickListener::OutsideClickListener(RasterHorizontalSliderComponent& ownerToUse)
     : owner(ownerToUse) {
 }
 
-void RasterKnobComponent::OutsideClickListener::mouseDown(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::OutsideClickListener::mouseDown(const juce::MouseEvent& event) {
     if (owner.valueEditor.isVisible() && !owner.isPointInsideValueEditor(event))
         owner.commitValueEdit();
 }
 
-RasterKnobComponent::RasterKnobComponent(const Ui::Theme& themeToUse)
+RasterHorizontalSliderComponent::RasterHorizontalSliderComponent(const Ui::Theme& themeToUse)
     : theme(themeToUse),
       valueEditor(*this),
       outsideClickListener(*this) {
@@ -42,41 +40,42 @@ RasterKnobComponent::RasterKnobComponent(const Ui::Theme& themeToUse)
     updateLayout();
 }
 
-RasterKnobComponent::~RasterKnobComponent() {
+RasterHorizontalSliderComponent::~RasterHorizontalSliderComponent() {
     detachOutsideClickListener();
 }
 
-void RasterKnobComponent::setConfig(Config newConfig) {
+void RasterHorizontalSliderComponent::setConfig(Config newConfig) {
     config = std::move(newConfig);
     value = snapAndClamp(value);
     updateValueEditorText();
     repaint();
 }
 
-void RasterKnobComponent::setValue(const float newValue, const juce::NotificationType notificationType) {
+void RasterHorizontalSliderComponent::setValue(const float newValue,
+                                               const juce::NotificationType notificationType) {
     setValueInternal(newValue, notificationType);
 }
 
-float RasterKnobComponent::getValue() const {
+float RasterHorizontalSliderComponent::getValue() const {
     return value;
 }
 
-juce::Rectangle<int> RasterKnobComponent::getPreferredBounds() const {
-    return {0, 0, theme.metrics.knob.width, theme.metrics.knob.height};
+juce::Rectangle<int> RasterHorizontalSliderComponent::getPreferredBounds() const {
+    return {0, 0, theme.metrics.horizontalSlider.width, theme.metrics.horizontalSlider.height};
 }
 
-void RasterKnobComponent::paint(juce::Graphics& g) {
-    const auto& metrics = theme.metrics.knob;
+void RasterHorizontalSliderComponent::paint(juce::Graphics& g) {
+    const auto& metrics = theme.metrics.horizontalSlider;
     g.setColour(theme.hardwareMarkingLight);
     g.setFont(juce::FontOptions(metrics.labelFontHeight).withStyle("Bold"));
     g.drawText(config.label, labelBounds, juce::Justification::centred, false);
 
-    const auto& scaleImage = Ui::getControlRasterAsset(Ui::ControlRasterAssetId::knobSmallScale);
-    if (scaleImage.isValid())
-        Ui::drawAssetWithin(g, scaleImage, scaleBounds);
-
-    const auto& knobImage = Ui::getControlRasterAsset(Ui::ControlRasterAssetId::knobSmallFilmstrip);
-    Ui::RasterFilmstrip::drawFrame(g, knobImage, knobSmallFilmstripSpec, getFrameIndex(), knobBounds);
+    const auto& sliderImage = Ui::getControlRasterAsset(Ui::ControlRasterAssetId::horizontalSliderFilmstrip);
+    Ui::RasterFilmstrip::drawFrame(g,
+                                   sliderImage,
+                                   horizontalSliderFilmstripSpec,
+                                   getFrameIndex(),
+                                   sliderBounds);
 
     const auto& valueImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::textBox);
     if (valueImage.isValid())
@@ -89,41 +88,41 @@ void RasterKnobComponent::paint(juce::Graphics& g) {
     }
 }
 
-void RasterKnobComponent::resized() {
+void RasterHorizontalSliderComponent::resized() {
     updateLayout();
 }
 
-void RasterKnobComponent::mouseDown(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::mouseDown(const juce::MouseEvent& event) {
     if (valueBounds.contains(event.getPosition())) {
         beginValueEdit();
         return;
     }
 
-    if (knobBounds.contains(event.getPosition()) || scaleBounds.contains(event.getPosition()))
+    if (sliderBounds.contains(event.getPosition()))
         beginDrag(event);
 }
 
-void RasterKnobComponent::mouseMove(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::mouseMove(const juce::MouseEvent& event) {
     updateMouseCursor(event.getPosition());
 }
 
-void RasterKnobComponent::mouseExit(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::mouseExit(const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
     setMouseCursor(juce::MouseCursor::NormalCursor);
 }
 
-void RasterKnobComponent::mouseDrag(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::mouseDrag(const juce::MouseEvent& event) {
     if (dragging)
         updateDrag(event);
 }
 
-void RasterKnobComponent::mouseUp(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::mouseUp(const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
     if (dragging)
         endDrag();
 }
 
-bool RasterKnobComponent::keyPressed(const juce::KeyPress& key) {
+bool RasterHorizontalSliderComponent::keyPressed(const juce::KeyPress& key) {
     const auto increment = key.getModifiers().isShiftDown() ? config.step * 10.0f : config.step;
     if (increment <= 0.0f)
         return juce::Component::keyPressed(key);
@@ -141,16 +140,17 @@ bool RasterKnobComponent::keyPressed(const juce::KeyPress& key) {
     return juce::Component::keyPressed(key);
 }
 
-void RasterKnobComponent::configureEditor() {
+void RasterHorizontalSliderComponent::configureEditor() {
+    const auto& metrics = theme.metrics.horizontalSlider;
     valueEditor.setSelectAllWhenFocused(true);
     valueEditor.setJustification(juce::Justification::centred);
     valueEditor.setMultiLine(false);
     valueEditor.setReturnKeyStartsNewLine(false);
     valueEditor.setScrollToShowCursor(true);
-    valueEditor.setFont(juce::FontOptions(theme.metrics.knob.valueFontHeight, juce::Font::bold));
+    valueEditor.setFont(juce::FontOptions(metrics.valueFontHeight, juce::Font::bold));
     valueEditor.applyFontToAllText(valueEditor.getFont(), true);
-    valueEditor.setIndents(theme.metrics.knob.valueEditorTextIndentX,
-                           theme.metrics.knob.valueEditorTextIndentTop);
+    valueEditor.setIndents(metrics.valueEditorTextIndentX,
+                           metrics.valueEditorTextIndentTop);
     valueEditor.setColour(juce::TextEditor::backgroundColourId, theme.controlSurface);
     valueEditor.setColour(juce::TextEditor::outlineColourId,
                            theme.sectionDividerHighlight.withMultipliedAlpha(theme.metrics.presetPopup.editorOutlineAlpha));
@@ -163,7 +163,7 @@ void RasterKnobComponent::configureEditor() {
     valueEditor.onEscapeKey = [this] { cancelValueEdit(); };
 }
 
-void RasterKnobComponent::beginValueEdit() {
+void RasterHorizontalSliderComponent::beginValueEdit() {
     if (valueEditor.isVisible())
         return;
 
@@ -176,7 +176,7 @@ void RasterKnobComponent::beginValueEdit() {
     repaint(valueBounds);
 }
 
-void RasterKnobComponent::commitValueEdit() {
+void RasterHorizontalSliderComponent::commitValueEdit() {
     if (!valueEditor.isVisible() || cancellingEdit)
         return;
 
@@ -191,7 +191,7 @@ void RasterKnobComponent::commitValueEdit() {
     repaint(valueBounds);
 }
 
-void RasterKnobComponent::cancelValueEdit() {
+void RasterHorizontalSliderComponent::cancelValueEdit() {
     if (!valueEditor.isVisible())
         return;
 
@@ -204,7 +204,7 @@ void RasterKnobComponent::cancelValueEdit() {
     repaint(valueBounds);
 }
 
-void RasterKnobComponent::attachOutsideClickListener() {
+void RasterHorizontalSliderComponent::attachOutsideClickListener() {
     if (outsideClickListenerAttached)
         return;
 
@@ -212,7 +212,7 @@ void RasterKnobComponent::attachOutsideClickListener() {
     outsideClickListenerAttached = true;
 }
 
-void RasterKnobComponent::detachOutsideClickListener() {
+void RasterHorizontalSliderComponent::detachOutsideClickListener() {
     if (!outsideClickListenerAttached)
         return;
 
@@ -220,7 +220,7 @@ void RasterKnobComponent::detachOutsideClickListener() {
     outsideClickListenerAttached = false;
 }
 
-bool RasterKnobComponent::isPointInsideValueEditor(const juce::MouseEvent& event) const {
+bool RasterHorizontalSliderComponent::isPointInsideValueEditor(const juce::MouseEvent& event) const {
     if (event.eventComponent == &valueEditor || valueEditor.isParentOf(event.eventComponent))
         return true;
 
@@ -231,65 +231,62 @@ bool RasterKnobComponent::isPointInsideValueEditor(const juce::MouseEvent& event
     return valueEditor.getScreenBounds().contains(screenPoint);
 }
 
-void RasterKnobComponent::beginDrag(const juce::MouseEvent& event) {
+void RasterHorizontalSliderComponent::beginDrag(const juce::MouseEvent& event) {
     dragging = true;
-    dragStartValue = value;
-    dragStartY = event.position.y;
+    dragStartNormalised = normaliseValue(value);
+    dragStartX = event.position.x;
     grabKeyboardFocus();
     if (onGestureStart != nullptr)
         onGestureStart();
 }
 
-void RasterKnobComponent::updateDrag(const juce::MouseEvent& event) {
-    const auto range = config.maximum - config.minimum;
-    if (range <= 0.0f)
-        return;
-
-    const auto deltaNormalised = (dragStartY - event.position.y) / juce::jmax(1.0f, theme.metrics.knob.dragPixelsForFullRange);
-    setValueInternal(dragStartValue + deltaNormalised * range, juce::sendNotification);
+void RasterHorizontalSliderComponent::updateDrag(const juce::MouseEvent& event) {
+    const auto deltaNormalised = (event.position.x - dragStartX)
+                                 / juce::jmax(1.0f, theme.metrics.horizontalSlider.dragPixelsForFullRange);
+    setValueInternal(denormaliseValue(dragStartNormalised + deltaNormalised),
+                     juce::sendNotification);
 }
 
-void RasterKnobComponent::endDrag() {
+void RasterHorizontalSliderComponent::endDrag() {
     dragging = false;
     if (onGestureEnd != nullptr)
         onGestureEnd();
 }
 
-void RasterKnobComponent::updateMouseCursor(const juce::Point<int> position) {
+void RasterHorizontalSliderComponent::updateMouseCursor(const juce::Point<int> position) {
     setMouseCursor(isInteractivePosition(position) ? juce::MouseCursor::PointingHandCursor
                                                    : juce::MouseCursor::NormalCursor);
 }
 
-bool RasterKnobComponent::isInteractivePosition(const juce::Point<int> position) const {
-    return valueBounds.contains(position) || knobBounds.contains(position) || scaleBounds.contains(position);
+bool RasterHorizontalSliderComponent::isInteractivePosition(const juce::Point<int> position) const {
+    return valueBounds.contains(position) || sliderBounds.contains(position);
 }
 
-void RasterKnobComponent::updateLayout() {
-    const auto& metrics = theme.metrics.knob;
+void RasterHorizontalSliderComponent::updateLayout() {
+    const auto& metrics = theme.metrics.horizontalSlider;
     auto bounds = getLocalBounds();
     if (bounds.isEmpty())
         bounds = getPreferredBounds();
 
     labelBounds = bounds.removeFromTop(metrics.labelHeight);
-    bounds.removeFromTop(metrics.labelToScaleGap);
+    bounds.removeFromTop(metrics.labelToSliderGap);
 
-    const auto scaleAndKnobHeight = juce::jmax(metrics.scaleHeight, metrics.knobSide);
-    const auto scaleAndKnobBounds = bounds.removeFromTop(scaleAndKnobHeight);
-    const auto centre = scaleAndKnobBounds.getCentre();
-    scaleBounds = juce::Rectangle<int>(metrics.scaleWidth, metrics.scaleHeight).withCentre(centre.translated(0, metrics.scaleOffsetY));
-    knobBounds = juce::Rectangle<int>(metrics.knobSide, metrics.knobSide).withCentre(centre);
+    const auto sliderSectionBounds = bounds.removeFromTop(metrics.sliderHeight);
+    sliderBounds = juce::Rectangle<int>(metrics.sliderWidth, metrics.sliderHeight)
+                       .withCentre({getLocalBounds().getCentreX(), sliderSectionBounds.getCentreY()});
 
-    bounds.removeFromTop(metrics.scaleToValueGap);
-    valueBounds = juce::Rectangle<int>(metrics.valueWidth, metrics.valueHeight).withCentre({getLocalBounds().getCentreX(),
-                                                                                            bounds.getY() + metrics.valueHeight / 2});
+    bounds.removeFromTop(metrics.sliderToValueGap);
+    valueBounds = juce::Rectangle<int>(metrics.valueWidth, metrics.valueHeight)
+                      .withCentre({getLocalBounds().getCentreX(), bounds.getY() + metrics.valueHeight / 2});
     valueEditor.setBounds(valueBounds);
 }
 
-void RasterKnobComponent::updateValueEditorText() {
+void RasterHorizontalSliderComponent::updateValueEditorText() {
     valueEditor.setText(formatValue(value), false);
 }
 
-void RasterKnobComponent::setValueInternal(const float newValue, const juce::NotificationType notificationType) {
+void RasterHorizontalSliderComponent::setValueInternal(const float newValue,
+                                                       const juce::NotificationType notificationType) {
     const auto nextValue = snapAndClamp(newValue);
     if (juce::approximatelyEqual(value, nextValue))
         return;
@@ -301,26 +298,39 @@ void RasterKnobComponent::setValueInternal(const float newValue, const juce::Not
         onValueChanged(value);
 }
 
-float RasterKnobComponent::snapAndClamp(const float plainValue) const {
-    return Ui::RasterFilmstrip::snapValue(plainValue, config.minimum, config.maximum, config.step);
+float RasterHorizontalSliderComponent::snapAndClamp(const float plainValue) const {
+    return Ui::RasterSliderValueMapping::snapValue(plainValue, config.minimum, config.maximum, config.step);
 }
 
-juce::String RasterKnobComponent::formatValue(const float plainValue) const {
+float RasterHorizontalSliderComponent::normaliseValue(const float plainValue) const {
+    return Ui::RasterSliderValueMapping::normaliseValue(plainValue,
+                                                        config.minimum,
+                                                        config.maximum,
+                                                        config.valueMapping);
+}
+
+float RasterHorizontalSliderComponent::denormaliseValue(const float normalisedValue) const {
+    return Ui::RasterSliderValueMapping::denormaliseValue(normalisedValue,
+                                                          config.minimum,
+                                                          config.maximum,
+                                                          config.valueMapping);
+}
+
+juce::String RasterHorizontalSliderComponent::formatValue(const float plainValue) const {
     if (config.formatter != nullptr)
         return config.formatter(plainValue);
 
     return juce::String(plainValue, 1) + (config.suffix.isNotEmpty() ? " " + config.suffix : juce::String{});
 }
 
-std::optional<float> RasterKnobComponent::parseValue(const juce::String &text) const {
+std::optional<float> RasterHorizontalSliderComponent::parseValue(const juce::String& text) const {
     if (config.parser != nullptr)
         return config.parser(text);
 
     return Ui::RasterFilmstrip::parseNumericText(text, config.suffix);
 }
 
-int RasterKnobComponent::getFrameIndex() const {
-    return Ui::RasterFilmstrip::frameIndexForNormalisedValue(
-        Ui::RasterFilmstrip::normaliseValue(value, config.minimum, config.maximum),
-        knobSmallFilmstripSpec.frameCount);
+int RasterHorizontalSliderComponent::getFrameIndex() const {
+    return Ui::RasterFilmstrip::frameIndexForNormalisedValue(normaliseValue(value),
+                                                             horizontalSliderFilmstripSpec.frameCount);
 }

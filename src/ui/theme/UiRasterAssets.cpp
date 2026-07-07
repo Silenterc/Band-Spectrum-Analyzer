@@ -116,6 +116,27 @@ namespace {
         jassert(image.isValid());
         return image;
     }
+
+    const juce::Image& getHorizontalSliderFilmstrip() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::Hor_slider_png,
+                                                                  static_cast<size_t>(BinaryData::Hor_slider_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image& getRectanglePadOff() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_rectangle_off_png,
+                                                                  static_cast<size_t>(BinaryData::pad_rectangle_off_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image& getRectanglePadOn() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_rectangle_on_png,
+                                                                  static_cast<size_t>(BinaryData::pad_rectangle_on_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
 }
 
 namespace Ui {
@@ -169,6 +190,12 @@ namespace Ui {
                 return getKnobSmallFilmstrip();
             case ControlRasterAssetId::knobSmallScale:
                 return getKnobSmallScale();
+            case ControlRasterAssetId::horizontalSliderFilmstrip:
+                return getHorizontalSliderFilmstrip();
+            case ControlRasterAssetId::rectanglePadOff:
+                return getRectanglePadOff();
+            case ControlRasterAssetId::rectanglePadOn:
+                return getRectanglePadOn();
         }
 
         jassertfalse;
