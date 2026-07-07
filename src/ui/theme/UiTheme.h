@@ -239,6 +239,18 @@ namespace Ui {
         [[nodiscard]] RectanglePadMetrics scaled(float factor) const;
     };
 
+    struct SettingsSectionFrameMetrics {
+        float strokeWidth = 1.5f;
+        float cornerRadius = 8.0f;
+        float titleFontHeight = 17.0f;
+        int titleHorizontalPadding = 12;
+        int titleGapHeight = 18;
+        float borderAlpha = 0.82f;
+        float titleAlpha = 0.88f;
+
+        [[nodiscard]] SettingsSectionFrameMetrics scaled(float factor) const;
+    };
+
     struct BackgroundMetrics {
         int woodSideInset = 31;
         int screwPadding = 2;
@@ -342,6 +354,7 @@ namespace Ui {
         KnobMetrics knob;
         HorizontalSliderMetrics horizontalSlider;
         RectanglePadMetrics rectanglePad;
+        SettingsSectionFrameMetrics settingsSectionFrame;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

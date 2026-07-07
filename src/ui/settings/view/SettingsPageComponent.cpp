@@ -4,10 +4,12 @@
 
 SettingsPageComponent::SettingsPageComponent(const Ui::Theme& themeToUse)
     : theme(themeToUse),
+      mockFrequencyRangeFrame(themeToUse, "FREQUENCY RANGE"),
       mockHoldTimeKnob(themeToUse),
       mockVisibleMinFrequencySlider(themeToUse),
       mockBandModeButton(themeToUse, "1/6 Oct") {
     setOpaque(true);
+    addAndMakeVisible(mockFrequencyRangeFrame);
     addAndMakeVisible(mockHoldTimeKnob);
     addAndMakeVisible(mockVisibleMinFrequencySlider);
     addAndMakeVisible(mockBandModeButton);
@@ -76,6 +78,14 @@ void SettingsPageComponent::resized() {
 
     const auto buttonPreferredBounds = mockBandModeButton.getPreferredBounds();
     mockBandModeButton.setBounds(buttonPreferredBounds.withPosition(sliderX, sliderY + sliderPreferredBounds.getHeight() + 14));
+
+    const auto framePadding = 22;
+    const auto frameLeft = sliderX - framePadding;
+    const auto frameTop = sliderY - 22;
+    const auto frameRight = juce::jmax(sliderX + sliderPreferredBounds.getWidth(),
+                                       sliderX + buttonPreferredBounds.getWidth()) + framePadding;
+    const auto frameBottom = mockBandModeButton.getBottom() + framePadding;
+    mockFrequencyRangeFrame.setBounds({frameLeft, frameTop, frameRight - frameLeft, frameBottom - frameTop});
 }
 
 void SettingsPageComponent::rebuildCachedBackground() {

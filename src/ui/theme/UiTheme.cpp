@@ -215,6 +215,16 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    SettingsSectionFrameMetrics SettingsSectionFrameMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.strokeWidth = scaleFloat(strokeWidth, factor);
+        scaledMetrics.cornerRadius = scaleFloat(cornerRadius, factor);
+        scaledMetrics.titleFontHeight = scaleFloat(titleFontHeight, factor);
+        scaledMetrics.titleHorizontalPadding = scaleInt(titleHorizontalPadding, factor);
+        scaledMetrics.titleGapHeight = scaleInt(titleGapHeight, factor);
+        return scaledMetrics;
+    }
+
     BackgroundMetrics BackgroundMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.woodSideInset = scaleInt(woodSideInset, factor);
@@ -309,6 +319,7 @@ namespace Ui {
         scaledMetrics.knob = knob.scaled(factor);
         scaledMetrics.horizontalSlider = horizontalSlider.scaled(factor);
         scaledMetrics.rectanglePad = rectanglePad.scaled(factor);
+        scaledMetrics.settingsSectionFrame = settingsSectionFrame.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);
