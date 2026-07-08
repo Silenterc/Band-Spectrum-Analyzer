@@ -18,21 +18,13 @@ namespace Ui {
             settingsMetrics.analysisSectionHeight
         };
 
-        const auto validationTop = layout.analysisSectionBounds.getBottom() + settingsMetrics.validationTopGap;
-        layout.validationKnobBounds = juce::Rectangle<int>(theme.metrics.knob.width,
-                                                           theme.metrics.knob.height)
-                                          .withPosition(left + settingsMetrics.validationKnobLeftInset, validationTop);
-
-        layout.validationSliderBounds = juce::Rectangle<int>(theme.metrics.horizontalSlider.width,
-                                                             theme.metrics.horizontalSlider.height)
-                                            .withPosition(layout.validationKnobBounds.getRight()
-                                                              + settingsMetrics.validationSliderGap,
-                                                          validationTop + settingsMetrics.validationSliderOffsetY);
-
-        const auto framePadding = settingsMetrics.validationFramePadding;
-        layout.validationFrequencyFrameBounds = layout.validationSliderBounds
-                                                    .expanded(framePadding, framePadding)
-                                                    .withBottom(layout.validationSliderBounds.getBottom() + framePadding);
+        const auto timeDecayTop = layout.analysisSectionBounds.getBottom() + settingsMetrics.timeDecayTopGap;
+        layout.timeDecaySectionBounds = {
+            left,
+            timeDecayTop,
+            juce::jmin(settingsMetrics.timeDecaySectionWidth, contentWidth),
+            settingsMetrics.timeDecaySectionHeight
+        };
 
         return layout;
     }

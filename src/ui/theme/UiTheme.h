@@ -193,7 +193,7 @@ namespace Ui {
 
     struct KnobMetrics {
         int width = 104;
-        int height = 146;
+        int height = 104;
         int scaleWidth = 56;
         int scaleHeight = 49;
         int scaleOffsetY = -8;
@@ -206,7 +206,7 @@ namespace Ui {
         float valueFontHeight = 13.5f;
         int labelHeight = 18;
         int labelToScaleGap = 4;
-        int scaleToValueGap = 6;
+        int scaleToValueGap = 2;
         int filmstripFrameCount = 128;
         int filmstripFrameWidth = 120;
         int filmstripFrameHeight = 120;
@@ -265,11 +265,9 @@ namespace Ui {
     struct SettingsPageMetrics {
         int topInset = 22;
         int analysisSectionHeight = 88;
-        int validationTopGap = 28;
-        int validationKnobLeftInset = 26;
-        int validationSliderGap = 56;
-        int validationSliderOffsetY = 4;
-        int validationFramePadding = 22;
+        int timeDecayTopGap = 18;
+        int timeDecaySectionWidth = 348;
+        int timeDecaySectionHeight = 312;
 
         [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
     };
@@ -282,6 +280,14 @@ namespace Ui {
         int labelRightToButtonLeftGap = 16;
 
         [[nodiscard]] SettingsAnalysisSectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsTimeDecaySectionMetrics {
+        int contentTopInset = 42;
+        int horizontalInset = 34;
+        int columnGap = 36;
+        int rowGap = 16;
+        [[nodiscard]] SettingsTimeDecaySectionMetrics scaled(float factor) const;
     };
 
     struct BackgroundMetrics {
@@ -390,6 +396,7 @@ namespace Ui {
         SettingsSectionFrameMetrics settingsSectionFrame;
         SettingsPageMetrics settingsPage;
         SettingsAnalysisSectionMetrics settingsAnalysisSection;
+        SettingsTimeDecaySectionMetrics settingsTimeDecaySection;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

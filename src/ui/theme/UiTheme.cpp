@@ -229,11 +229,9 @@ namespace Ui {
         auto scaledMetrics = *this;
         scaledMetrics.topInset = scaleInt(topInset, factor);
         scaledMetrics.analysisSectionHeight = scaleInt(analysisSectionHeight, factor);
-        scaledMetrics.validationTopGap = scaleInt(validationTopGap, factor);
-        scaledMetrics.validationKnobLeftInset = scaleInt(validationKnobLeftInset, factor);
-        scaledMetrics.validationSliderGap = scaleInt(validationSliderGap, factor);
-        scaledMetrics.validationSliderOffsetY = scaleInt(validationSliderOffsetY, factor);
-        scaledMetrics.validationFramePadding = scaleInt(validationFramePadding, factor);
+        scaledMetrics.timeDecayTopGap = scaleInt(timeDecayTopGap, factor);
+        scaledMetrics.timeDecaySectionWidth = scaleInt(timeDecaySectionWidth, factor);
+        scaledMetrics.timeDecaySectionHeight = scaleInt(timeDecaySectionHeight, factor);
         return scaledMetrics;
     }
 
@@ -244,6 +242,15 @@ namespace Ui {
         scaledMetrics.buttonOffsetY = scaleInt(buttonOffsetY, factor);
         scaledMetrics.labelWidth = scaleInt(labelWidth, factor);
         scaledMetrics.labelRightToButtonLeftGap = scaleInt(labelRightToButtonLeftGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsTimeDecaySectionMetrics SettingsTimeDecaySectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.columnGap = scaleInt(columnGap, factor);
+        scaledMetrics.rowGap = scaleInt(rowGap, factor);
         return scaledMetrics;
     }
 
@@ -344,6 +351,7 @@ namespace Ui {
         scaledMetrics.settingsSectionFrame = settingsSectionFrame.scaled(factor);
         scaledMetrics.settingsPage = settingsPage.scaled(factor);
         scaledMetrics.settingsAnalysisSection = settingsAnalysisSection.scaled(factor);
+        scaledMetrics.settingsTimeDecaySection = settingsTimeDecaySection.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

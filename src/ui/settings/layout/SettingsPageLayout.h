@@ -8,9 +8,7 @@ namespace Ui {
     struct SettingsPageLayout {
         juce::Rectangle<int> contentBounds;
         juce::Rectangle<int> analysisSectionBounds;
-        juce::Rectangle<int> validationKnobBounds;
-        juce::Rectangle<int> validationSliderBounds;
-        juce::Rectangle<int> validationFrequencyFrameBounds;
+        juce::Rectangle<int> timeDecaySectionBounds;
     };
 
     class SettingsPageLayoutBuilder {
