@@ -13,6 +13,7 @@ public:
     ~RasterRectanglePadButton() override = default;
 
     [[nodiscard]] juce::Rectangle<int> getPreferredBounds() const;
+    [[nodiscard]] juce::Point<float> getVisualCenterOffset() const;
     [[nodiscard]] bool isActive() const;
 
     bool hitTest(int x, int y) override;

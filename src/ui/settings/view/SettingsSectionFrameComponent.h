@@ -12,6 +12,9 @@ public:
     void paint(juce::Graphics& g) override;
     bool hitTest(int x, int y) override;
 
+    [[nodiscard]] static juce::Rectangle<float> getBorderBounds(juce::Rectangle<int> bounds,
+                                                                const Ui::SettingsSectionFrameMetrics& metrics);
+
     void setTitle(juce::String newTitle);
 
 private:

@@ -212,6 +212,8 @@ namespace Ui {
         scaledMetrics.width = scaleInt(width, factor);
         scaledMetrics.height = scaleInt(height, factor);
         scaledMetrics.iconSide = scaleInt(iconSide, factor);
+        scaledMetrics.visualCenterOffsetX = scaleFloat(visualCenterOffsetX, factor);
+        scaledMetrics.visualCenterOffsetY = scaleFloat(visualCenterOffsetY, factor);
         scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
         return scaledMetrics;
     }
@@ -244,10 +246,7 @@ namespace Ui {
     SettingsAnalysisSectionMetrics SettingsAnalysisSectionMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
-        scaledMetrics.buttonGroupOffsetX = scaleInt(buttonGroupOffsetX, factor);
-        scaledMetrics.buttonOffsetY = scaleInt(buttonOffsetY, factor);
-        scaledMetrics.labelWidth = scaleInt(labelWidth, factor);
-        scaledMetrics.labelRightToButtonLeftGap = scaleInt(labelRightToButtonLeftGap, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
         return scaledMetrics;
     }
 
@@ -270,11 +269,8 @@ namespace Ui {
 
     SettingsUiSectionMetrics SettingsUiSectionMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
-        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
         scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
         scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
-        scaledMetrics.labelWidth = scaleInt(labelWidth, factor);
-        scaledMetrics.labelRightToButtonLeftGap = scaleInt(labelRightToButtonLeftGap, factor);
         return scaledMetrics;
     }
 
@@ -282,9 +278,11 @@ namespace Ui {
         auto scaledMetrics = *this;
         scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
         scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.contentOffsetX = scaleInt(contentOffsetX, factor);
         scaledMetrics.toggleWidth = scaleInt(toggleWidth, factor);
         scaledMetrics.toggleLabelHeight = scaleInt(toggleLabelHeight, factor);
         scaledMetrics.toggleLabelToButtonGap = scaleInt(toggleLabelToButtonGap, factor);
+        scaledMetrics.toggleToSliderGap = scaleInt(toggleToSliderGap, factor);
         scaledMetrics.sliderGap = scaleInt(sliderGap, factor);
         return scaledMetrics;
     }

@@ -10,16 +10,10 @@ namespace {
 
 SettingsUiSectionComponent::SettingsUiSectionComponent(const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      frame(themeToUse, "UI") {
+      frame(themeToUse, "UI SCALE") {
     addAndMakeVisible(frame);
     createScaleButtons();
     selectScaleButton(selectedScaleIndex);
-}
-
-void SettingsUiSectionComponent::paint(juce::Graphics& g) {
-    g.setColour(theme.hardwareMarkingLight);
-    g.setFont(juce::FontOptions(theme.metrics.rectanglePad.labelFontHeight).withStyle("Bold"));
-    g.drawText("UI SCALE", scaleLabelBounds, juce::Justification::centredRight, false);
 }
 
 void SettingsUiSectionComponent::resized() {
@@ -50,18 +44,16 @@ void SettingsUiSectionComponent::layoutScaleButtons(const juce::Rectangle<int> b
     const auto& metrics = theme.metrics.settingsUiSection;
     const auto contentBounds = bounds.reduced(metrics.horizontalInset, 0);
     const auto buttonBounds = scaleButtons.front()->getPreferredBounds();
+    const auto visualCenterOffset = scaleButtons.front()->getVisualCenterOffset();
     const auto totalButtonWidth = buttonBounds.getWidth() * static_cast<int>(scaleButtons.size())
                                   + metrics.buttonGap * (static_cast<int>(scaleButtons.size()) - 1);
-    const auto buttonStartX = contentBounds.getRight() - totalButtonWidth;
-    const auto buttonY = bounds.getY() + metrics.contentTopInset;
-
-    const auto availableLabelWidth = juce::jmax(0,
-                                                buttonStartX - metrics.labelRightToButtonLeftGap
-                                                    - contentBounds.getX());
-    scaleLabelBounds = juce::Rectangle<int>(juce::jmin(metrics.labelWidth, availableLabelWidth),
-                                            buttonBounds.getHeight())
-                           .withRightX(buttonStartX - metrics.labelRightToButtonLeftGap)
-                           .withY(buttonY);
+    const auto frameCentreY =
+        SettingsSectionFrameComponent::getBorderBounds(bounds, theme.metrics.settingsSectionFrame).getCentreY();
+    const auto buttonStartX = juce::roundToInt(static_cast<float>(contentBounds.getCentreX() - totalButtonWidth / 2)
+                                               - visualCenterOffset.x);
+    const auto buttonY = juce::roundToInt(frameCentreY
+                                          - static_cast<float>(buttonBounds.getHeight()) * 0.5f
+                                          - visualCenterOffset.y);
 
     for (auto index = 0; index < static_cast<int>(scaleButtons.size()); ++index) {
         if (scaleButtons[static_cast<std::size_t>(index)] == nullptr)

@@ -16,6 +16,11 @@ juce::Rectangle<int> RasterRectanglePadButton::getPreferredBounds() const {
     return {0, 0, theme.metrics.rectanglePad.width, theme.metrics.rectanglePad.height};
 }
 
+juce::Point<float> RasterRectanglePadButton::getVisualCenterOffset() const {
+    return {theme.metrics.rectanglePad.visualCenterOffsetX,
+            theme.metrics.rectanglePad.visualCenterOffsetY};
+}
+
 bool RasterRectanglePadButton::isActive() const {
     return active;
 }

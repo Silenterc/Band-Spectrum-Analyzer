@@ -74,17 +74,31 @@ void SettingsFrequencyRangeSectionComponent::layoutControls(const juce::Rectangl
     const auto& sliderMetrics = theme.metrics.horizontalSlider;
     const auto sliderY = bounds.getY() + metrics.contentTopInset;
     const auto toggleButtonBounds = customRangeButton.getPreferredBounds();
-    const auto toggleCentreX = contentBounds.getX() + metrics.toggleWidth / 2;
+    const auto toggleVisualLeadingInset =
+        static_cast<float>(metrics.toggleWidth - toggleButtonBounds.getWidth()) / 2.0f
+        + customRangeButton.getVisualCenterOffset().x;
     const auto sliderControlY = sliderY + sliderMetrics.labelHeight + sliderMetrics.labelToSliderGap;
     const auto sliderControlCentreY = sliderControlY + sliderMetrics.sliderHeight / 2;
+    const auto totalControlWidth = metrics.toggleWidth
+                                   + metrics.toggleToSliderGap
+                                   + sliderBounds.getWidth()
+                                   + metrics.sliderGap
+                                   + sliderBounds.getWidth();
+    const auto controlStartX = juce::roundToInt(static_cast<float>(contentBounds.getCentreX())
+                                                - (static_cast<float>(totalControlWidth) + toggleVisualLeadingInset)
+                                                    / 2.0f)
+                               + metrics.contentOffsetX;
+    const auto minSliderX = controlStartX + metrics.toggleWidth + metrics.toggleToSliderGap;
+    const auto maxSliderX = minSliderX + sliderBounds.getWidth() + metrics.sliderGap;
+    const auto toggleCentreX = juce::roundToInt(static_cast<float>(controlStartX + metrics.toggleWidth / 2)
+                                                - customRangeButton.getVisualCenterOffset().x);
+    const auto toggleCentreY = juce::roundToInt(static_cast<float>(sliderControlCentreY)
+                                                - customRangeButton.getVisualCenterOffset().y);
 
     customRangeLabelBounds = juce::Rectangle<int>(metrics.toggleWidth, metrics.toggleLabelHeight)
-                                 .withPosition(contentBounds.getX(), sliderY);
-    customRangeButton.setBounds(toggleButtonBounds.withCentre({toggleCentreX, sliderControlCentreY}));
+                                 .withPosition(controlStartX, sliderY);
+    customRangeButton.setBounds(toggleButtonBounds.withCentre({toggleCentreX, toggleCentreY}));
 
-    const auto slidersRight = contentBounds.getRight();
-    const auto maxSliderX = slidersRight - sliderBounds.getWidth();
-    const auto minSliderX = maxSliderX - metrics.sliderGap - sliderBounds.getWidth();
     visibleMinFrequencySlider.setBounds(sliderBounds.withPosition(minSliderX, sliderY));
     visibleMaxFrequencySlider.setBounds(sliderBounds.withPosition(maxSliderX, sliderY));
 }

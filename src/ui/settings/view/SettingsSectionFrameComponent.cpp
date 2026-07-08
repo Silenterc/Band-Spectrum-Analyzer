@@ -9,7 +9,7 @@ SettingsSectionFrameComponent::SettingsSectionFrameComponent(const Ui::Theme& th
 
 void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
     const auto& metrics = theme.metrics.settingsSectionFrame;
-    auto bounds = getLocalBounds().toFloat().reduced(metrics.strokeWidth * metrics.strokeInsetMultiplier);
+    const auto bounds = getBorderBounds(getLocalBounds(), metrics);
     if (bounds.isEmpty())
         return;
 
@@ -23,10 +23,6 @@ void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
                                 ? 0
                                 : juce::roundToInt(juce::TextLayout::getStringWidth(g.getCurrentFont(), title))
                                   + metrics.titleHorizontalPadding * 2;
-    const auto frameTop = static_cast<float>(metrics.titleGapHeight) * metrics.titleTopGapMultiplier;
-    bounds.setY(bounds.getY() + frameTop);
-    bounds.setHeight(bounds.getHeight() - frameTop);
-
     const auto x = bounds.getX();
     const auto y = bounds.getY();
     const auto right = bounds.getRight();
@@ -69,6 +65,16 @@ void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
 bool SettingsSectionFrameComponent::hitTest(const int x, const int y) {
     juce::ignoreUnused(x, y);
     return false;
+}
+
+juce::Rectangle<float> SettingsSectionFrameComponent::getBorderBounds(
+    const juce::Rectangle<int> bounds,
+    const Ui::SettingsSectionFrameMetrics& metrics) {
+    auto borderBounds = bounds.toFloat().reduced(metrics.strokeWidth * metrics.strokeInsetMultiplier);
+    const auto frameTop = static_cast<float>(metrics.titleGapHeight) * metrics.titleTopGapMultiplier;
+    borderBounds.setY(borderBounds.getY() + frameTop);
+    borderBounds.setHeight(borderBounds.getHeight() - frameTop);
+    return borderBounds;
 }
 
 void SettingsSectionFrameComponent::setTitle(juce::String newTitle) {

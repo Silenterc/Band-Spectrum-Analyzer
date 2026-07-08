@@ -14,7 +14,6 @@ public:
     explicit SettingsAnalysisSectionComponent(const Ui::Theme& themeToUse);
     ~SettingsAnalysisSectionComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
@@ -26,7 +25,6 @@ private:
     SettingsSectionFrameComponent frame;
     std::array<std::unique_ptr<RasterRectanglePadButton>, 4> bandModeButtons;
     int selectedBandModeIndex = 2;
-    juce::Rectangle<int> bandModeLabelBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsAnalysisSectionComponent)
 };

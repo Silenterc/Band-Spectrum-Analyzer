@@ -11,16 +11,10 @@ namespace {
 
 SettingsAnalysisSectionComponent::SettingsAnalysisSectionComponent(const Ui::Theme& themeToUse)
     : theme(themeToUse),
-      frame(themeToUse, "ANALYSIS") {
+      frame(themeToUse, "BAND MODE") {
     addAndMakeVisible(frame);
     createBandModeButtons();
     selectBandModeButton(selectedBandModeIndex);
-}
-
-void SettingsAnalysisSectionComponent::paint(juce::Graphics& g) {
-    g.setColour(theme.hardwareMarkingLight);
-    g.setFont(juce::FontOptions(theme.metrics.rectanglePad.labelFontHeight).withStyle("Bold"));
-    g.drawText("BAND MODE", bandModeLabelBounds, juce::Justification::centred, false);
 }
 
 void SettingsAnalysisSectionComponent::resized() {
@@ -49,15 +43,19 @@ void SettingsAnalysisSectionComponent::selectBandModeButton(const int selectedIn
 
 void SettingsAnalysisSectionComponent::layoutBandModeButtons(const juce::Rectangle<int> bounds) {
     const auto& metrics = theme.metrics.settingsAnalysisSection;
+    const auto contentBounds = bounds.reduced(metrics.horizontalInset, 0);
     const auto buttonBounds = bandModeButtons.front()->getPreferredBounds();
+    const auto visualCenterOffset = bandModeButtons.front()->getVisualCenterOffset();
     const auto buttonGap = metrics.buttonGap;
     const auto totalButtonWidth = buttonBounds.getWidth() * static_cast<int>(bandModeButtons.size())
                                   + buttonGap * (static_cast<int>(bandModeButtons.size()) - 1);
-    const auto startX = bounds.getCentreX() - totalButtonWidth / 2 + metrics.buttonGroupOffsetX;
-    const auto buttonY = bounds.getCentreY() - buttonBounds.getHeight() / 2 + metrics.buttonOffsetY;
-    bandModeLabelBounds = juce::Rectangle<int>(metrics.labelWidth, buttonBounds.getHeight())
-                              .withCentre({startX - metrics.labelRightToButtonLeftGap - metrics.labelWidth / 2,
-                                           buttonY + buttonBounds.getHeight() / 2});
+    const auto frameCentreY =
+        SettingsSectionFrameComponent::getBorderBounds(bounds, theme.metrics.settingsSectionFrame).getCentreY();
+    const auto startX = juce::roundToInt(static_cast<float>(contentBounds.getCentreX() - totalButtonWidth / 2)
+                                         - visualCenterOffset.x);
+    const auto buttonY = juce::roundToInt(frameCentreY
+                                          - static_cast<float>(buttonBounds.getHeight()) * 0.5f
+                                          - visualCenterOffset.y);
 
     for (auto index = 0; index < static_cast<int>(bandModeButtons.size()); ++index) {
         if (bandModeButtons[static_cast<size_t>(index)] == nullptr)

@@ -243,6 +243,8 @@ namespace Ui {
         int width = 104;
         int height = 44;
         int iconSide = 24;
+        float visualCenterOffsetX = 0.5f;
+        float visualCenterOffsetY = 1.0f;
         float labelFontHeight = 15.0f;
 
         [[nodiscard]] RectanglePadMetrics scaled(float factor) const;
@@ -271,8 +273,8 @@ namespace Ui {
         int timeDecaySectionHeight = 250;
         int sectionColumnGap = 14;
         int sectionStackGap = 14;
-        int gridSectionHeight = 136;
-        int uiSectionHeight = 100;
+        int gridSectionHeight = 138;
+        int uiSectionHeight = 98;
         int frequencyRangeSectionHeight = 136;
 
         [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
@@ -280,10 +282,7 @@ namespace Ui {
 
     struct SettingsAnalysisSectionMetrics {
         int buttonGap = 10;
-        int buttonGroupOffsetX = 74;
-        int buttonOffsetY = 4;
-        int labelWidth = 160;
-        int labelRightToButtonLeftGap = 16;
+        int horizontalInset = 34;
 
         [[nodiscard]] SettingsAnalysisSectionMetrics scaled(float factor) const;
     };
@@ -297,29 +296,28 @@ namespace Ui {
     };
 
     struct SettingsGridSectionMetrics {
-        int contentTopInset = 32;
-        int horizontalInset = 28;
+        int contentTopInset = 26;
+        int horizontalInset = 34;
         int columnGap = 22;
 
         [[nodiscard]] SettingsGridSectionMetrics scaled(float factor) const;
     };
 
     struct SettingsUiSectionMetrics {
-        int contentTopInset = 42;
-        int horizontalInset = 24;
+        int horizontalInset = 34;
         int buttonGap = 8;
-        int labelWidth = 88;
-        int labelRightToButtonLeftGap = 14;
 
         [[nodiscard]] SettingsUiSectionMetrics scaled(float factor) const;
     };
 
     struct SettingsFrequencyRangeSectionMetrics {
-        int contentTopInset = 32;
-        int horizontalInset = 36;
+        int contentTopInset = 26;
+        int horizontalInset = 34;
+        int contentOffsetX = 4;
         int toggleWidth = 150;
         int toggleLabelHeight = 20;
         int toggleLabelToButtonGap = 2;
+        int toggleToSliderGap = 42;
         int sliderGap = 42;
 
         [[nodiscard]] SettingsFrequencyRangeSectionMetrics scaled(float factor) const;

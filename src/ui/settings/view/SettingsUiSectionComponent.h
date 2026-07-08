@@ -14,7 +14,6 @@ public:
     explicit SettingsUiSectionComponent(const Ui::Theme& themeToUse);
     ~SettingsUiSectionComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
@@ -26,7 +25,6 @@ private:
     SettingsSectionFrameComponent frame;
     std::array<std::unique_ptr<RasterRectanglePadButton>, 3> scaleButtons;
     int selectedScaleIndex = 0;
-    juce::Rectangle<int> scaleLabelBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsUiSectionComponent)
 };
