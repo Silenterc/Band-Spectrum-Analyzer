@@ -225,6 +225,28 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    SettingsPageMetrics SettingsPageMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.topInset = scaleInt(topInset, factor);
+        scaledMetrics.analysisSectionHeight = scaleInt(analysisSectionHeight, factor);
+        scaledMetrics.validationTopGap = scaleInt(validationTopGap, factor);
+        scaledMetrics.validationKnobLeftInset = scaleInt(validationKnobLeftInset, factor);
+        scaledMetrics.validationSliderGap = scaleInt(validationSliderGap, factor);
+        scaledMetrics.validationSliderOffsetY = scaleInt(validationSliderOffsetY, factor);
+        scaledMetrics.validationFramePadding = scaleInt(validationFramePadding, factor);
+        return scaledMetrics;
+    }
+
+    SettingsAnalysisSectionMetrics SettingsAnalysisSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
+        scaledMetrics.buttonGroupOffsetX = scaleInt(buttonGroupOffsetX, factor);
+        scaledMetrics.buttonOffsetY = scaleInt(buttonOffsetY, factor);
+        scaledMetrics.labelWidth = scaleInt(labelWidth, factor);
+        scaledMetrics.labelRightToButtonLeftGap = scaleInt(labelRightToButtonLeftGap, factor);
+        return scaledMetrics;
+    }
+
     BackgroundMetrics BackgroundMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.woodSideInset = scaleInt(woodSideInset, factor);
@@ -320,6 +342,8 @@ namespace Ui {
         scaledMetrics.horizontalSlider = horizontalSlider.scaled(factor);
         scaledMetrics.rectanglePad = rectanglePad.scaled(factor);
         scaledMetrics.settingsSectionFrame = settingsSectionFrame.scaled(factor);
+        scaledMetrics.settingsPage = settingsPage.scaled(factor);
+        scaledMetrics.settingsAnalysisSection = settingsAnalysisSection.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

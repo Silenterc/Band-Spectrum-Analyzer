@@ -207,7 +207,11 @@ namespace Ui {
         int labelHeight = 18;
         int labelToScaleGap = 4;
         int scaleToValueGap = 6;
+        int filmstripFrameCount = 128;
+        int filmstripFrameWidth = 120;
+        int filmstripFrameHeight = 120;
         float dragPixelsForFullRange = 180.0f;
+        float keyboardStepMultiplier = 10.0f;
 
         [[nodiscard]] KnobMetrics scaled(float factor) const;
     };
@@ -226,7 +230,11 @@ namespace Ui {
         int labelHeight = 18;
         int labelToSliderGap = 4;
         int sliderToValueGap = 6;
+        int filmstripFrameCount = 256;
+        int filmstripFrameWidth = 444;
+        int filmstripFrameHeight = 104;
         float dragPixelsForFullRange = 210.0f;
+        float keyboardStepMultiplier = 10.0f;
 
         [[nodiscard]] HorizontalSliderMetrics scaled(float factor) const;
     };
@@ -245,10 +253,35 @@ namespace Ui {
         float titleFontHeight = 17.0f;
         int titleHorizontalPadding = 12;
         int titleGapHeight = 18;
+        float borderActiveBlend = 0.42f;
+        float strokeInsetMultiplier = 0.5f;
+        float titleTopGapMultiplier = 0.5f;
         float borderAlpha = 0.82f;
         float titleAlpha = 0.88f;
 
         [[nodiscard]] SettingsSectionFrameMetrics scaled(float factor) const;
+    };
+
+    struct SettingsPageMetrics {
+        int topInset = 22;
+        int analysisSectionHeight = 88;
+        int validationTopGap = 28;
+        int validationKnobLeftInset = 26;
+        int validationSliderGap = 56;
+        int validationSliderOffsetY = 4;
+        int validationFramePadding = 22;
+
+        [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
+    };
+
+    struct SettingsAnalysisSectionMetrics {
+        int buttonGap = 10;
+        int buttonGroupOffsetX = 74;
+        int buttonOffsetY = 4;
+        int labelWidth = 160;
+        int labelRightToButtonLeftGap = 16;
+
+        [[nodiscard]] SettingsAnalysisSectionMetrics scaled(float factor) const;
     };
 
     struct BackgroundMetrics {
@@ -355,6 +388,8 @@ namespace Ui {
         HorizontalSliderMetrics horizontalSlider;
         RectanglePadMetrics rectanglePad;
         SettingsSectionFrameMetrics settingsSectionFrame;
+        SettingsPageMetrics settingsPage;
+        SettingsAnalysisSectionMetrics settingsAnalysisSection;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

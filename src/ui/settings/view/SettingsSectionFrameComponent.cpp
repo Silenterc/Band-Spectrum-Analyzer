@@ -9,12 +9,12 @@ SettingsSectionFrameComponent::SettingsSectionFrameComponent(const Ui::Theme& th
 
 void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
     const auto& metrics = theme.metrics.settingsSectionFrame;
-    auto bounds = getLocalBounds().toFloat().reduced(metrics.strokeWidth * 0.5f);
+    auto bounds = getLocalBounds().toFloat().reduced(metrics.strokeWidth * metrics.strokeInsetMultiplier);
     if (bounds.isEmpty())
         return;
 
     const auto borderColour = theme.hardwareMarkingDark
-                                  .interpolatedWith(theme.hardwareMarkingActiveLight, 0.42f)
+                                  .interpolatedWith(theme.hardwareMarkingActiveLight, metrics.borderActiveBlend)
                                   .withAlpha(metrics.borderAlpha);
     const auto font = juce::FontOptions(metrics.titleFontHeight).withStyle("Bold");
     g.setFont(font);
@@ -23,7 +23,7 @@ void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
                                 ? 0
                                 : juce::roundToInt(juce::TextLayout::getStringWidth(g.getCurrentFont(), title))
                                   + metrics.titleHorizontalPadding * 2;
-    const auto frameTop = static_cast<float>(metrics.titleGapHeight) * 0.5f;
+    const auto frameTop = static_cast<float>(metrics.titleGapHeight) * metrics.titleTopGapMultiplier;
     bounds.setY(bounds.getY() + frameTop);
     bounds.setHeight(bounds.getHeight() - frameTop);
 
@@ -31,10 +31,12 @@ void SettingsSectionFrameComponent::paint(juce::Graphics& g) {
     const auto y = bounds.getY();
     const auto right = bounds.getRight();
     const auto bottom = bounds.getBottom();
-    const auto radius = juce::jmin(metrics.cornerRadius, juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f);
+    const auto radius = juce::jmin(metrics.cornerRadius,
+                                  juce::jmin(bounds.getWidth(), bounds.getHeight())
+                                      * metrics.strokeInsetMultiplier);
     const auto centreX = bounds.getCentreX();
-    const auto titleGapLeft = centreX - static_cast<float>(titleWidth) * 0.5f;
-    const auto titleGapRight = centreX + static_cast<float>(titleWidth) * 0.5f;
+    const auto titleGapLeft = centreX - static_cast<float>(titleWidth) * metrics.strokeInsetMultiplier;
+    const auto titleGapRight = centreX + static_cast<float>(titleWidth) * metrics.strokeInsetMultiplier;
     const auto topLeftEnd = juce::jlimit(x + radius, right - radius, titleGapLeft);
     const auto topRightStart = juce::jlimit(x + radius, right - radius, titleGapRight);
 

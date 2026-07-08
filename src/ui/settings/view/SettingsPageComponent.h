@@ -5,7 +5,7 @@
 #include "ui/theme/UiTheme.h"
 #include "ui/widgets/RasterHorizontalSliderComponent.h"
 #include "ui/widgets/RasterKnobComponent.h"
-#include "ui/widgets/RasterRectanglePadButton.h"
+#include "ui/settings/view/SettingsAnalysisSectionComponent.h"
 #include "ui/settings/view/SettingsSectionFrameComponent.h"
 
 class SettingsPageComponent final : public juce::Component {
@@ -21,10 +21,10 @@ private:
 
     const Ui::Theme& theme;
     juce::Image cachedBackground;
+    SettingsAnalysisSectionComponent analysisSection;
     SettingsSectionFrameComponent mockFrequencyRangeFrame;
     RasterKnobComponent mockHoldTimeKnob;
     RasterHorizontalSliderComponent mockVisibleMinFrequencySlider;
-    RasterRectanglePadButton mockBandModeButton;
     float mockHoldTimeMs = 750.0f;
     float mockVisibleMinFrequencyHz = 30.0f;
 

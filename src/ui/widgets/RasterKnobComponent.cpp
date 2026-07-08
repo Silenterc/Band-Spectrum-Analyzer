@@ -5,12 +5,14 @@
 #include "ui/theme/UiRasterAssets.h"
 
 namespace {
-    constexpr Ui::RasterFilmstripSpec knobSmallFilmstripSpec{
-        .frameCount = 128,
-        .frameWidth = 120,
-        .frameHeight = 120,
-        .orientation = Ui::FilmstripOrientation::vertical
-    };
+    Ui::RasterFilmstripSpec getKnobFilmstripSpec(const Ui::KnobMetrics& metrics) {
+        return {
+            .frameCount = metrics.filmstripFrameCount,
+            .frameWidth = metrics.filmstripFrameWidth,
+            .frameHeight = metrics.filmstripFrameHeight,
+            .orientation = Ui::FilmstripOrientation::vertical
+        };
+    }
 }
 
 RasterKnobComponent::InlineValueEditor::InlineValueEditor(RasterKnobComponent& ownerToUse)
@@ -76,7 +78,7 @@ void RasterKnobComponent::paint(juce::Graphics& g) {
         Ui::drawAssetWithin(g, scaleImage, scaleBounds);
 
     const auto& knobImage = Ui::getControlRasterAsset(Ui::ControlRasterAssetId::knobSmallFilmstrip);
-    Ui::RasterFilmstrip::drawFrame(g, knobImage, knobSmallFilmstripSpec, getFrameIndex(), knobBounds);
+    Ui::RasterFilmstrip::drawFrame(g, knobImage, getKnobFilmstripSpec(metrics), getFrameIndex(), knobBounds);
 
     const auto& valueImage = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::textBox);
     if (valueImage.isValid())
@@ -124,7 +126,9 @@ void RasterKnobComponent::mouseUp(const juce::MouseEvent& event) {
 }
 
 bool RasterKnobComponent::keyPressed(const juce::KeyPress& key) {
-    const auto increment = key.getModifiers().isShiftDown() ? config.step * 10.0f : config.step;
+    const auto increment = key.getModifiers().isShiftDown()
+                               ? config.step * theme.metrics.knob.keyboardStepMultiplier
+                               : config.step;
     if (increment <= 0.0f)
         return juce::Component::keyPressed(key);
 
@@ -320,7 +324,8 @@ std::optional<float> RasterKnobComponent::parseValue(const juce::String &text) c
 }
 
 int RasterKnobComponent::getFrameIndex() const {
+    const auto& metrics = theme.metrics.knob;
     return Ui::RasterFilmstrip::frameIndexForNormalisedValue(
         Ui::RasterFilmstrip::normaliseValue(value, config.minimum, config.maximum),
-        knobSmallFilmstripSpec.frameCount);
+        metrics.filmstripFrameCount);
 }

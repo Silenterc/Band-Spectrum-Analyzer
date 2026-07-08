@@ -3,12 +3,14 @@
 #include "ui/theme/UiRasterAssets.h"
 
 namespace {
-    constexpr Ui::RasterFilmstripSpec horizontalSliderFilmstripSpec{
-        .frameCount = 256,
-        .frameWidth = 444,
-        .frameHeight = 104,
-        .orientation = Ui::FilmstripOrientation::vertical
-    };
+    Ui::RasterFilmstripSpec getHorizontalSliderFilmstripSpec(const Ui::HorizontalSliderMetrics& metrics) {
+        return {
+            .frameCount = metrics.filmstripFrameCount,
+            .frameWidth = metrics.filmstripFrameWidth,
+            .frameHeight = metrics.filmstripFrameHeight,
+            .orientation = Ui::FilmstripOrientation::vertical
+        };
+    }
 }
 
 RasterHorizontalSliderComponent::InlineValueEditor::InlineValueEditor(RasterHorizontalSliderComponent& ownerToUse)
@@ -73,7 +75,7 @@ void RasterHorizontalSliderComponent::paint(juce::Graphics& g) {
     const auto& sliderImage = Ui::getControlRasterAsset(Ui::ControlRasterAssetId::horizontalSliderFilmstrip);
     Ui::RasterFilmstrip::drawFrame(g,
                                    sliderImage,
-                                   horizontalSliderFilmstripSpec,
+                                   getHorizontalSliderFilmstripSpec(metrics),
                                    getFrameIndex(),
                                    sliderBounds);
 
@@ -123,7 +125,9 @@ void RasterHorizontalSliderComponent::mouseUp(const juce::MouseEvent& event) {
 }
 
 bool RasterHorizontalSliderComponent::keyPressed(const juce::KeyPress& key) {
-    const auto increment = key.getModifiers().isShiftDown() ? config.step * 10.0f : config.step;
+    const auto increment = key.getModifiers().isShiftDown()
+                               ? config.step * theme.metrics.horizontalSlider.keyboardStepMultiplier
+                               : config.step;
     if (increment <= 0.0f)
         return juce::Component::keyPressed(key);
 
@@ -331,6 +335,7 @@ std::optional<float> RasterHorizontalSliderComponent::parseValue(const juce::Str
 }
 
 int RasterHorizontalSliderComponent::getFrameIndex() const {
+    const auto& metrics = theme.metrics.horizontalSlider;
     return Ui::RasterFilmstrip::frameIndexForNormalisedValue(normaliseValue(value),
-                                                             horizontalSliderFilmstripSpec.frameCount);
+                                                             metrics.filmstripFrameCount);
 }

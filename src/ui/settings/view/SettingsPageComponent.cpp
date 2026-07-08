@@ -1,18 +1,19 @@
 #include "ui/settings/view/SettingsPageComponent.h"
 
+#include "ui/settings/layout/SettingsPageLayout.h"
 #include "ui/theme/UiRasterAssets.h"
 
 SettingsPageComponent::SettingsPageComponent(const Ui::Theme& themeToUse)
     : theme(themeToUse),
+      analysisSection(themeToUse),
       mockFrequencyRangeFrame(themeToUse, "FREQUENCY RANGE"),
       mockHoldTimeKnob(themeToUse),
-      mockVisibleMinFrequencySlider(themeToUse),
-      mockBandModeButton(themeToUse, "1/6 Oct") {
+      mockVisibleMinFrequencySlider(themeToUse) {
     setOpaque(true);
+    addAndMakeVisible(analysisSection);
     addAndMakeVisible(mockFrequencyRangeFrame);
     addAndMakeVisible(mockHoldTimeKnob);
     addAndMakeVisible(mockVisibleMinFrequencySlider);
-    addAndMakeVisible(mockBandModeButton);
 
     RasterKnobComponent::Config knobConfig;
     knobConfig.label = "HOLD TIME";
@@ -50,11 +51,6 @@ SettingsPageComponent::SettingsPageComponent(const Ui::Theme& themeToUse)
     mockVisibleMinFrequencySlider.onValueChanged = [this](const float value) {
         mockVisibleMinFrequencyHz = value;
     };
-
-    mockBandModeButton.setActive(true);
-    mockBandModeButton.onClick = [this] {
-        mockBandModeButton.setActive(!mockBandModeButton.isActive());
-    };
 }
 
 void SettingsPageComponent::paint(juce::Graphics& g) {
@@ -65,27 +61,11 @@ void SettingsPageComponent::paint(juce::Graphics& g) {
 void SettingsPageComponent::resized() {
     rebuildCachedBackground();
 
-    const auto preferredBounds = mockHoldTimeKnob.getPreferredBounds();
-    const auto contentBounds = getLocalBounds().reduced(theme.metrics.analyzerSection.plotInset);
-    const auto knobX = contentBounds.getX() + juce::roundToInt(static_cast<float>(contentBounds.getWidth()) * 0.10f);
-    const auto knobY = contentBounds.getY() + juce::roundToInt(static_cast<float>(contentBounds.getHeight()) * 0.20f);
-    mockHoldTimeKnob.setBounds(preferredBounds.withPosition(knobX, knobY));
-
-    const auto sliderPreferredBounds = mockVisibleMinFrequencySlider.getPreferredBounds();
-    const auto sliderX = knobX + preferredBounds.getWidth() + 56;
-    const auto sliderY = knobY + 4;
-    mockVisibleMinFrequencySlider.setBounds(sliderPreferredBounds.withPosition(sliderX, sliderY));
-
-    const auto buttonPreferredBounds = mockBandModeButton.getPreferredBounds();
-    mockBandModeButton.setBounds(buttonPreferredBounds.withPosition(sliderX, sliderY + sliderPreferredBounds.getHeight() + 14));
-
-    const auto framePadding = 22;
-    const auto frameLeft = sliderX - framePadding;
-    const auto frameTop = sliderY - 22;
-    const auto frameRight = juce::jmax(sliderX + sliderPreferredBounds.getWidth(),
-                                       sliderX + buttonPreferredBounds.getWidth()) + framePadding;
-    const auto frameBottom = mockBandModeButton.getBottom() + framePadding;
-    mockFrequencyRangeFrame.setBounds({frameLeft, frameTop, frameRight - frameLeft, frameBottom - frameTop});
+    const auto layout = Ui::SettingsPageLayoutBuilder::build(getLocalBounds(), theme);
+    analysisSection.setBounds(layout.analysisSectionBounds);
+    mockHoldTimeKnob.setBounds(layout.validationKnobBounds);
+    mockVisibleMinFrequencySlider.setBounds(layout.validationSliderBounds);
+    mockFrequencyRangeFrame.setBounds(layout.validationFrequencyFrameBounds);
 }
 
 void SettingsPageComponent::rebuildCachedBackground() {
