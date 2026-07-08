@@ -268,6 +268,8 @@ namespace Ui {
         int timeDecayTopGap = 18;
         int timeDecaySectionWidth = 348;
         int timeDecaySectionHeight = 312;
+        int sectionColumnGap = 14;
+        int gridSectionHeight = 166;
 
         [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
     };
@@ -288,6 +290,14 @@ namespace Ui {
         int columnGap = 36;
         int rowGap = 16;
         [[nodiscard]] SettingsTimeDecaySectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsGridSectionMetrics {
+        int contentTopInset = 42;
+        int horizontalInset = 28;
+        int columnGap = 22;
+
+        [[nodiscard]] SettingsGridSectionMetrics scaled(float factor) const;
     };
 
     struct BackgroundMetrics {
@@ -397,6 +407,7 @@ namespace Ui {
         SettingsPageMetrics settingsPage;
         SettingsAnalysisSectionMetrics settingsAnalysisSection;
         SettingsTimeDecaySectionMetrics settingsTimeDecaySection;
+        SettingsGridSectionMetrics settingsGridSection;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

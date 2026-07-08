@@ -232,6 +232,8 @@ namespace Ui {
         scaledMetrics.timeDecayTopGap = scaleInt(timeDecayTopGap, factor);
         scaledMetrics.timeDecaySectionWidth = scaleInt(timeDecaySectionWidth, factor);
         scaledMetrics.timeDecaySectionHeight = scaleInt(timeDecaySectionHeight, factor);
+        scaledMetrics.sectionColumnGap = scaleInt(sectionColumnGap, factor);
+        scaledMetrics.gridSectionHeight = scaleInt(gridSectionHeight, factor);
         return scaledMetrics;
     }
 
@@ -251,6 +253,14 @@ namespace Ui {
         scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
         scaledMetrics.columnGap = scaleInt(columnGap, factor);
         scaledMetrics.rowGap = scaleInt(rowGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsGridSectionMetrics SettingsGridSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.columnGap = scaleInt(columnGap, factor);
         return scaledMetrics;
     }
 
@@ -352,6 +362,7 @@ namespace Ui {
         scaledMetrics.settingsPage = settingsPage.scaled(factor);
         scaledMetrics.settingsAnalysisSection = settingsAnalysisSection.scaled(factor);
         scaledMetrics.settingsTimeDecaySection = settingsTimeDecaySection.scaled(factor);
+        scaledMetrics.settingsGridSection = settingsGridSection.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

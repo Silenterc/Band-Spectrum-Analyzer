@@ -26,6 +26,15 @@ namespace Ui {
             settingsMetrics.timeDecaySectionHeight
         };
 
+        const auto gridLeft = layout.timeDecaySectionBounds.getRight() + settingsMetrics.sectionColumnGap;
+        const auto gridWidth = juce::jmax(0, layout.contentBounds.getRight() - gridLeft);
+        layout.gridSectionBounds = {
+            gridLeft,
+            timeDecayTop,
+            gridWidth,
+            settingsMetrics.gridSectionHeight
+        };
+
         return layout;
     }
 }

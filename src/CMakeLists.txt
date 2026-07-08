@@ -79,6 +79,7 @@ target_sources(${PROJECT_NAME}
         ui/editor/layout/MainLayoutComponent.cpp
         ui/settings/layout/SettingsPageLayout.cpp
         ui/settings/view/SettingsAnalysisSectionComponent.cpp
+        ui/settings/view/SettingsGridSectionComponent.cpp
         ui/settings/view/SettingsTimeDecaySectionComponent.cpp
         ui/settings/view/SettingsSectionFrameComponent.cpp
         ui/settings/view/SettingsPageComponent.cpp
