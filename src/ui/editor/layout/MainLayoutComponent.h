@@ -9,6 +9,7 @@
 #include "ui/presets/contracts/PresetUiSnapshotSource.h"
 #include "ui/editor/state/EditorPage.h"
 #include "ui/widgets/SectionDividerComponent.h"
+#include "ui/widgets/BrandLogoComponent.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/presets/view/PresetHeaderComponent.h"
 #include "ui/analyzer/plot/view/AnalyzerSectionComponent.h"
@@ -49,6 +50,7 @@ private:
     PresetHeaderComponent presetHeaderComponent;
     AnalyzerSectionComponent analyzerSectionComponent;
     SettingsPageComponent settingsPageComponent;
+    BrandLogoComponent settingsLogoComponent;
     SignalRackComponent signalRackComponent;
     AnalyzerMeterControlsComponent meterControlsComponent;
     SectionDividerComponent verticalSectionDivider;

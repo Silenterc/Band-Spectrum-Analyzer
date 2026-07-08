@@ -12,6 +12,7 @@ MainLayoutComponent::MainLayoutComponent(AnalyzerRawTraceSource& rawTraceSourceT
                                snapshotSourceToUse,
                                themeToUse),
       settingsPageComponent(themeToUse),
+      settingsLogoComponent(themeToUse),
       signalRackComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
       meterControlsComponent(snapshotSourceToUse, settingsActionsToUse, themeToUse),
       verticalSectionDivider(themeToUse, SectionDividerComponent::Orientation::vertical),
@@ -19,6 +20,7 @@ MainLayoutComponent::MainLayoutComponent(AnalyzerRawTraceSource& rawTraceSourceT
     addAndMakeVisible(analyzerSectionComponent);
     addAndMakeVisible(presetHeaderComponent);
     addChildComponent(settingsPageComponent);
+    addChildComponent(settingsLogoComponent);
     addAndMakeVisible(signalRackComponent);
     addAndMakeVisible(verticalSectionDivider);
     addAndMakeVisible(horizontalSectionDivider);
@@ -39,6 +41,7 @@ void MainLayoutComponent::resized() {
                                                   + theme.metrics.presetHeader.height
                                                   + theme.metrics.presetHeader.plotGap);
     presetHeaderComponent.setBounds(layout.presetHeaderBounds);
+    settingsLogoComponent.setBounds(layout.presetHeaderBounds);
     signalRackComponent.setBounds(layout.rackBounds);
     meterControlsComponent.setBounds(layout.actionsBounds);
     verticalSectionDivider.setBounds(layout.verticalDividerBounds);
@@ -105,6 +108,7 @@ void MainLayoutComponent::updatePageVisibility() {
 
     analyzerSectionComponent.setVisible(!settingsActive);
     presetHeaderComponent.setVisible(!settingsActive);
+    settingsLogoComponent.setVisible(settingsActive);
     signalRackComponent.setVisible(!settingsActive);
     horizontalSectionDivider.setVisible(!settingsActive);
     verticalSectionDivider.setVisible(true);

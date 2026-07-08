@@ -70,6 +70,7 @@ target_sources(${PROJECT_NAME}
         ui/widgets/RasterKnobComponent.cpp
         ui/widgets/RasterHorizontalSliderComponent.cpp
         ui/widgets/RasterRectanglePadButton.cpp
+        ui/widgets/BrandLogoComponent.cpp
         ui/widgets/PadButton.cpp
         ui/widgets/CalloutPresenter.cpp
         ui/widgets/PopupActionButton.cpp

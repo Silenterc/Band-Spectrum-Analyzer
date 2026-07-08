@@ -6,6 +6,7 @@
 #include "ui/presets/contracts/PresetActions.h"
 #include "ui/presets/contracts/PresetUiSnapshotSource.h"
 #include "ui/theme/UiTheme.h"
+#include "ui/widgets/BrandLogoComponent.h"
 
 class PresetHeaderComponent final : public juce::Component {
 public:

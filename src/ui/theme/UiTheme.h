@@ -266,7 +266,6 @@ namespace Ui {
     };
 
     struct SettingsPageMetrics {
-        int topInset = 22;
         int analysisSectionHeight = 88;
         int timeDecayTopGap = 18;
         int timeDecaySectionWidth = 348;

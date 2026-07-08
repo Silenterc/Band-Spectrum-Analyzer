@@ -230,7 +230,6 @@ namespace Ui {
 
     SettingsPageMetrics SettingsPageMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
-        scaledMetrics.topInset = scaleInt(topInset, factor);
         scaledMetrics.analysisSectionHeight = scaleInt(analysisSectionHeight, factor);
         scaledMetrics.timeDecayTopGap = scaleInt(timeDecayTopGap, factor);
         scaledMetrics.timeDecaySectionWidth = scaleInt(timeDecaySectionWidth, factor);
