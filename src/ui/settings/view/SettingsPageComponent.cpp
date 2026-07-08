@@ -8,12 +8,14 @@ SettingsPageComponent::SettingsPageComponent(const Ui::Theme& themeToUse)
       analysisSection(themeToUse),
       timeDecaySection(themeToUse),
       gridSection(themeToUse),
-      uiSection(themeToUse) {
+      uiSection(themeToUse),
+      frequencyRangeSection(themeToUse) {
     setOpaque(true);
     addAndMakeVisible(analysisSection);
     addAndMakeVisible(timeDecaySection);
     addAndMakeVisible(gridSection);
     addAndMakeVisible(uiSection);
+    addAndMakeVisible(frequencyRangeSection);
 }
 
 void SettingsPageComponent::paint(juce::Graphics& g) {
@@ -29,6 +31,7 @@ void SettingsPageComponent::resized() {
     timeDecaySection.setBounds(layout.timeDecaySectionBounds);
     gridSection.setBounds(layout.gridSectionBounds);
     uiSection.setBounds(layout.uiSectionBounds);
+    frequencyRangeSection.setBounds(layout.frequencyRangeSectionBounds);
 }
 
 void SettingsPageComponent::rebuildCachedBackground() {

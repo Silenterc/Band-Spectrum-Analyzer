@@ -43,6 +43,13 @@ namespace Ui {
             settingsMetrics.uiSectionHeight
         };
 
+        layout.frequencyRangeSectionBounds = {
+            left,
+            layout.contentBounds.getBottom() - settingsMetrics.frequencyRangeSectionHeight,
+            contentWidth,
+            settingsMetrics.frequencyRangeSectionHeight
+        };
+
         return layout;
     }
 }

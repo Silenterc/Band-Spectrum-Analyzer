@@ -211,6 +211,7 @@ namespace Ui {
         auto scaledMetrics = *this;
         scaledMetrics.width = scaleInt(width, factor);
         scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.iconSide = scaleInt(iconSide, factor);
         scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
         return scaledMetrics;
     }
@@ -236,6 +237,7 @@ namespace Ui {
         scaledMetrics.sectionStackGap = scaleInt(sectionStackGap, factor);
         scaledMetrics.gridSectionHeight = scaleInt(gridSectionHeight, factor);
         scaledMetrics.uiSectionHeight = scaleInt(uiSectionHeight, factor);
+        scaledMetrics.frequencyRangeSectionHeight = scaleInt(frequencyRangeSectionHeight, factor);
         return scaledMetrics;
     }
 
@@ -273,6 +275,17 @@ namespace Ui {
         scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
         scaledMetrics.labelWidth = scaleInt(labelWidth, factor);
         scaledMetrics.labelRightToButtonLeftGap = scaleInt(labelRightToButtonLeftGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsFrequencyRangeSectionMetrics SettingsFrequencyRangeSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.toggleWidth = scaleInt(toggleWidth, factor);
+        scaledMetrics.toggleLabelHeight = scaleInt(toggleLabelHeight, factor);
+        scaledMetrics.toggleLabelToButtonGap = scaleInt(toggleLabelToButtonGap, factor);
+        scaledMetrics.sliderGap = scaleInt(sliderGap, factor);
         return scaledMetrics;
     }
 
@@ -376,6 +389,7 @@ namespace Ui {
         scaledMetrics.settingsTimeDecaySection = settingsTimeDecaySection.scaled(factor);
         scaledMetrics.settingsGridSection = settingsGridSection.scaled(factor);
         scaledMetrics.settingsUiSection = settingsUiSection.scaled(factor);
+        scaledMetrics.settingsFrequencyRangeSection = settingsFrequencyRangeSection.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);

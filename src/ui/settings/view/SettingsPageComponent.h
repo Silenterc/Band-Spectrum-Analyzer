@@ -4,6 +4,7 @@
 
 #include "ui/theme/UiTheme.h"
 #include "ui/settings/view/SettingsAnalysisSectionComponent.h"
+#include "ui/settings/view/SettingsFrequencyRangeSectionComponent.h"
 #include "ui/settings/view/SettingsGridSectionComponent.h"
 #include "ui/settings/view/SettingsTimeDecaySectionComponent.h"
 #include "ui/settings/view/SettingsUiSectionComponent.h"
@@ -25,6 +26,7 @@ private:
     SettingsTimeDecaySectionComponent timeDecaySection;
     SettingsGridSectionComponent gridSection;
     SettingsUiSectionComponent uiSection;
+    SettingsFrequencyRangeSectionComponent frequencyRangeSection;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsPageComponent)
 };

@@ -4,6 +4,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "ui/theme/UiIcons.h"
 #include "ui/theme/UiTheme.h"
 
 class RasterRectanglePadButton final : public juce::Button {
@@ -20,6 +21,7 @@ public:
 
     void setActive(bool shouldBeActive);
     void setLabel(juce::String newLabel);
+    void setIcon(std::optional<Ui::IconId> newIcon);
     void setActiveMarkingColour(juce::Colour newActiveMarkingColour);
 
 private:
@@ -27,9 +29,11 @@ private:
 
     const Ui::Theme& theme;
     juce::String label;
+    std::optional<Ui::IconId> icon;
     bool active = false;
     std::optional<juce::Colour> activeMarkingColourOverride;
     juce::Rectangle<int> padBounds;
+    juce::Rectangle<int> iconBounds;
     juce::Image cachedOffImage;
     juce::Image cachedOnImage;
 

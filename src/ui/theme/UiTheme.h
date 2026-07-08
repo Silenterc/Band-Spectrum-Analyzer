@@ -242,6 +242,7 @@ namespace Ui {
     struct RectanglePadMetrics {
         int width = 104;
         int height = 44;
+        int iconSide = 24;
         float labelFontHeight = 15.0f;
 
         [[nodiscard]] RectanglePadMetrics scaled(float factor) const;
@@ -267,11 +268,12 @@ namespace Ui {
         int analysisSectionHeight = 88;
         int timeDecayTopGap = 18;
         int timeDecaySectionWidth = 348;
-        int timeDecaySectionHeight = 312;
+        int timeDecaySectionHeight = 250;
         int sectionColumnGap = 14;
         int sectionStackGap = 14;
-        int gridSectionHeight = 166;
-        int uiSectionHeight = 132;
+        int gridSectionHeight = 136;
+        int uiSectionHeight = 100;
+        int frequencyRangeSectionHeight = 136;
 
         [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
     };
@@ -287,15 +289,15 @@ namespace Ui {
     };
 
     struct SettingsTimeDecaySectionMetrics {
-        int contentTopInset = 42;
+        int contentTopInset = 26;
         int horizontalInset = 34;
         int columnGap = 36;
-        int rowGap = 16;
+        int rowGap = 8;
         [[nodiscard]] SettingsTimeDecaySectionMetrics scaled(float factor) const;
     };
 
     struct SettingsGridSectionMetrics {
-        int contentTopInset = 42;
+        int contentTopInset = 32;
         int horizontalInset = 28;
         int columnGap = 22;
 
@@ -303,13 +305,24 @@ namespace Ui {
     };
 
     struct SettingsUiSectionMetrics {
-        int contentTopInset = 56;
+        int contentTopInset = 42;
         int horizontalInset = 24;
         int buttonGap = 8;
         int labelWidth = 88;
         int labelRightToButtonLeftGap = 14;
 
         [[nodiscard]] SettingsUiSectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsFrequencyRangeSectionMetrics {
+        int contentTopInset = 32;
+        int horizontalInset = 36;
+        int toggleWidth = 150;
+        int toggleLabelHeight = 20;
+        int toggleLabelToButtonGap = 2;
+        int sliderGap = 42;
+
+        [[nodiscard]] SettingsFrequencyRangeSectionMetrics scaled(float factor) const;
     };
 
     struct BackgroundMetrics {
@@ -421,6 +434,7 @@ namespace Ui {
         SettingsTimeDecaySectionMetrics settingsTimeDecaySection;
         SettingsGridSectionMetrics settingsGridSection;
         SettingsUiSectionMetrics settingsUiSection;
+        SettingsFrequencyRangeSectionMetrics settingsFrequencyRangeSection;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;

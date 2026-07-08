@@ -1,5 +1,6 @@
 #include "RasterRectanglePadButton.h"
 
+#include "ui/theme/UiIcons.h"
 #include "ui/theme/UiRasterAssets.h"
 
 RasterRectanglePadButton::RasterRectanglePadButton(const Ui::Theme& themeToUse,
@@ -35,13 +36,22 @@ void RasterRectanglePadButton::paintButton(juce::Graphics& g,
     const auto markingColour = active
                                    ? activeMarkingColourOverride.value_or(theme.hardwareMarkingDark)
                                    : theme.hardwareMarkingLight;
+
+    if (icon.has_value())
+        Ui::drawIcon(g, *icon, iconBounds.toFloat(), markingColour);
+
+    if (label.isEmpty())
+        return;
+
     g.setColour(markingColour);
     g.setFont(juce::FontOptions(theme.metrics.rectanglePad.labelFontHeight).withStyle("Bold"));
     g.drawText(label, padBounds, juce::Justification::centred, false);
 }
 
 void RasterRectanglePadButton::resized() {
+    const auto& metrics = theme.metrics.rectanglePad;
     padBounds = getPreferredBounds().withCentre(getLocalBounds().getCentre());
+    iconBounds = juce::Rectangle<int>(metrics.iconSide, metrics.iconSide).withCentre(padBounds.getCentre());
     rebuildCachedPadImages();
 }
 
@@ -58,6 +68,14 @@ void RasterRectanglePadButton::setLabel(juce::String newLabel) {
         return;
 
     label = std::move(newLabel);
+    repaint(padBounds);
+}
+
+void RasterRectanglePadButton::setIcon(std::optional<Ui::IconId> newIcon) {
+    if (icon == newIcon)
+        return;
+
+    icon = newIcon;
     repaint(padBounds);
 }
 
