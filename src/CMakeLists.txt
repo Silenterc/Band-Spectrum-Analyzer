@@ -81,6 +81,7 @@ target_sources(${PROJECT_NAME}
         ui/settings/view/SettingsAnalysisSectionComponent.cpp
         ui/settings/view/SettingsGridSectionComponent.cpp
         ui/settings/view/SettingsTimeDecaySectionComponent.cpp
+        ui/settings/view/SettingsUiSectionComponent.cpp
         ui/settings/view/SettingsSectionFrameComponent.cpp
         ui/settings/view/SettingsPageComponent.cpp
         ui/presets/view/PresetHeaderComponent.cpp

@@ -6,6 +6,7 @@
 #include "ui/settings/view/SettingsAnalysisSectionComponent.h"
 #include "ui/settings/view/SettingsGridSectionComponent.h"
 #include "ui/settings/view/SettingsTimeDecaySectionComponent.h"
+#include "ui/settings/view/SettingsUiSectionComponent.h"
 
 class SettingsPageComponent final : public juce::Component {
 public:
@@ -23,6 +24,7 @@ private:
     SettingsAnalysisSectionComponent analysisSection;
     SettingsTimeDecaySectionComponent timeDecaySection;
     SettingsGridSectionComponent gridSection;
+    SettingsUiSectionComponent uiSection;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsPageComponent)
 };

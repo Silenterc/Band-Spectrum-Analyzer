@@ -35,6 +35,14 @@ namespace Ui {
             settingsMetrics.gridSectionHeight
         };
 
+        const auto uiTop = layout.gridSectionBounds.getBottom() + settingsMetrics.sectionStackGap;
+        layout.uiSectionBounds = {
+            gridLeft,
+            uiTop,
+            gridWidth,
+            settingsMetrics.uiSectionHeight
+        };
+
         return layout;
     }
 }

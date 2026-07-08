@@ -10,6 +10,7 @@ namespace Ui {
         juce::Rectangle<int> analysisSectionBounds;
         juce::Rectangle<int> timeDecaySectionBounds;
         juce::Rectangle<int> gridSectionBounds;
+        juce::Rectangle<int> uiSectionBounds;
     };
 
     class SettingsPageLayoutBuilder {
