@@ -2,11 +2,11 @@
 
 #include <array>
 
-#include "dsp/core/AnalyzerConstants.h"
+#include "shared/AnalyzerProductConstants.h"
 
 namespace Ui::AnalyzerConstants {
-    inline constexpr float maxUiFrequencyHz = 20000.0f;
-    inline constexpr float defaultVisibleMinFrequencyHz = Analyzer::Constants::minFrequencyHz;
+    inline constexpr float maxUiFrequencyHz = Shared::AnalyzerProductConstants::maximumVisibleFrequencyHz;
+    inline constexpr float defaultVisibleMinFrequencyHz = Shared::AnalyzerProductConstants::minimumFrequencyHz;
     inline constexpr float defaultVisibleMaxFrequencyHz = maxUiFrequencyHz;
 
     inline constexpr std::array<float, 10> frequencyScaleLabelsHz{

@@ -53,7 +53,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
     layout.gridLines.clear();
     layout.frequencyMarkers.clear();
     layout.gridLines.reserve(static_cast<size_t>(std::ceil((gridMaxDb - gridMinDb) / gridStepDb)) + 1);
-    layout.frequencyMarkers.reserve(theme.metrics.analyzerPlot.frequencyScaleLabelsHz.size() + 2);
+    layout.frequencyMarkers.reserve(Ui::AnalyzerConstants::frequencyScaleLabelsHz.size() + 2);
 
     for (float db = gridMinDb; db <= gridMaxDb + 0.001f; db += gridStepDb) {
         AnalyzerGridLineLayout gridLine;
@@ -76,7 +76,7 @@ void AnalyzerViewModel::updateGrid(float gridMinDb, float gridMaxDb, float gridS
 
     addFrequencyMarker(layout.visibleMinFrequencyHz);
 
-    for (auto frequencyHz: theme.metrics.analyzerPlot.frequencyScaleLabelsHz) {
+    for (auto frequencyHz: Ui::AnalyzerConstants::frequencyScaleLabelsHz) {
         if (frequencyHz <= layout.visibleMinFrequencyHz || frequencyHz >= layout.visibleMaxFrequencyHz)
             continue;
 
@@ -157,7 +157,7 @@ void AnalyzerViewModel::updateVisibleFrequencyRange(const std::vector<Analyzer::
                                                     const AnalyzerViewState &viewState) {
     layout.useCustomFrequencyRange = viewState.useCustomFrequencyRange;
     const auto uiMinFrequencyHz = Ui::AnalyzerConstants::defaultVisibleMinFrequencyHz;
-    const auto uiMaxFrequencyHz = theme.metrics.analyzerPlot.maxUiFrequencyHz;
+    const auto uiMaxFrequencyHz = Ui::AnalyzerConstants::maxUiFrequencyHz;
 
     if (bandInfo.empty()) {
         layout.visibleMinFrequencyHz = uiMinFrequencyHz;

@@ -1,6 +1,6 @@
 #include "display/analyzer/logic/AnalyzerMeter.h"
 
-#include "display/analyzer/data/AnalyzerDisplayTuning.h"
+#include "display/analyzer/config/AnalyzerDisplayConstants.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,11 +12,11 @@ namespace {
     constexpr float discardedPeakDb = -std::numeric_limits<float>::infinity();
 
     float snapRmsToDisplayFloor(const float valueDb, const float floorDb) {
-        return valueDb <= floorDb + Display::analyzerMeterTuning.settleToleranceDb ? floorDb : valueDb;
+        return valueDb <= floorDb + Display::Constants::meterTuning.settleToleranceDb ? floorDb : valueDb;
     }
 
     void discardPeakIfBelowFloor(float &peakDb, float &lastPeakInputDb, const float floorDb) {
-        if (peakDb > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
+        if (peakDb > floorDb + Display::Constants::meterTuning.settleToleranceDb)
             return;
 
         peakDb = discardedPeakDb;
@@ -125,12 +125,12 @@ const Analyzer::MeterData &AnalyzerMeter::getMeterData() const {
 bool AnalyzerMeter::isSettledAtFloor(const float floorDb) const {
     for (const auto &trace: meterData.traces) {
         for (const auto value: trace.frame.rmsDb) {
-            if (value > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
+            if (value > floorDb + Display::Constants::meterTuning.settleToleranceDb)
                 return false;
         }
 
         for (const auto value: trace.frame.peakDb) {
-            if (value > floorDb + Display::analyzerMeterTuning.settleToleranceDb)
+            if (value > floorDb + Display::Constants::meterTuning.settleToleranceDb)
                 return false;
         }
     }

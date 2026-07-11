@@ -35,7 +35,9 @@ std::optional<PluginPresets::PresetDocument> PresetDocumentSerializer::fromXml(c
         return std::nullopt;
 
     PluginPresets::PresetDocument document;
-    document.formatVersion = static_cast<int>(tree.getProperty(formatVersionProperty, currentFormatVersion));
+    document.formatVersion = static_cast<int>(tree.getProperty(
+        formatVersionProperty,
+        PluginPresets::Constants::currentDocumentFormatVersion));
     document.id = tree.getProperty(idProperty).toString();
     document.name = tree.getProperty(nameProperty).toString();
     document.origin = *origin;

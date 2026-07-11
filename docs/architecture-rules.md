@@ -106,7 +106,7 @@ The following kinds of state belong in `src/display/`, not `src/ui/`:
 - per-slot frozen-frame capture/latching
 - contribution reduction for hold semantics
 - global hold timing and decay
-- active vs idle display polling cadence
+- active deadline scheduling, overrun policy, and idle/frozen wake cadence
 - cross-thread display-frame publication
 
 ### UI-owned analyzer state
@@ -179,6 +179,13 @@ It must not grow presentation-only fields such as:
 - immutable or plain data carriers
 - no JUCE component geometry
 - no APVTS references
+
+### `src/display/analyzer/config/`
+
+- compile-time display policy only
+- owns worker cadence, idle polling, lifecycle timeouts, and meter/hold tolerances
+- constants live in predictably named `*Constants.h` files
+- no UI appearance, geometry, APVTS, or DSP policy
 
 ### `src/display/analyzer/logic/`
 
@@ -256,6 +263,7 @@ Legacy central UI folders are not allowed for new or moved feature code:
 - must not include `src/ui/*`
 - if plugin and UI both need a small value enum, put that value type here and let UI feature state compose it
 - shared option catalogs may pair such enums with stable host/UI labels when both layers must use the same mapping
+- cross-layer product limits belong in predictably named `*ProductConstants.h` files
 
 ## Source Of Truth Rules
 
@@ -267,6 +275,17 @@ Legacy central UI folders are not allowed for new or moved feature code:
 - worker semantic state must not be duplicated in UI view code
 - hold overlays must remain their own semantic output, not be modeled as fake slot traces
 - plugin-domain preset documents and serialized state must not leak into UI contracts or views
+
+### Constants Ownership
+
+- constants live in the narrowest layer that owns their meaning; there is no global backend constants dump
+- cross-layer product limits live under `src/shared/` in `*ProductConstants.h`
+- DSP processing policy lives in `src/dsp/` in `*Constants.h`
+- display worker policy lives in `src/display/analyzer/config/` in `*Constants.h`
+- plugin feature policy lives with its feature, such as `plugin/presets/PresetConstants.h`
+- UI semantic constants live with their feature state; visual appearance and geometry live in `Ui::Theme`
+- derived values must reference their canonical constant instead of repeating its literal
+- constants used only to express local mathematics or private implementation mechanics stay local
 
 ## Optimistic Local Echo Rules
 

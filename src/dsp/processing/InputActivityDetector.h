@@ -4,6 +4,8 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include "dsp/core/AnalyzerConstants.h"
+
 namespace Analyzer {
     /**
      * Tracks whether recent input energy is high enough to justify analyzer processing.
@@ -25,7 +27,7 @@ namespace Analyzer {
                     const juce::AudioBuffer<float> *sidechainBuffer) {
             lastPeakAbs = std::max(getPeakAbs(mainBuffer), getPeakAbs(sidechainBuffer));
 
-            if (lastPeakAbs >= activateThresholdGain) {
+            if (lastPeakAbs >= Constants::activityActivateThresholdGain) {
                 state = State::active;
                 silentSamplesRemaining = getSilentHoldSamples();
                 return;
@@ -34,7 +36,7 @@ namespace Analyzer {
             if (state == State::idle)
                 return;
 
-            if (lastPeakAbs >= deactivateThresholdGain) {
+            if (lastPeakAbs >= Constants::activityDeactivateThresholdGain) {
                 state = State::active;
                 silentSamplesRemaining = getSilentHoldSamples();
                 return;
@@ -76,15 +78,11 @@ namespace Analyzer {
         }
 
         [[nodiscard]] int getSilentHoldSamples() const {
-            return static_cast<int>(sampleRate * silenceHoldMs * 0.001);
+            return static_cast<int>(sampleRate * Constants::activitySilenceHoldMs * 0.001);
         }
 
-        static constexpr float activateThresholdGain = 0.0000630957f;   // -84 dBFS
-        static constexpr float deactivateThresholdGain = 0.0000316228f; // -90 dBFS
-        static constexpr float silenceHoldMs = 220.0f;
-
         State state = State::idle;
-        double sampleRate = 44100.0;
+        double sampleRate = Constants::defaultSampleRateHz;
         float lastPeakAbs = 0.0f;
         int silentSamplesRemaining = 0;
     };

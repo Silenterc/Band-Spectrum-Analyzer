@@ -10,6 +10,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
+    display/AnalyzerDisplayTickSchedulerTests.cpp
     dsp/AnalyzerEngineTests.cpp
     plugin/PluginUiBridgeSettingsTests.cpp
     plugin/PresetSessionTests.cpp

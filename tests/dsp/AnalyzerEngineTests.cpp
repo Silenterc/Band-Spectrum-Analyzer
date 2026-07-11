@@ -10,7 +10,7 @@
 #include "dsp/core/AnalyzerEngine.h"
 #include "display/analyzer/logic/AnalyzerMeter.h"
 #include "shared/DefaultParameterValues.h"
-#include "display/analyzer/data/AnalyzerDisplayTuning.h"
+#include "display/analyzer/config/AnalyzerDisplayConstants.h"
 
 namespace {
     constexpr double sampleRate = 48000.0;
@@ -244,7 +244,7 @@ namespace {
 
     Analyzer::MeterData buildMeterData(AnalyzerMeter &displayMeter, const Analyzer::Engine &engine,
                                        const TestParameters &parameters,
-                                       float dtSeconds = Display::meterPollIntervalSeconds) {
+                                       float dtSeconds = Display::Constants::frameIntervalSeconds) {
         const auto publishedTraces = engine.readPublishedTraces();
         displayMeter.tick(engine.getBandInfo(),
                           publishedTraces.getTraces(),

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../dsp/core/BandMode.h"
+#include "AnalyzerProductConstants.h"
 #include "SignalSlotConfiguration.h"
 #include "UiScalePreset.h"
 
@@ -18,8 +19,8 @@ namespace Defaults {
     inline constexpr float gridMaxDb = 3.0f;
     inline constexpr float gridStepDb = 5.0f;
     inline constexpr bool useCustomFrequencyRange = false;
-    inline constexpr float visibleMinFrequencyHz = 20.0f;
-    inline constexpr float visibleMaxFrequencyHz = 20000.0f;
+    inline constexpr float visibleMinFrequencyHz = Shared::AnalyzerProductConstants::minimumFrequencyHz;
+    inline constexpr float visibleMaxFrequencyHz = Shared::AnalyzerProductConstants::maximumVisibleFrequencyHz;
     inline constexpr Ui::UiScalePreset uiScalePreset = Ui::UiScalePreset::x1;
 
     // Global parameter ranges
@@ -68,7 +69,7 @@ namespace Defaults {
     inline constexpr float signalOpacityMax = 1.0f;
     inline constexpr float signalOpacityStep = 0.01f;
 
-    // Display-rate meter tuning
+    // Meter parameter defaults
     inline constexpr float rmsWindowMs = 200.0f;
     inline constexpr float peakDecayDbPerSecond = 15.0f;
     inline constexpr float holdDecayDbPerSecond = 6.0f;

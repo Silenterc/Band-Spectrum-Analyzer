@@ -106,7 +106,7 @@ namespace Analyzer {
         void publishProcessorState(bool resetProcessors, size_t frameSlotIndex = 0);
 
         // Current playback sample rate
-        double currentSampleRate = 44100.0;
+        double currentSampleRate = Constants::defaultSampleRateHz;
         // Largest block size we were prepared for
         int currentMaximumBlockSize = 0;
         // Whether prepare has been called

@@ -1,6 +1,7 @@
 #include "display/analyzer/thread/AnalyzerDisplayWorker.h"
 
-#include "display/analyzer/data/AnalyzerDisplayTuning.h"
+#include "display/analyzer/config/AnalyzerDisplayConstants.h"
+#include "display/analyzer/thread/AnalyzerDisplayTickScheduler.h"
 
 namespace {
     const std::vector<Analyzer::RawTrace>& emptyRawTraces() {
@@ -23,13 +24,12 @@ AnalyzerDisplayWorker::~AnalyzerDisplayWorker() {
 void AnalyzerDisplayWorker::start() {
     lastTickTimeMs = juce::Time::getMillisecondCounterHiRes();
     startThread();
-    wakeEvent.signal();
 }
 
 void AnalyzerDisplayWorker::stop() {
     signalThreadShouldExit();
     wakeEvent.signal();
-    stopThread(2000);
+    stopThread(Display::Constants::workerStopTimeoutMs);
 }
 
 void AnalyzerDisplayWorker::setControlState(const AnalyzerDisplayControlState &newControlState) {
@@ -50,57 +50,77 @@ const AnalyzerDisplayFrame *AnalyzerDisplayWorker::readLatestFrame(bool &hasUpda
 }
 
 void AnalyzerDisplayWorker::run() {
+    AnalyzerDisplayTickScheduler tickScheduler;
+    tickScheduler.start(juce::Time::getMillisecondCounterHiRes(), Display::Constants::frameIntervalMs);
+    bool wasGloballyFrozen = false;
+
     while (!threadShouldExit()) {
-        bool shouldCompute = false;
-
-        {
-            const juce::ScopedLock lock(controlLock);
-            shouldCompute = forceRefresh;
-        }
-
-        const auto waitMs = shouldCompute ? 0 : (useIdlePolling
-                                                     ? Display::idleMeterPollIntervalMs
-                                                     : Display::meterPollIntervalMs);
-
-        if (!shouldCompute)
-            wakeEvent.wait(waitMs);
-
-        if (threadShouldExit())
-            break;
-
+        bool shouldComputeImmediately = false;
         AnalyzerDisplayControlState currentControlState;
+
         {
             const juce::ScopedLock lock(controlLock);
             currentControlState = controlState;
         }
 
-        double currentTimeMs = juce::Time::getMillisecondCounterHiRes();
-        auto dtSeconds = static_cast<float>((currentTimeMs - lastTickTimeMs) * 0.001);
-        if (dtSeconds < 0.0f)
-            dtSeconds = 0.0f;
+        if (currentControlState.globalFrozen && !shouldComputeImmediately) {
+            // A control-state change signals the event, so a frozen display needs no polling.
+            wakeEvent.wait();
+            continue;
+        }
+
+        if (!shouldComputeImmediately) {
+            const auto nowMs = juce::Time::getMillisecondCounterHiRes();
+            wakeEvent.wait(tickScheduler.getWaitMilliseconds(nowMs));
+        }
+
+        if (threadShouldExit())
+            break;
+
+        {
+            const juce::ScopedLock lock(controlLock);
+            shouldComputeImmediately = forceRefresh;
+            currentControlState = controlState;
+        }
+
+        const auto currentTimeMs = juce::Time::getMillisecondCounterHiRes();
 
         if (currentControlState.globalFrozen) {
-            // Global freeze pins the last published frame and stops meter and hold time from advancing.
             lastTickTimeMs = currentTimeMs;
-            useIdlePolling = false;
+            wasGloballyFrozen = true;
             const juce::ScopedLock lock(controlLock);
             forceRefresh = false;
             continue;
         }
 
-        // Only reset the delta-time reference when a frame was published, so skipped wakes accumulate.
-        if (computeFrame(dtSeconds))
+        if (wasGloballyFrozen) {
             lastTickTimeMs = currentTimeMs;
+            wasGloballyFrozen = false;
+        }
+
+        auto dtSeconds = static_cast<float>((currentTimeMs - lastTickTimeMs) * 0.001);
+        if (dtSeconds < 0.0f)
+            dtSeconds = 0.0f;
+
+        bool wasForceRefresh = false;
+        if (computeFrame(dtSeconds, wasForceRefresh))
+            lastTickTimeMs = currentTimeMs;
+
+        const auto nextIntervalMs = useIdlePolling
+                                        ? Display::Constants::idlePollIntervalMs
+                                        : Display::Constants::frameIntervalMs;
+        tickScheduler.scheduleNext(juce::Time::getMillisecondCounterHiRes(),
+                                   nextIntervalMs,
+                                   wasForceRefresh);
     }
 }
 
-bool AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
+bool AnalyzerDisplayWorker::computeFrame(const float dtSeconds, bool &wasForceRefresh) {
     AnalyzerDisplayControlState currentControlState;
-    bool shouldForceRefresh = false;
     {
         const juce::ScopedLock lock(controlLock);
         currentControlState = controlState;
-        shouldForceRefresh = forceRefresh;
+        wasForceRefresh = forceRefresh;
         forceRefresh = false;
     }
 
@@ -120,7 +140,7 @@ bool AnalyzerDisplayWorker::computeFrame(const float dtSeconds) {
     const auto shouldProcessAnalyzer = rawTraceSource.shouldProcessAnalyzer();
     const auto meterSettled = meter.isSettledAtFloor(currentControlState.floorDb);
     const auto holdSettled = globalHoldModel.isSettledAtFloor(currentControlState.floorDb);
-    const auto shouldTick = shouldForceRefresh
+    const auto shouldTick = wasForceRefresh
                             || bandLayoutChanged
                             || slotConfigurationChanged
                             || hasTraceUpdate

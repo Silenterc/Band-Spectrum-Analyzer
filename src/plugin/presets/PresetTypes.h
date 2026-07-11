@@ -4,6 +4,8 @@
 
 #include <juce_data_structures/juce_data_structures.h>
 
+#include "PresetConstants.h"
+
 namespace PluginPresets {
     enum class PresetOrigin {
         factory,
@@ -17,7 +19,7 @@ namespace PluginPresets {
     };
 
     struct PresetDocument {
-        int formatVersion = 1;
+        int formatVersion = Constants::currentDocumentFormatVersion;
         juce::String id;
         juce::String name;
         PresetOrigin origin = PresetOrigin::factory;

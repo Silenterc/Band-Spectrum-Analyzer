@@ -29,8 +29,8 @@ public:
 
 private:
     void run() override;
-    /** Returns true when a frame was actually computed and published. */
-    bool computeFrame(float dtSeconds);
+    /** Returns true when a frame was published and reports whether the tick consumed a forced refresh. */
+    bool computeFrame(float dtSeconds, bool &wasForceRefresh);
     void resetDisplayModels();
 
     AnalyzerRawTraceSource &rawTraceSource;

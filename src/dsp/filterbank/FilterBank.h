@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "SIMDBPFilter.h"
+#include "../core/AnalyzerConstants.h"
 #include "../core/AnalyzerData.h"
 #include "../sources/AnalysisSourceBuilder.h"
 
@@ -81,7 +82,7 @@ namespace Analyzer {
          */
         void clearPowerAccumulators();
 
-        double sampleRate = 44100.0;
+        double sampleRate = Constants::defaultSampleRateHz;
         Mode mode = Mode::singleLane;
         std::shared_ptr<const std::vector<BandInfo>> bandInfo;
         // Primary analysis path, always present.

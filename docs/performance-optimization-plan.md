@@ -174,8 +174,8 @@ Platform-universal: this work benefits the software path directly and shrinks GP
 after W1. On Linux, where every stroke is CPU-rasterized, expect a much larger relative win than
 macOS measured — do this before any Linux-specific rendering work.
 
-- Replace the underlay+main double stroke on RMS lines with a single stroke or a pre-built filled
-  ribbon polygon (fills are far cheaper than curved strokes).
+- Done: replaced the underlay+main double stroke on RMS lines with one slightly heavier,
+  higher-contrast coloured stroke.
 - Reuse batch storage across frames: keep `RectangleList`/`Path`/point-vector capacity alive in
   `AnalyzerRenderBatchBuilder` instead of destroy-and-reallocate per frame.
 - Acceptance: paint ≤0.7% in a sample profile on macOS; equivalent relative reduction confirmed in
@@ -183,14 +183,20 @@ macOS measured — do this before any Linux-specific rendering work.
 
 ### W3 — Worker efficiency (~0.5 pts)
 
-- Reuse `MeterTrace` vectors across ticks instead of constructing fresh ones per trace per tick.
+- Done: reuse `MeterTrace` vectors across ticks instead of constructing fresh ones per trace per
+  tick; regression coverage verifies stable storage for an unchanged layout.
 - Write slot frames directly into the triple-buffer writer storage instead of copying vectors
   through `assignSlotFrame`.
 - Acceptance: worker ≤0.5% active in profile; zero steady-state allocations on the worker thread.
 
 ### W4 — Cadence and presentation polish
 
-- Keep the fixed 20 ms (50 fps) evenly-paced tick as the only mode.
+- Keep the fixed 20 ms (50 fps) evenly-paced tick as the only active mode. Implemented with
+  monotonic absolute deadlines: work time does not extend the interval, missed deadlines are
+  skipped instead of replayed, immediate control refreshes reanchor the schedule, and global
+  freeze waits without polling. `Display::Constants::framesPerSecond` in
+  `display/analyzer/config/AnalyzerDisplayConstants.h` is the single code-level rate setting;
+  scheduling derives its interval from that value.
 - Once W1 lands, consider presenting on the display's vblank (`VBlankAttachment`) so publish and
   present never beat against each other.
 - Investigate window-occlusion detection (editor hidden behind DAW windows) to pause repaints the

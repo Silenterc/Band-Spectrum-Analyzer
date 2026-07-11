@@ -149,6 +149,26 @@ TEST_CASE("Display sources do not include UI headers", "[display][architecture]"
     }
 }
 
+TEST_CASE("Analyzer constants use their documented ownership folders", "[architecture][constants]") {
+    const auto sourceDirectory = juce::File(BSA_REPO_ROOT).getChildFile("src");
+    const auto displayAnalyzerDirectory = sourceDirectory.getChildFile("display").getChildFile("analyzer");
+    const auto displayConfigDirectory = displayAnalyzerDirectory.getChildFile("config");
+    const auto displayDataDirectory = displayAnalyzerDirectory.getChildFile("data");
+
+    REQUIRE(displayConfigDirectory.getChildFile("AnalyzerDisplayConstants.h").existsAsFile());
+    REQUIRE(displayDataDirectory.findChildFiles(juce::File::findFiles, false, "*Constants.h").isEmpty());
+    REQUIRE(sourceDirectory.getChildFile("shared").getChildFile("AnalyzerProductConstants.h").existsAsFile());
+    REQUIRE(sourceDirectory.getChildFile("plugin")
+                .getChildFile("presets")
+                .getChildFile("PresetConstants.h")
+                .existsAsFile());
+
+    const auto themeHeader = sourceDirectory.getChildFile("ui").getChildFile("theme").getChildFile("UiTheme.h");
+    const auto themeText = themeHeader.loadFileAsString();
+    REQUIRE_FALSE(themeText.contains("maxUiFrequencyHz"));
+    REQUIRE_FALSE(themeText.contains("frequencyScaleLabelsHz"));
+}
+
 TEST_CASE("Settings feature starts with view-only folder structure", "[ui][architecture]") {
     const auto settingsDirectory = juce::File(BSA_REPO_ROOT)
                                        .getChildFile("src")
