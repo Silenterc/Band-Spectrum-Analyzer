@@ -48,6 +48,8 @@ RasterHorizontalSliderComponent::~RasterHorizontalSliderComponent() {
 
 void RasterHorizontalSliderComponent::setConfig(Config newConfig) {
     config = std::move(newConfig);
+    allowedMinimum = config.minimum;
+    allowedMaximum = config.maximum;
     value = snapAndClamp(value);
     updateValueEditorText();
     repaint();
@@ -56,6 +58,12 @@ void RasterHorizontalSliderComponent::setConfig(Config newConfig) {
 void RasterHorizontalSliderComponent::setValue(const float newValue,
                                                const juce::NotificationType notificationType) {
     setValueInternal(newValue, notificationType);
+}
+
+void RasterHorizontalSliderComponent::setAllowedRange(const float minimum, const float maximum) {
+    allowedMinimum = minimum;
+    allowedMaximum = maximum;
+    setValueInternal(value, juce::dontSendNotification);
 }
 
 float RasterHorizontalSliderComponent::getValue() const {
@@ -303,7 +311,8 @@ void RasterHorizontalSliderComponent::setValueInternal(const float newValue,
 }
 
 float RasterHorizontalSliderComponent::snapAndClamp(const float plainValue) const {
-    return Ui::RasterSliderValueMapping::snapValue(plainValue, config.minimum, config.maximum, config.step);
+    const auto snapped = Ui::RasterSliderValueMapping::snapValue(plainValue, config.minimum, config.maximum, config.step);
+    return juce::jlimit(allowedMinimum, allowedMaximum, snapped);
 }
 
 float RasterHorizontalSliderComponent::normaliseValue(const float plainValue) const {

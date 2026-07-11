@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "display/analyzer/data/AnalyzerMeterData.h"
+#include "shared/DefaultParameterValues.h"
 #include "ui/analyzer/plot/state/AnalyzerUiConstants.h"
 #include "ui/analyzer/rack/state/SignalSlotUiState.h"
 
@@ -25,6 +26,7 @@ namespace Ui {
         std::array<SignalSlotState, Shared::maxSignalSlots> signalSlots{};
         Shared::SignalSlotOrder slotOrder{};
         Analyzer::MeterSettings meterSettings;
+        Analyzer::BandMode bandMode = Defaults::bandMode;
         bool frozen = false;
         bool sidechainAvailable = false;
         float gridMinDb = 0.0f;
@@ -39,6 +41,7 @@ namespace Ui {
         return lhs.signalSlots == rhs.signalSlots
                && lhs.slotOrder == rhs.slotOrder
                && meterSettingsEqual(lhs.meterSettings, rhs.meterSettings)
+               && lhs.bandMode == rhs.bandMode
                && lhs.frozen == rhs.frozen
                && lhs.sidechainAvailable == rhs.sidechainAvailable
                && std::abs(lhs.gridMinDb - rhs.gridMinDb) <= 0.0001f

@@ -105,7 +105,7 @@ namespace PluginParameters {
     }
 
     Analyzer::BandMode Access::readBandMode() const {
-        return readChoice(bandModeParam, Schema::bandModeChoices);
+        return readChoice(bandModeParam, Shared::bandModeChoices);
     }
 
     bool Access::readFreeze() const {
@@ -137,7 +137,7 @@ namespace PluginParameters {
     }
 
     Ui::UiScalePreset Access::readUiScalePreset() const {
-        return readChoice(uiScaleParam, Schema::uiScaleChoices);
+        return readChoice(uiScaleParam, Shared::uiScaleChoices);
     }
 
     void Access::writeFreeze(const bool value) {
@@ -156,9 +156,9 @@ namespace PluginParameters {
 
     void Access::writeSlotSignal(const size_t slotIndex, const Analyzer::SignalSource source, const Analyzer::SignalMode mode) {
         writeFloat(Schema::slotParameterId(Schema::SlotField::source, slotIndex),
-                   static_cast<float>(Schema::indexForValue(source, Schema::signalSourceChoices)));
+                   static_cast<float>(Shared::indexForValue(source, Schema::signalSourceChoices)));
         writeFloat(Schema::slotParameterId(Schema::SlotField::mode, slotIndex),
-                   static_cast<float>(Schema::indexForValue(mode, Schema::signalModeChoices)));
+                   static_cast<float>(Shared::indexForValue(mode, Schema::signalModeChoices)));
     }
 
     void Access::writeSlotEnabled(const size_t slotIndex, const bool value) {
@@ -199,6 +199,46 @@ namespace PluginParameters {
         writeBool(Schema::showHoldId, value);
     }
 
+    void Access::writeBandMode(const Analyzer::BandMode bandMode) {
+        writeFloat(Schema::bandModeId,
+                   static_cast<float>(Shared::indexForValue(bandMode, Shared::bandModeChoices)));
+    }
+
+    void Access::writeHoldMs(const float holdMs) {
+        writeFloat(Schema::holdMsId, juce::jlimit(Defaults::holdMsMin, Defaults::holdMsMax, holdMs));
+    }
+
+    void Access::writeRmsWindowMs(const float rmsWindowMs) {
+        writeFloat(Schema::rmsWindowMsId,
+                   juce::jlimit(Defaults::rmsWindowMsMin, Defaults::rmsWindowMsMax, rmsWindowMs));
+    }
+
+    void Access::writePeakDecayDbPerSecond(const float decayDbPerSecond) {
+        writeFloat(Schema::peakDecayDbPerSecondId,
+                   juce::jlimit(Defaults::peakDecayDbPerSecondMin,
+                                Defaults::peakDecayDbPerSecondMax,
+                                decayDbPerSecond));
+    }
+
+    void Access::writeHoldDecayDbPerSecond(const float decayDbPerSecond) {
+        writeFloat(Schema::holdDecayDbPerSecondId,
+                   juce::jlimit(Defaults::holdDecayDbPerSecondMin,
+                                Defaults::holdDecayDbPerSecondMax,
+                                decayDbPerSecond));
+    }
+
+    void Access::writeGridMinDb(const float gridMinDb) {
+        writeFloat(Schema::gridMinDbId, juce::jlimit(Defaults::gridMinDbMin, Defaults::gridMinDbMax, gridMinDb));
+    }
+
+    void Access::writeGridMaxDb(const float gridMaxDb) {
+        writeFloat(Schema::gridMaxDbId, juce::jlimit(Defaults::gridMaxDbMin, Defaults::gridMaxDbMax, gridMaxDb));
+    }
+
+    void Access::writeGridStepDb(const float gridStepDb) {
+        writeFloat(Schema::gridStepDbId, juce::jlimit(Defaults::gridStepDbMin, Defaults::gridStepDbMax, gridStepDb));
+    }
+
     void Access::writeUseCustomFrequencyRange(const bool value) {
         writeBool(Schema::useCustomFrequencyRangeId, value);
     }
@@ -215,6 +255,11 @@ namespace PluginParameters {
                    juce::jlimit(Defaults::visibleMaxFrequencyHzMin,
                                 Defaults::visibleMaxFrequencyHzMax,
                                 frequencyHz));
+    }
+
+    void Access::writeUiScalePreset(const Ui::UiScalePreset preset) {
+        writeFloat(Schema::uiScaleId,
+                   static_cast<float>(Shared::indexForValue(preset, Shared::uiScaleChoices)));
     }
 
     bool Access::readBool(std::atomic<float> *parameter) {

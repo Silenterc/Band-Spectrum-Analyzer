@@ -7,6 +7,7 @@
 
 #include "../../dsp/core/BandMode.h"
 #include "../../shared/DefaultParameterValues.h"
+#include "../../shared/ParameterOptionCatalog.h"
 #include "../../shared/SignalPresetCatalog.h"
 #include "../../shared/UiScalePreset.h"
 #include "../../ui/analyzer/rack/state/SignalSlotUiState.h"
@@ -23,12 +24,6 @@ namespace PluginParameters::Schema {
         mode,
         colour,
         opacity
-    };
-
-    template<typename Enum>
-    struct EnumChoice {
-        Enum value;
-        const char *label;
     };
 
     inline constexpr auto bandModeName = "Band Mode";
@@ -65,32 +60,19 @@ namespace PluginParameters::Schema {
     inline constexpr auto visibleMaxFrequencyHzId = "visibleMaxFrequencyHz";
     inline constexpr auto uiScaleId = "uiScale";
 
-    inline constexpr std::array<EnumChoice<Analyzer::BandMode>, 4> bandModeChoices{{
-        {Analyzer::BandMode::octaveThird, "1/3 Oct"},
-        {Analyzer::BandMode::octaveQuarter, "1/4 Oct"},
-        {Analyzer::BandMode::octaveSixth, "1/6 Oct"},
-        {Analyzer::BandMode::octaveTwelfth, "1/12 Oct"}
-    }};
-
-    inline constexpr std::array<EnumChoice<Analyzer::SignalSource>, 2> signalSourceChoices{{
+    inline constexpr std::array<Shared::EnumChoice<Analyzer::SignalSource>, 2> signalSourceChoices{{
         {Analyzer::SignalSource::main, "Main"},
         {Analyzer::SignalSource::sidechain, "Sidechain"}
     }};
 
-    inline constexpr std::array<EnumChoice<Analyzer::SignalMode>, 3> signalModeChoices{{
+    inline constexpr std::array<Shared::EnumChoice<Analyzer::SignalMode>, 3> signalModeChoices{{
         {Analyzer::SignalMode::mid, "Mid"},
         {Analyzer::SignalMode::side, "Side"},
         {Analyzer::SignalMode::stereo, "Stereo"}
     }};
 
-    inline constexpr std::array<EnumChoice<Ui::UiScalePreset>, 3> uiScaleChoices{{
-        {Ui::UiScalePreset::x1, "1x"},
-        {Ui::UiScalePreset::x1_5, "1.5x"},
-        {Ui::UiScalePreset::x2, "2x"}
-    }};
-
     template<typename Enum, size_t Size>
-    juce::StringArray toStringArray(const std::array<EnumChoice<Enum>, Size> &choices) {
+    juce::StringArray toStringArray(const std::array<Shared::EnumChoice<Enum>, Size> &choices) {
         juce::StringArray result;
         result.ensureStorageAllocated(static_cast<int>(choices.size()));
         for (const auto &choice: choices)
@@ -114,22 +96,6 @@ namespace PluginParameters::Schema {
 
     inline juce::ParameterID makeParameterID(const juce::String &id) {
         return {id, parameterVersionHint};
-    }
-
-    template<typename Enum, size_t Size>
-    constexpr int indexForValue(const Enum value, const std::array<EnumChoice<Enum>, Size> &choices) {
-        for (size_t index = 0; index < choices.size(); ++index) {
-            if (choices[index].value == value)
-                return static_cast<int>(index);
-        }
-
-        return 0;
-    }
-
-    template<typename Enum, size_t Size>
-    constexpr Enum valueForIndex(const int index, const std::array<EnumChoice<Enum>, Size> &choices) {
-        const auto clampedIndex = juce::jlimit(0, static_cast<int>(choices.size()) - 1, index);
-        return choices[static_cast<size_t>(clampedIndex)].value;
     }
 
     inline auto holdMsRange() {
@@ -228,13 +194,13 @@ namespace PluginParameters::Schema {
                     makeParameterID(slotParameterId(field, slotIndex)),
                     slotParameterName(field, slotIndex),
                     toStringArray(signalSourceChoices),
-                    indexForValue(Defaults::signalSlotSource(slotIndex), signalSourceChoices));
+                    Shared::indexForValue(Defaults::signalSlotSource(slotIndex), signalSourceChoices));
             case SlotField::mode:
                 return std::make_unique<juce::AudioParameterChoice>(
                     makeParameterID(slotParameterId(field, slotIndex)),
                     slotParameterName(field, slotIndex),
                     toStringArray(signalModeChoices),
-                    indexForValue(Defaults::signalSlotMode(slotIndex), signalModeChoices));
+                    Shared::indexForValue(Defaults::signalSlotMode(slotIndex), signalModeChoices));
             case SlotField::colour:
                 return std::make_unique<juce::AudioParameterChoice>(
                     makeParameterID(slotParameterId(field, slotIndex)),
@@ -260,8 +226,8 @@ namespace PluginParameters::Schema {
         layout.add(std::make_unique<juce::AudioParameterChoice>(
             makeParameterID(bandModeId),
             bandModeName,
-            toStringArray(bandModeChoices),
-            indexForValue(Defaults::bandMode, bandModeChoices)));
+            toStringArray(Shared::bandModeChoices),
+            Shared::indexForValue(Defaults::bandMode, Shared::bandModeChoices)));
         layout.add(std::make_unique<juce::AudioParameterBool>(
             makeParameterID(freezeId),
             freezeName,
@@ -348,8 +314,8 @@ namespace PluginParameters::Schema {
         layout.add(std::make_unique<juce::AudioParameterChoice>(
             makeParameterID(uiScaleId),
             uiScaleName,
-            toStringArray(uiScaleChoices),
-            indexForValue(Defaults::uiScalePreset, uiScaleChoices)));
+            toStringArray(Shared::uiScaleChoices),
+            Shared::indexForValue(Defaults::uiScalePreset, Shared::uiScaleChoices)));
 
         return layout;
     }

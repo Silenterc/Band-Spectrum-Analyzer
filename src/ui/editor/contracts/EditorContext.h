@@ -6,6 +6,7 @@ class AnalyzerSettingsActions;
 class PresetUiSnapshotSource;
 class PresetActions;
 class EditorPresentationStateSource;
+class EditorPresentationActions;
 
 namespace Ui {
     /** Plugin-implemented contracts the editor consumes; references must outlive the editor. */
@@ -16,5 +17,6 @@ namespace Ui {
         AnalyzerSettingsActions &analyzerSettingsActions;
         PresetActions &presetActions;
         EditorPresentationStateSource &editorPresentationStateSource;
+        EditorPresentationActions &editorPresentationActions;
     };
 }

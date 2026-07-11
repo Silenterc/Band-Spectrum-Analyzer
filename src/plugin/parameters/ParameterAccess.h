@@ -45,9 +45,18 @@ namespace PluginParameters {
         void writeShowPeak(bool value);
         void writeShowRms(bool value);
         void writeShowHold(bool value);
+        void writeBandMode(Analyzer::BandMode bandMode);
+        void writeHoldMs(float holdMs);
+        void writeRmsWindowMs(float rmsWindowMs);
+        void writePeakDecayDbPerSecond(float decayDbPerSecond);
+        void writeHoldDecayDbPerSecond(float decayDbPerSecond);
+        void writeGridMinDb(float gridMinDb);
+        void writeGridMaxDb(float gridMaxDb);
+        void writeGridStepDb(float gridStepDb);
         void writeUseCustomFrequencyRange(bool value);
         void writeVisibleMinFrequencyHz(float frequencyHz);
         void writeVisibleMaxFrequencyHz(float frequencyHz);
+        void writeUiScalePreset(Ui::UiScalePreset preset);
 
     private:
         struct SlotRefs {
@@ -63,10 +72,10 @@ namespace PluginParameters {
 
         template<typename Enum, size_t Size>
         Enum readChoice(std::atomic<float> *parameter,
-                        const std::array<Schema::EnumChoice<Enum>, Size> &choices) const {
+                        const std::array<Shared::EnumChoice<Enum>, Size> &choices) const {
             jassert(parameter != nullptr);
             const auto index = juce::roundToInt(parameter->load());
-            return Schema::valueForIndex(index, choices);
+            return Shared::valueForIndex(index, choices);
         }
 
         static bool readBool(std::atomic<float> *parameter);

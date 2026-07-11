@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "ui/widgets/RasterFilmstrip.h"
+#include "ui/widgets/RasterKnobComponent.h"
 
 TEST_CASE("Raster filmstrip frame mapping clamps and reaches endpoints", "[ui][knob]") {
     REQUIRE(Ui::RasterFilmstrip::frameIndexForNormalisedValue(-0.25f, 128) == 0);
@@ -58,4 +59,32 @@ TEST_CASE("Raster knob parser accepts optional suffix and rejects invalid input"
 
     REQUIRE_FALSE(Ui::RasterFilmstrip::parseNumericText("fast", "ms").has_value());
     REQUIRE_FALSE(Ui::RasterFilmstrip::parseNumericText("12-3", "ms").has_value());
+}
+
+TEST_CASE("Raster knob walls values at the allowed range without changing its scale", "[ui][knob]") {
+    const juce::ScopedJuceInitialiser_GUI juceInitialiser;
+    const auto theme = Ui::makeTheme(Ui::UiScalePreset::x1);
+    RasterKnobComponent knob(theme);
+
+    RasterKnobComponent::Config config;
+    config.minimum = -120.0f;
+    config.maximum = -12.0f;
+    config.step = 1.0f;
+    knob.setConfig(std::move(config));
+
+    knob.setValue(-50.0f);
+    REQUIRE(knob.getValue() == Catch::Approx(-50.0f));
+
+    knob.setAllowedRange(-120.0f, -16.0f);
+    knob.setValue(-12.0f);
+    REQUIRE(knob.getValue() == Catch::Approx(-16.0f));
+
+    // Re-widening restores the full configured range
+    knob.setAllowedRange(-120.0f, -12.0f);
+    knob.setValue(-12.0f);
+    REQUIRE(knob.getValue() == Catch::Approx(-12.0f));
+
+    // Tightening the range clamps the current value in place
+    knob.setAllowedRange(-120.0f, -20.0f);
+    REQUIRE(knob.getValue() == Catch::Approx(-20.0f));
 }

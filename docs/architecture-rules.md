@@ -78,7 +78,9 @@ Analyzer channels and UI feature channels must stay separate.
 
 ### 3. UI-to-plugin action channel
 
-- contract: `AnalyzerSettingsActions`
+- contracts:
+  - `AnalyzerSettingsActions`
+  - `EditorPresentationActions`
 - views dispatch intents only
 - views must not know parameter ids or APVTS details
 
@@ -250,9 +252,10 @@ Legacy central UI folders are not allowed for new or moved feature code:
 
 ### `src/shared/`
 
-- cross-layer value types and defaults only
+- cross-layer value types, defaults, and small option catalogs shared by plugin and UI
 - must not include `src/ui/*`
 - if plugin and UI both need a small value enum, put that value type here and let UI feature state compose it
+- shared option catalogs may pair such enums with stable host/UI labels when both layers must use the same mapping
 
 ## Source Of Truth Rules
 
@@ -275,6 +278,18 @@ Rules:
 - the next snapshot from the source wins
 - local echo must not be published as a separate mutable feature state model
 - use it only for direct interaction feedback, such as slot toggles, colour/mode selection, and successful popup row removal
+
+## Paired Settings Constraint Rules
+
+The settings page may tighten the interactive range of paired controls to make direct manipulation predictable. Current examples are the minimum separation between grid bounds and the minimum ratio between visible frequency bounds.
+
+Rules:
+
+- interactive limits are UI affordances, not global APVTS invariants
+- `PluginUiBridge` may constrain settings-page intents before writing a parameter
+- the underlying parameters remain independently addressable by host automation and restored plugin state
+- snapshots publish the stored parameter values; they must not silently rewrite host-authored values
+- degenerate host-authored combinations are accepted as independent parameter state rather than repaired by changing another parameter
 
 ## Change Rules
 

@@ -116,6 +116,7 @@ Snapshots must not carry raw trace payloads, APVTS handles, or plugin persistenc
 Views dispatch intents only:
 
 - analyzer actions: `AnalyzerSettingsActions`
+- editor presentation actions: `EditorPresentationActions`
 - preset actions: `PresetActions`
 
 Views must not know parameter ids, APVTS details, preset file paths, XML format, or plugin serialization policy.
@@ -138,6 +139,12 @@ Examples:
 - preset popups may remove a row after a successful delete action
 
 The plugin still owns persistence and parameter writes. The UI echo only bridges the time before the next snapshot publication.
+
+## Paired Settings Controls
+
+The settings page derives narrower interactive ranges for related controls where unrestricted direct manipulation would create an awkward display. Grid minimum/maximum keep at least 6 dB of separation, and visible frequency minimum/maximum keep at least a 2:1 ratio when edited in the plugin UI.
+
+These are settings-page interaction limits, not global parameter invariants. `PluginUiBridge` applies them to UI intents, while host automation and restored state may address the APVTS parameters independently. Published snapshots reflect the stored values and do not repair a host-authored combination by changing another parameter.
 
 ## Analyzer Feature
 

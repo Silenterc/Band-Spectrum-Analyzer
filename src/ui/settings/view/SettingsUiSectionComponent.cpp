@@ -1,19 +1,17 @@
 #include "ui/settings/view/SettingsUiSectionComponent.h"
 
-namespace {
-    constexpr std::array<const char*, 3> scaleLabels{
-        "1x",
-        "1.5x",
-        "2x"
-    };
-}
-
-SettingsUiSectionComponent::SettingsUiSectionComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse),
+SettingsUiSectionComponent::SettingsUiSectionComponent(EditorPresentationActions& presentationActionsToUse,
+                                                       const Ui::Theme& themeToUse)
+    : presentationActions(presentationActionsToUse),
+      theme(themeToUse),
       frame(themeToUse, "UI SCALE") {
     addAndMakeVisible(frame);
     createScaleButtons();
     selectScaleButton(selectedScaleIndex);
+}
+
+void SettingsUiSectionComponent::applyPresentationState(const Ui::EditorPresentationState& state) {
+    selectScaleButton(Shared::indexForValue(state.scale, Shared::uiScaleChoices));
 }
 
 void SettingsUiSectionComponent::resized() {
@@ -23,9 +21,11 @@ void SettingsUiSectionComponent::resized() {
 
 void SettingsUiSectionComponent::createScaleButtons() {
     for (auto index = 0; index < static_cast<int>(scaleButtons.size()); ++index) {
-        auto button = std::make_unique<RasterRectanglePadButton>(theme, scaleLabels[static_cast<std::size_t>(index)]);
+        auto button = std::make_unique<RasterRectanglePadButton>(
+            theme, Shared::uiScaleChoices[static_cast<std::size_t>(index)].label);
         button->onClick = [this, index] {
             selectScaleButton(index);
+            presentationActions.setUiScalePreset(Shared::uiScaleChoices[static_cast<std::size_t>(index)].value);
         };
         addAndMakeVisible(*button);
         scaleButtons[static_cast<std::size_t>(index)] = std::move(button);

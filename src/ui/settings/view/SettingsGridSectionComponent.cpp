@@ -1,19 +1,32 @@
 #include "ui/settings/view/SettingsGridSectionComponent.h"
 
+#include "shared/DefaultParameterValues.h"
+#include "ui/settings/model/SettingsRangeModel.h"
+
 namespace {
+    constexpr std::size_t gridMinKnobIndex = 0;
+    constexpr std::size_t gridMaxKnobIndex = 1;
+
     struct GridKnobDefinition {
         const char* label;
         float minimum;
         float maximum;
         float step;
-        float initialValue;
         bool showPositiveSign;
+        void (AnalyzerSettingsActions::*dispatch)(float);
+        float (*read)(const Ui::AnalyzerUiSnapshot&);
     };
 
     constexpr std::array<GridKnobDefinition, 3> knobDefinitions{
-        GridKnobDefinition{"GRID MIN dB", -120.0f, 0.0f, 1.0f, -90.0f, false},
-        GridKnobDefinition{"GRID MAX dB", -60.0f, 24.0f, 1.0f, 6.0f, true},
-        GridKnobDefinition{"GRID STEP dB", 1.0f, 24.0f, 1.0f, 6.0f, false}
+        GridKnobDefinition{"GRID MIN dB", Defaults::gridMinDbMin, Defaults::gridMinDbMax, Defaults::gridMinDbStep,
+                           false, &AnalyzerSettingsActions::setGridMinDb,
+                           [](const Ui::AnalyzerUiSnapshot& snapshot) { return snapshot.gridMinDb; }},
+        GridKnobDefinition{"GRID MAX dB", Defaults::gridMaxDbMin, Defaults::gridMaxDbMax, Defaults::gridMaxDbStep,
+                           true, &AnalyzerSettingsActions::setGridMaxDb,
+                           [](const Ui::AnalyzerUiSnapshot& snapshot) { return snapshot.gridMaxDb; }},
+        GridKnobDefinition{"GRID STEP dB", Defaults::gridStepDbMin, Defaults::gridStepDbMax, Defaults::gridStepDbStep,
+                           false, &AnalyzerSettingsActions::setGridStepDb,
+                           [](const Ui::AnalyzerUiSnapshot& snapshot) { return snapshot.gridStepDb; }}
     };
 
     juce::String formatDecibelValue(const float value, const bool showPositiveSign) {
@@ -23,11 +36,23 @@ namespace {
     }
 }
 
-SettingsGridSectionComponent::SettingsGridSectionComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse),
+SettingsGridSectionComponent::SettingsGridSectionComponent(AnalyzerSettingsActions& settingsActionsToUse,
+                                                           const Ui::Theme& themeToUse)
+    : settingsActions(settingsActionsToUse),
+      theme(themeToUse),
       frame(themeToUse, "GRID") {
     addAndMakeVisible(frame);
     createKnobs();
+}
+
+void SettingsGridSectionComponent::applySnapshot(const Ui::AnalyzerUiSnapshot& snapshot) {
+    const auto minAllowed = Ui::SettingsRangeModel::gridMinDbAllowedRange(snapshot);
+    const auto maxAllowed = Ui::SettingsRangeModel::gridMaxDbAllowedRange(snapshot);
+    knobs[gridMinKnobIndex]->setAllowedRange(minAllowed.minimum, minAllowed.maximum);
+    knobs[gridMaxKnobIndex]->setAllowedRange(maxAllowed.minimum, maxAllowed.maximum);
+
+    for (auto index = std::size_t{}; index < knobs.size(); ++index)
+        knobs[index]->setValue(knobDefinitions[index].read(snapshot));
 }
 
 void SettingsGridSectionComponent::resized() {
@@ -59,11 +84,9 @@ void SettingsGridSectionComponent::configureKnob(const std::size_t index) {
         return Ui::RasterFilmstrip::parseNumericText(text, "dB");
     };
 
-    values[index] = definition.initialValue;
     knobs[index]->setConfig(std::move(config));
-    knobs[index]->setValue(values[index]);
-    knobs[index]->onValueChanged = [this, index](const float value) {
-        values[index] = value;
+    knobs[index]->onValueChanged = [this, dispatch = definition.dispatch](const float value) {
+        (settingsActions.*dispatch)(value);
     };
 }
 

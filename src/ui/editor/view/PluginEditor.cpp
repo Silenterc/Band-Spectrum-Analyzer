@@ -18,6 +18,8 @@ SpectrumAnalyzerAudioProcessorEditor::SpectrumAnalyzerAudioProcessorEditor(
                  context.presetUiSnapshotSource,
                  context.analyzerSettingsActions,
                  context.presetActions,
+                 context.editorPresentationStateSource,
+                 context.editorPresentationActions,
                  theme) {
     setOpaque(true);
     addAndMakeVisible(backgroundComponent);

@@ -56,7 +56,7 @@ flowchart TD
     Bridge --> SnapshotSource[AnalyzerUiSnapshotSource]
     Bridge --> Settings[AnalyzerSettingsActions]
     Bridge --> PresetChannels[PresetActions / PresetUiSnapshotSource]
-    Bridge --> Presentation[EditorPresentationStateSource]
+    Bridge --> Presentation[EditorPresentationActions / EditorPresentationStateSource]
 
     ParamSchema --> APVTS
     APVTS --> ParamAccess
@@ -79,7 +79,7 @@ It owns:
 - state serialization and preset session
 - `PluginUiBridge` and the change tracker
 
-`PluginUiBridge` implements every UI-facing contract (`AnalyzerSettingsActions`, `AnalyzerUiSnapshotSource`, `EditorPresentationStateSource`, `PresetActions`, `PresetUiSnapshotSource`). It owns snapshot listener lists, last-published dedup caches, and message-thread marshalling of refreshes. The processor must not implement UI contracts directly.
+`PluginUiBridge` implements every UI-facing contract (`AnalyzerSettingsActions`, `AnalyzerUiSnapshotSource`, `EditorPresentationActions`, `EditorPresentationStateSource`, `PresetActions`, `PresetUiSnapshotSource`). It owns snapshot listener lists, last-published dedup caches, and message-thread marshalling of refreshes. The processor must not implement UI contracts directly.
 
 `Analyzer::Engine` implements `AnalyzerRawTraceSource` (owned by `src/dsp/core/`), which exposes:
 

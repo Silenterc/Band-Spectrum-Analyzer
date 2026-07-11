@@ -1,20 +1,17 @@
 #include "ui/settings/view/SettingsAnalysisSectionComponent.h"
 
-namespace {
-    constexpr std::array<const char*, 4> bandModeLabels{
-        "1/3 Oct",
-        "1/4 Oct",
-        "1/6 Oct",
-        "1/12 Oct"
-    };
-}
-
-SettingsAnalysisSectionComponent::SettingsAnalysisSectionComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse),
+SettingsAnalysisSectionComponent::SettingsAnalysisSectionComponent(AnalyzerSettingsActions& settingsActionsToUse,
+                                                                   const Ui::Theme& themeToUse)
+    : settingsActions(settingsActionsToUse),
+      theme(themeToUse),
       frame(themeToUse, "BAND MODE") {
     addAndMakeVisible(frame);
     createBandModeButtons();
     selectBandModeButton(selectedBandModeIndex);
+}
+
+void SettingsAnalysisSectionComponent::applySnapshot(const Ui::AnalyzerUiSnapshot& snapshot) {
+    selectBandModeButton(Shared::indexForValue(snapshot.bandMode, Shared::bandModeChoices));
 }
 
 void SettingsAnalysisSectionComponent::resized() {
@@ -24,9 +21,11 @@ void SettingsAnalysisSectionComponent::resized() {
 
 void SettingsAnalysisSectionComponent::createBandModeButtons() {
     for (auto index = 0; index < static_cast<int>(bandModeButtons.size()); ++index) {
-        auto button = std::make_unique<RasterRectanglePadButton>(theme, bandModeLabels[static_cast<size_t>(index)]);
+        auto button = std::make_unique<RasterRectanglePadButton>(
+            theme, Shared::bandModeChoices[static_cast<size_t>(index)].label);
         button->onClick = [this, index] {
             selectBandModeButton(index);
+            settingsActions.setBandMode(Shared::bandModeChoices[static_cast<size_t>(index)].value);
         };
         addAndMakeVisible(*button);
         bandModeButtons[static_cast<size_t>(index)] = std::move(button);

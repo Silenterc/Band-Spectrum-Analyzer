@@ -1,21 +1,34 @@
 #include "ui/settings/view/SettingsTimeDecaySectionComponent.h"
 
+#include "shared/DefaultParameterValues.h"
+
 namespace {
     struct TimeDecayKnobDefinition {
         const char* label;
         float minimum;
         float maximum;
         float step;
-        float initialValue;
         const char* suffix;
         int decimalPlaces;
+        void (AnalyzerSettingsActions::*dispatch)(float);
+        float (*read)(const Analyzer::MeterSettings&);
     };
 
     constexpr std::array<TimeDecayKnobDefinition, 4> knobDefinitions{
-        TimeDecayKnobDefinition{"HOLD TIME", 0.0f, 5000.0f, 10.0f, 750.0f, "ms", 0},
-        TimeDecayKnobDefinition{"RMS TIME", 0.0f, 5000.0f, 10.0f, 250.0f, "ms", 0},
-        TimeDecayKnobDefinition{"PEAK DECAY", 0.0f, 60.0f, 0.1f, 18.0f, "dB/s", 1},
-        TimeDecayKnobDefinition{"HOLD DECAY", 0.0f, 60.0f, 0.1f, 9.0f, "dB/s", 1}
+        TimeDecayKnobDefinition{"HOLD TIME", Defaults::holdMsMin, Defaults::holdMsMax, Defaults::holdMsStep,
+                                "ms", 0, &AnalyzerSettingsActions::setHoldTimeMs,
+                                [](const Analyzer::MeterSettings& settings) { return settings.holdMs; }},
+        TimeDecayKnobDefinition{"RMS TIME", Defaults::rmsWindowMsMin, Defaults::rmsWindowMsMax, Defaults::rmsWindowMsStep,
+                                "ms", 0, &AnalyzerSettingsActions::setRmsWindowMs,
+                                [](const Analyzer::MeterSettings& settings) { return settings.rmsWindowMs; }},
+        TimeDecayKnobDefinition{"PEAK DECAY", Defaults::peakDecayDbPerSecondMin, Defaults::peakDecayDbPerSecondMax,
+                                Defaults::peakDecayDbPerSecondStep,
+                                "dB/s", 1, &AnalyzerSettingsActions::setPeakDecayDbPerSecond,
+                                [](const Analyzer::MeterSettings& settings) { return settings.peakDecayDbPerSecond; }},
+        TimeDecayKnobDefinition{"HOLD DECAY", Defaults::holdDecayDbPerSecondMin, Defaults::holdDecayDbPerSecondMax,
+                                Defaults::holdDecayDbPerSecondStep,
+                                "dB/s", 1, &AnalyzerSettingsActions::setHoldDecayDbPerSecond,
+                                [](const Analyzer::MeterSettings& settings) { return settings.holdDecayDbPerSecond; }}
     };
 
     juce::String formatValueWithSuffix(const float value,
@@ -25,11 +38,18 @@ namespace {
     }
 }
 
-SettingsTimeDecaySectionComponent::SettingsTimeDecaySectionComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse),
+SettingsTimeDecaySectionComponent::SettingsTimeDecaySectionComponent(AnalyzerSettingsActions& settingsActionsToUse,
+                                                                     const Ui::Theme& themeToUse)
+    : settingsActions(settingsActionsToUse),
+      theme(themeToUse),
       frame(themeToUse, "TIME & DECAY") {
     addAndMakeVisible(frame);
     createKnobs();
+}
+
+void SettingsTimeDecaySectionComponent::applySnapshot(const Ui::AnalyzerUiSnapshot& snapshot) {
+    for (auto index = std::size_t{}; index < knobs.size(); ++index)
+        knobs[index]->setValue(knobDefinitions[index].read(snapshot.meterSettings));
 }
 
 void SettingsTimeDecaySectionComponent::resized() {
@@ -62,11 +82,9 @@ void SettingsTimeDecaySectionComponent::configureKnob(const std::size_t index) {
         return Ui::RasterFilmstrip::parseNumericText(text, suffix);
     };
 
-    values[index] = definition.initialValue;
     knobs[index]->setConfig(std::move(config));
-    knobs[index]->setValue(values[index]);
-    knobs[index]->onValueChanged = [this, index](const float value) {
-        values[index] = value;
+    knobs[index]->onValueChanged = [this, dispatch = definition.dispatch](const float value) {
+        (settingsActions.*dispatch)(value);
     };
 }
 

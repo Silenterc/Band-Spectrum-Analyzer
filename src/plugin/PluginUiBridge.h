@@ -7,6 +7,7 @@
 
 #include "../ui/analyzer/contracts/AnalyzerSettingsActions.h"
 #include "../ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
+#include "../ui/editor/contracts/EditorPresentationActions.h"
 #include "../ui/editor/contracts/EditorPresentationStateSource.h"
 #include "../ui/presets/contracts/PresetActions.h"
 #include "../ui/presets/contracts/PresetUiSnapshotSource.h"
@@ -21,6 +22,7 @@
  */
 class PluginUiBridge final : public AnalyzerSettingsActions,
                              public AnalyzerUiSnapshotSource,
+                             public EditorPresentationActions,
                              public EditorPresentationStateSource,
                              public PresetActions,
                              public PresetUiSnapshotSource,
@@ -52,6 +54,7 @@ public:
     void removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener &listener) override;
 
     // AnalyzerSettingsActions
+    void setBandMode(Analyzer::BandMode bandMode) override;
     void setFreezeEnabled(bool isFrozen) override;
     void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
     void setSignalSlotVisible(size_t slotIndex, bool isVisible) override;
@@ -69,9 +72,19 @@ public:
     void setShowPeakEnabled(bool isEnabled) override;
     void setShowRmsEnabled(bool isEnabled) override;
     void setShowHoldEnabled(bool isEnabled) override;
+    void setHoldTimeMs(float holdMs) override;
+    void setRmsWindowMs(float rmsWindowMs) override;
+    void setPeakDecayDbPerSecond(float decayDbPerSecond) override;
+    void setHoldDecayDbPerSecond(float decayDbPerSecond) override;
+    void setGridMinDb(float gridMinDb) override;
+    void setGridMaxDb(float gridMaxDb) override;
+    void setGridStepDb(float gridStepDb) override;
     void setCustomFrequencyRangeEnabled(bool isEnabled) override;
     void setVisibleMinFrequencyHz(float frequencyHz) override;
     void setVisibleMaxFrequencyHz(float frequencyHz) override;
+
+    // EditorPresentationActions
+    void setUiScalePreset(Ui::UiScalePreset preset) override;
 
     // PresetActions
     [[nodiscard]] Ui::Presets::PresetActionResult loadPreset(const Ui::Presets::PresetId &presetId) override;

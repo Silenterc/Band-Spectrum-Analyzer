@@ -1,12 +1,18 @@
 #include "ui/settings/view/SettingsFrequencyRangeSectionComponent.h"
 
+#include "shared/DefaultParameterValues.h"
+#include "ui/settings/model/SettingsRangeModel.h"
+
 namespace {
-    RasterHorizontalSliderComponent::Config makeFrequencySliderConfig(const juce::String& label) {
+    RasterHorizontalSliderComponent::Config makeFrequencySliderConfig(const juce::String& label,
+                                                                      const float minimum,
+                                                                      const float maximum,
+                                                                      const float step) {
         RasterHorizontalSliderComponent::Config config;
         config.label = label;
-        config.minimum = 20.0f;
-        config.maximum = 20000.0f;
-        config.step = 1.0f;
+        config.minimum = minimum;
+        config.maximum = maximum;
+        config.step = step;
         config.suffix = "Hz";
         config.valueMapping = Ui::SliderValueMapping::logarithmic;
         config.formatter = [](const float value) {
@@ -19,8 +25,11 @@ namespace {
     }
 }
 
-SettingsFrequencyRangeSectionComponent::SettingsFrequencyRangeSectionComponent(const Ui::Theme& themeToUse)
-    : theme(themeToUse),
+SettingsFrequencyRangeSectionComponent::SettingsFrequencyRangeSectionComponent(
+    AnalyzerSettingsActions& settingsActionsToUse,
+    const Ui::Theme& themeToUse)
+    : settingsActions(settingsActionsToUse),
+      theme(themeToUse),
       frame(themeToUse, "FREQUENCY RANGE"),
       customRangeButton(themeToUse, {}),
       visibleMinFrequencySlider(themeToUse),
@@ -33,10 +42,23 @@ SettingsFrequencyRangeSectionComponent::SettingsFrequencyRangeSectionComponent(c
     customRangeButton.onClick = [this] {
         customRangeEnabled = !customRangeEnabled;
         updateCustomRangeButton();
+        settingsActions.setCustomFrequencyRangeEnabled(customRangeEnabled);
     };
     customRangeButton.setIcon(Ui::IconId::power);
     configureSliders();
     updateCustomRangeButton();
+}
+
+void SettingsFrequencyRangeSectionComponent::applySnapshot(const Ui::AnalyzerUiSnapshot& snapshot) {
+    customRangeEnabled = snapshot.useCustomFrequencyRange;
+    updateCustomRangeButton();
+
+    const auto minAllowed = Ui::SettingsRangeModel::visibleMinFrequencyAllowedRange(snapshot);
+    const auto maxAllowed = Ui::SettingsRangeModel::visibleMaxFrequencyAllowedRange(snapshot);
+    visibleMinFrequencySlider.setAllowedRange(minAllowed.minimum, minAllowed.maximum);
+    visibleMaxFrequencySlider.setAllowedRange(maxAllowed.minimum, maxAllowed.maximum);
+    visibleMinFrequencySlider.setValue(snapshot.visibleMinFrequencyHz);
+    visibleMaxFrequencySlider.setValue(snapshot.visibleMaxFrequencyHz);
 }
 
 void SettingsFrequencyRangeSectionComponent::paint(juce::Graphics& g) {
@@ -54,16 +76,20 @@ void SettingsFrequencyRangeSectionComponent::resized() {
 }
 
 void SettingsFrequencyRangeSectionComponent::configureSliders() {
-    visibleMinFrequencySlider.setConfig(makeFrequencySliderConfig("VISIBLE MIN FREQUENCY"));
-    visibleMinFrequencySlider.setValue(visibleMinFrequencyHz);
+    visibleMinFrequencySlider.setConfig(makeFrequencySliderConfig("VISIBLE MIN FREQUENCY",
+                                                                  Defaults::visibleMinFrequencyHzMin,
+                                                                  Defaults::visibleMinFrequencyHzMax,
+                                                                  Defaults::visibleMinFrequencyHzStep));
     visibleMinFrequencySlider.onValueChanged = [this](const float value) {
-        visibleMinFrequencyHz = value;
+        settingsActions.setVisibleMinFrequencyHz(value);
     };
 
-    visibleMaxFrequencySlider.setConfig(makeFrequencySliderConfig("VISIBLE MAX FREQUENCY"));
-    visibleMaxFrequencySlider.setValue(visibleMaxFrequencyHz);
+    visibleMaxFrequencySlider.setConfig(makeFrequencySliderConfig("VISIBLE MAX FREQUENCY",
+                                                                  Defaults::visibleMaxFrequencyHzMin,
+                                                                  Defaults::visibleMaxFrequencyHzMax,
+                                                                  Defaults::visibleMaxFrequencyHzStep));
     visibleMaxFrequencySlider.onValueChanged = [this](const float value) {
-        visibleMaxFrequencyHz = value;
+        settingsActions.setVisibleMaxFrequencyHz(value);
     };
 }
 

@@ -27,6 +27,8 @@ public:
 
     void setConfig(Config newConfig);
     void setValue(float newValue, juce::NotificationType notificationType = juce::dontSendNotification);
+    /** Tightens the interactive clamp window without changing the control's visual range mapping. */
+    void setAllowedRange(float minimum, float maximum);
     [[nodiscard]] float getValue() const;
     [[nodiscard]] juce::Rectangle<int> getPreferredBounds() const;
 
@@ -89,6 +91,8 @@ private:
     const Ui::Theme& theme;
     Config config;
     float value = 0.0f;
+    float allowedMinimum = 0.0f;
+    float allowedMaximum = 1.0f;
     float dragStartNormalised = 0.0f;
     float dragStartX = 0.0f;
     bool dragging = false;

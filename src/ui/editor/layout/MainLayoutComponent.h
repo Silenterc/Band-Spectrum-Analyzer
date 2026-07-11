@@ -5,6 +5,8 @@
 #include "dsp/core/AnalyzerRawTraceSource.h"
 #include "ui/analyzer/contracts/AnalyzerSettingsActions.h"
 #include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
+#include "ui/editor/contracts/EditorPresentationActions.h"
+#include "ui/editor/contracts/EditorPresentationStateSource.h"
 #include "ui/presets/contracts/PresetActions.h"
 #include "ui/presets/contracts/PresetUiSnapshotSource.h"
 #include "ui/editor/state/EditorPage.h"
@@ -24,6 +26,8 @@ public:
                         PresetUiSnapshotSource& presetUiSnapshotSource,
                         AnalyzerSettingsActions& settingsActions,
                         PresetActions& presetActions,
+                        EditorPresentationStateSource& presentationStateSource,
+                        EditorPresentationActions& presentationActions,
                         const Ui::Theme& theme);
     ~MainLayoutComponent() override = default;
 

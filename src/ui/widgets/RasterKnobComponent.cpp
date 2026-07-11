@@ -50,6 +50,8 @@ RasterKnobComponent::~RasterKnobComponent() {
 
 void RasterKnobComponent::setConfig(Config newConfig) {
     config = std::move(newConfig);
+    allowedMinimum = config.minimum;
+    allowedMaximum = config.maximum;
     value = snapAndClamp(value);
     updateValueEditorText();
     repaint();
@@ -57,6 +59,12 @@ void RasterKnobComponent::setConfig(Config newConfig) {
 
 void RasterKnobComponent::setValue(const float newValue, const juce::NotificationType notificationType) {
     setValueInternal(newValue, notificationType);
+}
+
+void RasterKnobComponent::setAllowedRange(const float minimum, const float maximum) {
+    allowedMinimum = minimum;
+    allowedMaximum = maximum;
+    setValueInternal(value, juce::dontSendNotification);
 }
 
 float RasterKnobComponent::getValue() const {
@@ -306,7 +314,8 @@ void RasterKnobComponent::setValueInternal(const float newValue, const juce::Not
 }
 
 float RasterKnobComponent::snapAndClamp(const float plainValue) const {
-    return Ui::RasterFilmstrip::snapValue(plainValue, config.minimum, config.maximum, config.step);
+    const auto snapped = Ui::RasterFilmstrip::snapValue(plainValue, config.minimum, config.maximum, config.step);
+    return juce::jlimit(allowedMinimum, allowedMaximum, snapped);
 }
 
 juce::String RasterKnobComponent::formatValue(const float plainValue) const {

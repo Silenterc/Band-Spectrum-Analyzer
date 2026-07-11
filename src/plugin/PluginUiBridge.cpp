@@ -29,6 +29,7 @@ Ui::AnalyzerUiSnapshot PluginUiBridge::getAnalyzerUiSnapshot() const {
     state.signalSlots = parameterAccess.readUiSlots();
     state.slotOrder = signalSlotOrderState.getOrder();
     state.meterSettings = parameterAccess.readMeterSettings();
+    state.bandMode = parameterAccess.readBandMode();
     state.frozen = parameterAccess.readFreeze();
     state.sidechainAvailable = isSidechainAvailable();
     state.gridMinDb = parameterAccess.readGridMinDb();
@@ -72,6 +73,11 @@ void PluginUiBridge::addPresetUiSnapshotListener(PresetUiSnapshotSource::Listene
 
 void PluginUiBridge::removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener &listener) {
     presetUiSnapshotListeners.remove(&listener);
+}
+
+void PluginUiBridge::setBandMode(const Analyzer::BandMode bandMode) {
+    parameterAccess.writeBandMode(bandMode);
+    requestUiRefresh();
 }
 
 void PluginUiBridge::setFreezeEnabled(const bool isFrozen) {
@@ -156,18 +162,64 @@ void PluginUiBridge::setShowHoldEnabled(const bool isEnabled) {
     requestUiRefresh();
 }
 
+void PluginUiBridge::setHoldTimeMs(const float holdMs) {
+    parameterAccess.writeHoldMs(holdMs);
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setRmsWindowMs(const float rmsWindowMs) {
+    parameterAccess.writeRmsWindowMs(rmsWindowMs);
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setPeakDecayDbPerSecond(const float decayDbPerSecond) {
+    parameterAccess.writePeakDecayDbPerSecond(decayDbPerSecond);
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setHoldDecayDbPerSecond(const float decayDbPerSecond) {
+    parameterAccess.writeHoldDecayDbPerSecond(decayDbPerSecond);
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setGridMinDb(const float gridMinDb) {
+    parameterAccess.writeGridMinDb(
+        juce::jmin(gridMinDb, parameterAccess.readGridMaxDb() - Defaults::gridMinSpanDb));
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setGridMaxDb(const float gridMaxDb) {
+    parameterAccess.writeGridMaxDb(
+        juce::jmax(gridMaxDb, parameterAccess.readGridMinDb() + Defaults::gridMinSpanDb));
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setGridStepDb(const float gridStepDb) {
+    parameterAccess.writeGridStepDb(gridStepDb);
+    requestUiRefresh();
+}
+
 void PluginUiBridge::setCustomFrequencyRangeEnabled(const bool isEnabled) {
     parameterAccess.writeUseCustomFrequencyRange(isEnabled);
     requestUiRefresh();
 }
 
 void PluginUiBridge::setVisibleMinFrequencyHz(const float frequencyHz) {
-    parameterAccess.writeVisibleMinFrequencyHz(frequencyHz);
+    parameterAccess.writeVisibleMinFrequencyHz(
+        juce::jmin(frequencyHz,
+                   parameterAccess.readVisibleMaxFrequencyHz() / Defaults::visibleFrequencyMinSpanRatio));
     requestUiRefresh();
 }
 
 void PluginUiBridge::setVisibleMaxFrequencyHz(const float frequencyHz) {
-    parameterAccess.writeVisibleMaxFrequencyHz(frequencyHz);
+    parameterAccess.writeVisibleMaxFrequencyHz(
+        juce::jmax(frequencyHz,
+                   parameterAccess.readVisibleMinFrequencyHz() * Defaults::visibleFrequencyMinSpanRatio));
+    requestUiRefresh();
+}
+
+void PluginUiBridge::setUiScalePreset(const Ui::UiScalePreset preset) {
+    parameterAccess.writeUiScalePreset(preset);
     requestUiRefresh();
 }
 

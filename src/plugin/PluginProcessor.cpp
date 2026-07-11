@@ -188,7 +188,8 @@ juce::AudioProcessorEditor *SpectrumAnalyzerAudioProcessor::createEditor() {
         .presetUiSnapshotSource = uiBridge,
         .analyzerSettingsActions = uiBridge,
         .presetActions = uiBridge,
-        .editorPresentationStateSource = uiBridge
+        .editorPresentationStateSource = uiBridge,
+        .editorPresentationActions = uiBridge
     };
     return new SpectrumAnalyzerAudioProcessorEditor(*this, context);
 }
