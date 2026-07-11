@@ -117,18 +117,9 @@ void AnalyzerPlotComponent::drawBars(juce::Graphics &g) const {
 }
 
 void AnalyzerPlotComponent::drawRmsLines(juce::Graphics &g) const {
-    const auto underlayColour = theme.plotBackground.darker(1.1f)
-        .withAlpha(theme.metrics.analyzerPlot.rmsLineUnderlayAlpha);
-
     for (const auto &batch: traceBatchBuilder.getPathBatches()) {
         if (batch.path.isEmpty())
             continue;
-
-        g.setColour(underlayColour);
-        g.strokePath(batch.path,
-                     juce::PathStrokeType(batch.strokeThickness + theme.metrics.analyzerPlot.rmsLineUnderlayExtraThickness,
-                                          juce::PathStrokeType::curved,
-                                          juce::PathStrokeType::rounded));
 
         g.setColour(batch.colour);
         g.strokePath(batch.path,
@@ -160,12 +151,6 @@ void AnalyzerPlotComponent::drawHoverHighlight(juce::Graphics &g) const {
     for (const auto &batch: hoverHighlightBatchBuilder.getPathBatches()) {
         if (batch.path.isEmpty())
             continue;
-
-        g.setColour(theme.plotBackground.darker(1.2f).withAlpha(theme.metrics.analyzerPlot.rmsLineUnderlayAlpha));
-        g.strokePath(batch.path,
-                     juce::PathStrokeType(batch.strokeThickness + theme.metrics.analyzerPlot.rmsLineUnderlayExtraThickness,
-                                          juce::PathStrokeType::curved,
-                                          juce::PathStrokeType::rounded));
 
         g.setColour(batch.colour);
         g.strokePath(batch.path,

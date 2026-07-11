@@ -53,11 +53,9 @@ namespace Ui {
         float plotMarginTop = 16.0f;
         float plotMarginBottom = 26.0f;
         int interBandGapPixels = 1;
-        float rmsLineThickness = 2.0f;
-        float rmsLineWhiteness = 0.42f;
+        float rmsLineThickness = 2.4f;
+        float rmsLineWhiteness = 0.50f;
         float rmsLineAlpha = 0.98f;
-        float rmsLineUnderlayAlpha = 0.82f;
-        float rmsLineUnderlayExtraThickness = 1.6f;
         float frameExpansion = 0.0f;
         float frameCornerRadius = 0.0f;
         float gridLabelFontHeight = 12.0f;

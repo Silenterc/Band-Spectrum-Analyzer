@@ -65,7 +65,6 @@ namespace Ui {
         scaledMetrics.plotMarginBottom = scaleFloat(plotMarginBottom, factor);
         scaledMetrics.interBandGapPixels = scaleInt(interBandGapPixels, factor);
         scaledMetrics.rmsLineThickness = scaleFloat(rmsLineThickness, factor);
-        scaledMetrics.rmsLineUnderlayExtraThickness = scaleFloat(rmsLineUnderlayExtraThickness, factor);
         scaledMetrics.frameExpansion = scaleFloat(frameExpansion, factor);
         scaledMetrics.frameCornerRadius = scaleFloat(frameCornerRadius, factor);
         scaledMetrics.gridLabelFontHeight = scaleFloat(gridLabelFontHeight, factor);

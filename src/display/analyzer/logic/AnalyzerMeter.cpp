@@ -41,10 +41,13 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                          const float floorDb,
                          const float dtSeconds) {
     meterData.bandInfo = bandInfo;
-    meterData.traces.clear();
 
     const auto bandCount = meterData.bandInfo != nullptr ? meterData.bandInfo->size() : 0;
-    meterData.traces.reserve(traces.size());
+    // Keep the per-trace frames alive across display ticks. Constructing a fresh MeterTrace here
+    // used to allocate both dB vectors for every active trace at the display refresh rate.
+    meterData.traces.reserve(Shared::maxSignalSlots);
+    meterData.traces.resize(traces.size());
+    traceStates.reserve(Shared::maxSignalSlots);
     const auto rmsWindowChanged = !juce::approximatelyEqual(lastAppliedRmsWindowMs, meterSettings.rmsWindowMs);
     lastAppliedRmsWindowMs = meterSettings.rmsWindowMs;
 
@@ -64,10 +67,11 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
         }
     }
 
-    for (const auto &trace: traces) {
+    for (size_t traceIndex = 0; traceIndex < traces.size(); ++traceIndex) {
+        const auto &trace = traces[traceIndex];
         auto &traceState = getOrCreateTraceState(trace.kind, bandCount, floorDb);
 
-        Analyzer::MeterTrace meterTrace;
+        auto &meterTrace = meterData.traces[traceIndex];
         meterTrace.kind = trace.kind;
         meterTrace.frame.rmsDb.resize(bandCount);
         meterTrace.frame.peakDb.resize(bandCount);
@@ -111,8 +115,6 @@ void AnalyzerMeter::tick(const std::shared_ptr<const std::vector<Analyzer::BandI
                                                             : floorDb)
                                                      : floorDb;
         }
-
-        meterData.traces.push_back(std::move(meterTrace));
     }
 }
 

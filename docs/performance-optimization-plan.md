@@ -111,15 +111,17 @@ area unit on the first segment, +4.3 on the second).
 
 GPU attribution (per-process GPU-engine counters via `typeperf`): our sandbox PID submits real
 3D-engine work — ~1.8% / 2.0% / 2.3% at 1x / 1.5x / 2x — near-flat in pixel area, with huge
-headroom. SPAN and TDR Nova submit zero GPU work (CPU-rendered on Windows too). Our remaining CPU
-cost is therefore paint-pipeline work on the message thread (path building, D2D command
-recording), which scales with stroke complexity, not pixels — W2 is the right lever on Windows.
+headroom. SPAN and TDR Nova submit zero GPU work (CPU-rendered on Windows too). The ETW profile
+(2026-07-07, `docs/windows-profile-findings.md`) attributed the remaining CPU cost: our own code
+is <1 pt — the bill is JUCE's D2D backend machinery, the GPU driver and kernel time, so W2 will
+not move Windows; the levers here are fewer primitives/frame or a lower present rate (W1 seam).
 
 Windows-specific observations:
 
 - Cost tracks content, not pixels: on dynamic material our cost swung ~2–18% with the music
-  (silent passages draw near-flat, cheap paths). Even on the steady loop we oscillate ±4–5 pts
-  (σ≈4) with a multi-second period — unexplained; first target for the ETW/Superluminal profile.
+  (silent passages draw near-flat, cheap paths). The steady-loop ±4–5 pt oscillation (σ≈4) was
+  profiled 2026-07-07: work-driven amplitude of the identical pipeline (uniform stacks in high
+  and low windows), sub-5 s period; a 50 fps-vs-143 Hz vsync beat was ruled out.
 - SPAN's repaint-skipping (hard 0% windows mid-song on dynamic material) flatters its averages on
   real songs; ours keeps painting at ~1.2% when silent. W4's occlusion work could borrow the idea
   as a silence gate.
@@ -127,8 +129,9 @@ Windows-specific observations:
   12.4% here is consistent with the 5.6% on macOS. Within-machine ratios are the signal: we tie
   SPAN at 1x instead of leading 5×, plausibly because 1080p at 100% scaling gives SPAN's software
   renderer a small pixel bill, while retina charged it 4× that.
-- Not yet measured: editor-closed (engine-only) cost inside the sandbox PID, and the standalone
-  build. The display-pipeline share of the 12.4% needs the editor-closed run or a profiler.
+- Editor-closed (engine-only) cost: measured 2026-07-07 at ~0.5% (single active thread — the
+  display worker stops headless). Display is ~96% of the in-DAW cost; full attribution in
+  `docs/windows-profile-findings.md`. Still unmeasured: the standalone build.
 
 ## 2. Constraints
 

@@ -691,6 +691,67 @@ TEST_CASE("AnalyzerMeter RMS follows fresh hop updates instead of display ticks"
     REQUIRE(std::abs(secondSilentData.traces.front().frame.rmsDb[0] - floorDb) < toleranceDb);
 }
 
+TEST_CASE("AnalyzerMeter reuses trace frame storage across display ticks") {
+    AnalyzerMeter displayMeter;
+    Analyzer::MeterSettings meterSettings;
+
+    constexpr float floorDb = -80.0f;
+    constexpr float hopDurationSeconds = 1024.0f / 48000.0f;
+    constexpr float dtSeconds = 0.02f;
+
+    const auto bandInfo = std::make_shared<const std::vector<Analyzer::BandInfo>>(
+        std::initializer_list<Analyzer::BandInfo>{
+            {.lowHz = 80.0f, .centerHz = 100.0f, .highHz = 125.0f},
+            {.lowHz = 125.0f, .centerHz = 160.0f, .highHz = 200.0f}
+        });
+
+    std::vector<Analyzer::RawTrace> traces(2);
+    for (size_t traceIndex = 0; traceIndex < traces.size(); ++traceIndex) {
+        auto &trace = traces[traceIndex];
+        trace.kind = Analyzer::traceKindForSlot(traceIndex);
+        trace.measurements.resize(bandInfo->size());
+
+        for (auto &measurement: trace.measurements) {
+            measurement.peakPower = 1.0f;
+            measurement.rmsHopSumPower = 1024.0;
+            measurement.rmsHopNumSamples = 1024;
+        }
+    }
+
+    displayMeter.tick(bandInfo,
+                      traces,
+                      true,
+                      false,
+                      hopDurationSeconds,
+                      meterSettings,
+                      floorDb,
+                      dtSeconds);
+
+    const auto &firstData = displayMeter.getMeterData();
+    REQUIRE(firstData.traces.size() == traces.size());
+    const auto *traceStorage = firstData.traces.data();
+    const auto *firstRmsStorage = firstData.traces[0].frame.rmsDb.data();
+    const auto *firstPeakStorage = firstData.traces[0].frame.peakDb.data();
+    const auto *secondRmsStorage = firstData.traces[1].frame.rmsDb.data();
+    const auto *secondPeakStorage = firstData.traces[1].frame.peakDb.data();
+
+    displayMeter.tick(bandInfo,
+                      traces,
+                      true,
+                      false,
+                      hopDurationSeconds,
+                      meterSettings,
+                      floorDb,
+                      dtSeconds);
+
+    const auto &secondData = displayMeter.getMeterData();
+    REQUIRE(secondData.traces.data() == traceStorage);
+    REQUIRE(secondData.traces[0].frame.rmsDb.data() == firstRmsStorage);
+    REQUIRE(secondData.traces[0].frame.peakDb.data() == firstPeakStorage);
+    REQUIRE(secondData.traces[1].frame.rmsDb.data() == secondRmsStorage);
+    REQUIRE(secondData.traces[1].frame.peakDb.data() == secondPeakStorage);
+}
+
 TEST_CASE("AnalyzerMeter discards peak state internally once it settles below the display floor") {
     AnalyzerMeter displayMeter;
     Analyzer::MeterSettings meterSettings;
