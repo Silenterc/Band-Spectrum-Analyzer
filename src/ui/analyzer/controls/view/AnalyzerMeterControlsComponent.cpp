@@ -22,8 +22,9 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiSnapsho
     for (auto *button : { &settingsButton, &peakButton, &rmsButton, &holdButton, &freezeButton })
         button->setWantsKeyboardFocus(false);
 
-    settingsButton.onClick = [] {
-        // TODO: Open the settings panel when the skinned settings UI is implemented.
+    settingsButton.onClick = [this] {
+        if (onSettingsClicked != nullptr)
+            onSettingsClicked();
     };
 
     peakButton.onClick = [this] {
@@ -45,6 +46,7 @@ AnalyzerMeterControlsComponent::AnalyzerMeterControlsComponent(AnalyzerUiSnapsho
 
     settingsButton.setTooltip("Open settings");
     settingsButton.setDrawsPad(false);
+    settingsButton.setActiveMarkingColour(theme.hardwareMarkingActiveLight);
     settingsButton.setScaleMultiplier(theme.metrics.meterControls.settingsPadScaleMultiplier);
     settingsButton.setOverlayIcon(PadButton::OverlayIcon::settings);
     settingsButton.setOverlayIconScaleMultiplier(theme.metrics.meterControls.settingsIconScaleMultiplier);
@@ -150,10 +152,19 @@ void AnalyzerMeterControlsComponent::analyzerUiSnapshotChanged(const Ui::Analyze
 }
 
 void AnalyzerMeterControlsComponent::syncButtonStates(const Ui::AnalyzerUiSnapshot &snapshot) {
+    settingsButton.setActive(settingsPageActive);
     peakButton.setActive(snapshot.meterSettings.showPeak);
     rmsButton.setActive(snapshot.meterSettings.showRms);
     holdButton.setActive(snapshot.meterSettings.showHold);
     freezeButton.setActive(snapshot.frozen);
+}
+
+void AnalyzerMeterControlsComponent::setSettingsPageActive(const bool isActive) {
+    if (settingsPageActive == isActive)
+        return;
+
+    settingsPageActive = isActive;
+    settingsButton.setActive(settingsPageActive);
 }
 
 int AnalyzerMeterControlsComponent::getDecorPreferredHeight(const int availableWidth) const {

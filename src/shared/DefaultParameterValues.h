@@ -59,6 +59,10 @@ namespace Defaults {
     inline constexpr float visibleMaxFrequencyHzMax = 20000.0f;
     inline constexpr float visibleMaxFrequencyHzStep = 1.0f;
 
+    // Minimum separation kept between paired min/max parameters
+    inline constexpr float gridMinSpanDb = 6.0f;
+    inline constexpr float visibleFrequencyMinSpanRatio = 2.0f;
+
     inline constexpr float signalOpacity = 0.78f;
     inline constexpr float signalOpacityMin = 0.15f;
     inline constexpr float signalOpacityMax = 1.0f;

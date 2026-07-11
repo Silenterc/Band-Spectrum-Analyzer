@@ -8,6 +8,7 @@
 #include "../../dsp/core/EngineParameterState.h"
 #include "../../shared/UiScalePreset.h"
 #include "../../ui/analyzer/rack/state/SignalSlotUiState.h"
+#include "../SignalOutputMixer.h"
 #include "ParameterSchema.h"
 
 namespace PluginParameters {
@@ -18,6 +19,7 @@ namespace PluginParameters {
         void cache();
 
         Analyzer::EngineParameterState readEngineState() const;
+        std::array<SignalOutputMixer::SlotState, Shared::maxSignalSlots> readMixerSlots() const;
         std::array<Ui::SignalSlotState, Shared::maxSignalSlots> readUiSlots() const;
         Ui::SignalSlotState readUiSlot(size_t slotIndex) const;
         Analyzer::MeterSettings readMeterSettings() const;
@@ -43,9 +45,18 @@ namespace PluginParameters {
         void writeShowPeak(bool value);
         void writeShowRms(bool value);
         void writeShowHold(bool value);
+        void writeBandMode(Analyzer::BandMode bandMode);
+        void writeHoldMs(float holdMs);
+        void writeRmsWindowMs(float rmsWindowMs);
+        void writePeakDecayDbPerSecond(float decayDbPerSecond);
+        void writeHoldDecayDbPerSecond(float decayDbPerSecond);
+        void writeGridMinDb(float gridMinDb);
+        void writeGridMaxDb(float gridMaxDb);
+        void writeGridStepDb(float gridStepDb);
         void writeUseCustomFrequencyRange(bool value);
         void writeVisibleMinFrequencyHz(float frequencyHz);
         void writeVisibleMaxFrequencyHz(float frequencyHz);
+        void writeUiScalePreset(Ui::UiScalePreset preset);
 
     private:
         struct SlotRefs {
@@ -61,17 +72,16 @@ namespace PluginParameters {
 
         template<typename Enum, size_t Size>
         Enum readChoice(std::atomic<float> *parameter,
-                        const std::array<Schema::EnumChoice<Enum>, Size> &choices) const {
+                        const std::array<Shared::EnumChoice<Enum>, Size> &choices) const {
             jassert(parameter != nullptr);
             const auto index = juce::roundToInt(parameter->load());
-            return Schema::valueForIndex(index, choices);
+            return Shared::valueForIndex(index, choices);
         }
 
         static bool readBool(std::atomic<float> *parameter);
         static float readFloat(std::atomic<float> *parameter);
 
         void writeBool(const juce::String &parameterId, bool value);
-        void writeChoiceIndex(const juce::String &parameterId, int index, int choiceCount);
         void writeFloat(const juce::String &parameterId, float plainValue);
 
         juce::AudioProcessorValueTreeState &parameters;

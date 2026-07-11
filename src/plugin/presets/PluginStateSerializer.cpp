@@ -70,10 +70,9 @@ namespace {
 }
 
 PluginPresets::PluginStateSnapshot PluginStateSerializer::captureState(
-    const juce::AudioProcessorValueTreeState& parameters,
+    juce::AudioProcessorValueTreeState& parameters,
     const SignalSlotOrderState& signalSlotOrderState) const {
-    auto& mutableParameters = const_cast<juce::AudioProcessorValueTreeState&>(parameters);
-    auto state = mutableParameters.copyState();
+    auto state = parameters.copyState();
     state.removeProperty(juce::Identifier(PluginParameters::Schema::uiScaleId), nullptr);
     removeUiScaleChild(state);
     signalSlotOrderState.writeTo(state);

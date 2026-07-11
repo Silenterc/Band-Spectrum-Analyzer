@@ -4,12 +4,6 @@
 
 #include "ui/theme/UiRasterAssets.h"
 
-namespace {
-    bool nearlyEqual(const float lhs, const float rhs) {
-        return std::abs(lhs - rhs) <= 0.0001f;
-    }
-}
-
 AnalyzerSectionComponent::AnalyzerSectionComponent(AnalyzerRawTraceSource &rawTraceSourceToUse,
                                                    AnalyzerUiSnapshotSource &snapshotSourceToUse,
                                                    const Ui::Theme &themeToUse)
@@ -44,6 +38,11 @@ void AnalyzerSectionComponent::paintOverChildren(juce::Graphics &g) {
 
 void AnalyzerSectionComponent::resized() {
     rebuildLayout();
+}
+
+void AnalyzerSectionComponent::visibilityChanged() {
+    if (isShowing())
+        analyzerPlotComponent.refreshDisplay();
 }
 
 void AnalyzerSectionComponent::setTopReservedHeight(const int height) {
@@ -85,20 +84,6 @@ void AnalyzerSectionComponent::drawAxisLabels(juce::Graphics &g) const {
                    plotMetrics.frequencyLabelHeight,
                    juce::Justification::centred);
     }
-}
-
-void AnalyzerSectionComponent::drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const {
-    const auto &screw = Ui::getSharedRasterAsset(Ui::SharedRasterAssetId::screw);
-    const auto rasterScale = theme.metrics.assets.rasterScale;
-    const auto screwPadding = theme.metrics.background.screwPadding;
-    const auto topLeftBounds = Ui::getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
-    const auto topRightBounds = Ui::getLogicalAssetBounds(
-        screw,
-        rasterScale,
-        {bounds.getWidth() - screwPadding - topLeftBounds.getWidth(), screwPadding});
-
-    Ui::drawAssetWithin(g, screw, topLeftBounds);
-    Ui::drawAssetWithin(g, screw, topRightBounds);
 }
 
 void AnalyzerSectionComponent::rebuildLayout() {
@@ -159,7 +144,7 @@ void AnalyzerSectionComponent::rebuildCachedBackground() {
                        backgroundImage.getWidth(),
                        backgroundImage.getHeight());
 
-    drawTopCornerScrews(graphics, bounds);
+    Ui::drawTopCornerScrews(graphics, bounds, theme);
     drawAxisLabels(graphics);
 }
 
@@ -194,12 +179,12 @@ void AnalyzerSectionComponent::analyzerUiSnapshotChanged(const Ui::AnalyzerUiSna
     if (uiSnapshot == snapshot)
         return;
 
-    const auto layoutChanged = !nearlyEqual(uiSnapshot.gridMinDb, snapshot.gridMinDb)
-                               || !nearlyEqual(uiSnapshot.gridMaxDb, snapshot.gridMaxDb)
-                               || !nearlyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb)
+    const auto layoutChanged = !juce::approximatelyEqual(uiSnapshot.gridMinDb, snapshot.gridMinDb)
+                               || !juce::approximatelyEqual(uiSnapshot.gridMaxDb, snapshot.gridMaxDb)
+                               || !juce::approximatelyEqual(uiSnapshot.gridStepDb, snapshot.gridStepDb)
                                || uiSnapshot.useCustomFrequencyRange != snapshot.useCustomFrequencyRange
-                               || !nearlyEqual(uiSnapshot.visibleMinFrequencyHz, snapshot.visibleMinFrequencyHz)
-                               || !nearlyEqual(uiSnapshot.visibleMaxFrequencyHz, snapshot.visibleMaxFrequencyHz);
+                               || !juce::approximatelyEqual(uiSnapshot.visibleMinFrequencyHz, snapshot.visibleMinFrequencyHz)
+                               || !juce::approximatelyEqual(uiSnapshot.visibleMaxFrequencyHz, snapshot.visibleMaxFrequencyHz);
     uiSnapshot = snapshot;
     analyzerPlotComponent.setUiSnapshot(uiSnapshot);
 

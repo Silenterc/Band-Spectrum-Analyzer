@@ -122,3 +122,40 @@ TEST_CASE("Analyzer controls and editor components use view folders", "[ui][arch
     REQUIRE(editorDirectory.findChildFiles(juce::File::findFiles, false, "*.h").isEmpty());
     REQUIRE(editorDirectory.findChildFiles(juce::File::findFiles, false, "*.cpp").isEmpty());
 }
+
+TEST_CASE("Plugin processor does not implement UI contracts directly", "[plugin][architecture]") {
+    const auto processorHeader = juce::File(BSA_REPO_ROOT)
+                                     .getChildFile("src")
+                                     .getChildFile("plugin")
+                                     .getChildFile("PluginProcessor.h");
+    REQUIRE(processorHeader.existsAsFile());
+
+    const auto text = processorHeader.loadFileAsString();
+    // UI-facing contracts are implemented by PluginUiBridge; the processor stays audio-focused.
+    REQUIRE_FALSE(text.contains("contracts/"));
+    REQUIRE(text.contains("PluginUiBridge"));
+}
+
+TEST_CASE("Display sources do not include UI headers", "[display][architecture]") {
+    const auto displayDirectory = juce::File(BSA_REPO_ROOT).getChildFile("src").getChildFile("display");
+    REQUIRE(displayDirectory.isDirectory());
+
+    for (const auto& file : sourceFilesIn(displayDirectory)) {
+        const auto text = file.loadFileAsString();
+        INFO(file.getFullPathName().toStdString());
+        REQUIRE_FALSE(text.contains("#include \"ui/"));
+        REQUIRE_FALSE(text.contains("../ui/"));
+        REQUIRE_FALSE(text.contains("juce_gui_basics"));
+    }
+}
+
+TEST_CASE("Settings feature starts with view-only folder structure", "[ui][architecture]") {
+    const auto settingsDirectory = juce::File(BSA_REPO_ROOT)
+                                       .getChildFile("src")
+                                       .getChildFile("ui")
+                                       .getChildFile("settings");
+    REQUIRE(settingsDirectory.isDirectory());
+    REQUIRE(settingsDirectory.getChildFile("view").isDirectory());
+    REQUIRE(settingsDirectory.findChildFiles(juce::File::findFiles, false, "*.h").isEmpty());
+    REQUIRE(settingsDirectory.findChildFiles(juce::File::findFiles, false, "*.cpp").isEmpty());
+}

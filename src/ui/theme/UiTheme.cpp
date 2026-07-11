@@ -167,6 +167,125 @@ namespace Ui {
         return scaledMetrics;
     }
 
+    KnobMetrics KnobMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.scaleWidth = scaleInt(scaleWidth, factor);
+        scaledMetrics.scaleHeight = scaleInt(scaleHeight, factor);
+        scaledMetrics.scaleOffsetY = scaleInt(scaleOffsetY, factor);
+        scaledMetrics.knobSide = scaleInt(knobSide, factor);
+        scaledMetrics.valueWidth = scaleInt(valueWidth, factor);
+        scaledMetrics.valueHeight = scaleInt(valueHeight, factor);
+        scaledMetrics.valueEditorTextIndentX = scaleInt(valueEditorTextIndentX, factor);
+        scaledMetrics.valueEditorTextIndentTop = scaleInt(valueEditorTextIndentTop, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        scaledMetrics.valueFontHeight = scaleFloat(valueFontHeight, factor);
+        scaledMetrics.labelHeight = scaleInt(labelHeight, factor);
+        scaledMetrics.labelToScaleGap = scaleInt(labelToScaleGap, factor);
+        scaledMetrics.scaleToValueGap = scaleInt(scaleToValueGap, factor);
+        scaledMetrics.dragPixelsForFullRange = scaleFloat(dragPixelsForFullRange, factor);
+        return scaledMetrics;
+    }
+
+    HorizontalSliderMetrics HorizontalSliderMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.sliderWidth = scaleInt(sliderWidth, factor);
+        scaledMetrics.sliderHeight = scaleInt(sliderHeight, factor);
+        scaledMetrics.valueWidth = scaleInt(valueWidth, factor);
+        scaledMetrics.valueHeight = scaleInt(valueHeight, factor);
+        scaledMetrics.valueEditorTextIndentX = scaleInt(valueEditorTextIndentX, factor);
+        scaledMetrics.valueEditorTextIndentTop = scaleInt(valueEditorTextIndentTop, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        scaledMetrics.valueFontHeight = scaleFloat(valueFontHeight, factor);
+        scaledMetrics.labelHeight = scaleInt(labelHeight, factor);
+        scaledMetrics.labelToSliderGap = scaleInt(labelToSliderGap, factor);
+        scaledMetrics.sliderToValueGap = scaleInt(sliderToValueGap, factor);
+        scaledMetrics.dragPixelsForFullRange = scaleFloat(dragPixelsForFullRange, factor);
+        return scaledMetrics;
+    }
+
+    RectanglePadMetrics RectanglePadMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.width = scaleInt(width, factor);
+        scaledMetrics.height = scaleInt(height, factor);
+        scaledMetrics.iconSide = scaleInt(iconSide, factor);
+        scaledMetrics.visualCenterOffsetX = scaleFloat(visualCenterOffsetX, factor);
+        scaledMetrics.visualCenterOffsetY = scaleFloat(visualCenterOffsetY, factor);
+        scaledMetrics.labelFontHeight = scaleFloat(labelFontHeight, factor);
+        return scaledMetrics;
+    }
+
+    SettingsSectionFrameMetrics SettingsSectionFrameMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.strokeWidth = scaleFloat(strokeWidth, factor);
+        scaledMetrics.cornerRadius = scaleFloat(cornerRadius, factor);
+        scaledMetrics.titleFontHeight = scaleFloat(titleFontHeight, factor);
+        scaledMetrics.titleHorizontalPadding = scaleInt(titleHorizontalPadding, factor);
+        scaledMetrics.titleGapHeight = scaleInt(titleGapHeight, factor);
+        return scaledMetrics;
+    }
+
+    SettingsPageMetrics SettingsPageMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.analysisSectionHeight = scaleInt(analysisSectionHeight, factor);
+        scaledMetrics.timeDecayTopGap = scaleInt(timeDecayTopGap, factor);
+        scaledMetrics.timeDecaySectionWidth = scaleInt(timeDecaySectionWidth, factor);
+        scaledMetrics.timeDecaySectionHeight = scaleInt(timeDecaySectionHeight, factor);
+        scaledMetrics.sectionColumnGap = scaleInt(sectionColumnGap, factor);
+        scaledMetrics.sectionStackGap = scaleInt(sectionStackGap, factor);
+        scaledMetrics.gridSectionHeight = scaleInt(gridSectionHeight, factor);
+        scaledMetrics.uiSectionHeight = scaleInt(uiSectionHeight, factor);
+        scaledMetrics.frequencyRangeSectionHeight = scaleInt(frequencyRangeSectionHeight, factor);
+        return scaledMetrics;
+    }
+
+    SettingsAnalysisSectionMetrics SettingsAnalysisSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        return scaledMetrics;
+    }
+
+    SettingsTimeDecaySectionMetrics SettingsTimeDecaySectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.columnGap = scaleInt(columnGap, factor);
+        scaledMetrics.rowGap = scaleInt(rowGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsGridSectionMetrics SettingsGridSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.columnGap = scaleInt(columnGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsUiSectionMetrics SettingsUiSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.buttonGap = scaleInt(buttonGap, factor);
+        return scaledMetrics;
+    }
+
+    SettingsFrequencyRangeSectionMetrics SettingsFrequencyRangeSectionMetrics::scaled(const float factor) const {
+        auto scaledMetrics = *this;
+        scaledMetrics.contentTopInset = scaleInt(contentTopInset, factor);
+        scaledMetrics.horizontalInset = scaleInt(horizontalInset, factor);
+        scaledMetrics.contentOffsetX = scaleInt(contentOffsetX, factor);
+        scaledMetrics.toggleWidth = scaleInt(toggleWidth, factor);
+        scaledMetrics.toggleLabelHeight = scaleInt(toggleLabelHeight, factor);
+        scaledMetrics.toggleLabelToButtonGap = scaleInt(toggleLabelToButtonGap, factor);
+        scaledMetrics.toggleToSliderGap = scaleInt(toggleToSliderGap, factor);
+        scaledMetrics.sliderGap = scaleInt(sliderGap, factor);
+        return scaledMetrics;
+    }
+
     BackgroundMetrics BackgroundMetrics::scaled(const float factor) const {
         auto scaledMetrics = *this;
         scaledMetrics.woodSideInset = scaleInt(woodSideInset, factor);
@@ -258,6 +377,16 @@ namespace Ui {
         scaledMetrics.rack = rack.scaled(factor);
         scaledMetrics.slot = slot.scaled(factor);
         scaledMetrics.popup = popup.scaled(factor);
+        scaledMetrics.knob = knob.scaled(factor);
+        scaledMetrics.horizontalSlider = horizontalSlider.scaled(factor);
+        scaledMetrics.rectanglePad = rectanglePad.scaled(factor);
+        scaledMetrics.settingsSectionFrame = settingsSectionFrame.scaled(factor);
+        scaledMetrics.settingsPage = settingsPage.scaled(factor);
+        scaledMetrics.settingsAnalysisSection = settingsAnalysisSection.scaled(factor);
+        scaledMetrics.settingsTimeDecaySection = settingsTimeDecaySection.scaled(factor);
+        scaledMetrics.settingsGridSection = settingsGridSection.scaled(factor);
+        scaledMetrics.settingsUiSection = settingsUiSection.scaled(factor);
+        scaledMetrics.settingsFrequencyRangeSection = settingsFrequencyRangeSection.scaled(factor);
         scaledMetrics.background = background.scaled(factor);
         scaledMetrics.sectionDivider = sectionDivider.scaled(factor);
         scaledMetrics.assets = assets.scaled(factor);
@@ -282,6 +411,7 @@ namespace Ui {
         theme.tooltipText = juce::Colour::fromRGB(229, 212, 186);
         theme.hardwareMarkingLight = juce::Colour::fromRGB(231, 216, 190);
         theme.hardwareMarkingDark = juce::Colour::fromRGB(74, 52, 32);
+        theme.hardwareMarkingActiveLight = juce::Colour::fromRGB(255, 220, 126);
         theme.hardwareMarkingCoolDark = juce::Colour::fromRGB(58, 72, 82);
         theme.textSelectionFill = juce::Colour::fromRGB(74, 132, 255);
         theme.textSelectionText = juce::Colour::fromRGB(250, 248, 244);

@@ -7,10 +7,13 @@
 #include "parameters/ParameterSchema.h"
 #include "state/SignalSlotOrderState.h"
 
+/**
+ * Watches APVTS, its state tree, and slot order; flags engine-relevant changes
+ * for the audio thread and reports everything else to the listener.
+ */
 class ProcessorChangeTracker final : private juce::AudioProcessorValueTreeState::Listener,
                                      private juce::ValueTree::Listener,
-                                     private SignalSlotOrderState::Listener,
-                                     private juce::AsyncUpdater {
+                                     private SignalSlotOrderState::Listener {
 public:
     class Listener {
     public:
@@ -26,11 +29,11 @@ public:
 
     bool consumeEngineParametersDirty();
     void clearEngineParametersDirty();
-    void requestUiRefresh();
 
 private:
     void attach();
     void detach();
+    void notifyStateChanged();
 
     void parameterChanged(const juce::String &parameterID, float newValue) override;
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
@@ -44,7 +47,6 @@ private:
                                     int newIndex) override;
     void valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) override;
     void signalSlotOrderChanged() override;
-    void handleAsyncUpdate() override;
 
     juce::AudioProcessorValueTreeState &parameters;
     SignalSlotOrderState &signalSlotOrderState;

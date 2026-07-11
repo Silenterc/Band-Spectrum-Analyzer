@@ -1,5 +1,7 @@
 #include "UiRasterAssets.h"
 
+#include "UiTheme.h"
+
 #include <BinaryData.h>
 
 namespace {
@@ -100,6 +102,41 @@ namespace {
         jassert(image.isValid());
         return image;
     }
+
+    const juce::Image &getKnobSmallFilmstrip() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::Knob_small_png,
+                                                                  static_cast<size_t>(BinaryData::Knob_small_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image &getKnobSmallScale() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::scale_small_knob_png,
+                                                                  static_cast<size_t>(BinaryData::scale_small_knob_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image& getHorizontalSliderFilmstrip() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::Hor_slider_png,
+                                                                  static_cast<size_t>(BinaryData::Hor_slider_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image& getRectanglePadOff() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_rectangle_off_png,
+                                                                  static_cast<size_t>(BinaryData::pad_rectangle_off_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
+
+    const juce::Image& getRectanglePadOn() {
+        static const auto image = juce::ImageFileFormat::loadFrom(BinaryData::pad_rectangle_on_png,
+                                                                  static_cast<size_t>(BinaryData::pad_rectangle_on_pngSize));
+        jassert(image.isValid());
+        return image;
+    }
 }
 
 namespace Ui {
@@ -145,6 +182,24 @@ namespace Ui {
 
         jassertfalse;
         return getBackground2();
+    }
+
+    const juce::Image &getControlRasterAsset(const ControlRasterAssetId assetId) {
+        switch (assetId) {
+            case ControlRasterAssetId::knobSmallFilmstrip:
+                return getKnobSmallFilmstrip();
+            case ControlRasterAssetId::knobSmallScale:
+                return getKnobSmallScale();
+            case ControlRasterAssetId::horizontalSliderFilmstrip:
+                return getHorizontalSliderFilmstrip();
+            case ControlRasterAssetId::rectanglePadOff:
+                return getRectanglePadOff();
+            case ControlRasterAssetId::rectanglePadOn:
+                return getRectanglePadOn();
+        }
+
+        jassertfalse;
+        return getKnobSmallFilmstrip();
     }
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,
@@ -203,5 +258,21 @@ namespace Ui {
                     sourceBounds.getY(),
                     sourceBounds.getWidth(),
                     sourceBounds.getHeight());
+    }
+
+    void drawTopCornerScrews(juce::Graphics &g,
+                             const juce::Rectangle<int> bounds,
+                             const Theme &theme) {
+        const auto& screw = getSharedRasterAsset(SharedRasterAssetId::screw);
+        const auto rasterScale = theme.metrics.assets.rasterScale;
+        const auto screwPadding = theme.metrics.background.screwPadding;
+        const auto topLeftBounds = getLogicalAssetBounds(screw, rasterScale, {screwPadding, screwPadding});
+        const auto topRightBounds = getLogicalAssetBounds(
+            screw,
+            rasterScale,
+            {bounds.getWidth() - screwPadding - topLeftBounds.getWidth(), screwPadding});
+
+        drawAssetWithin(g, screw, topLeftBounds);
+        drawAssetWithin(g, screw, topRightBounds);
     }
 }

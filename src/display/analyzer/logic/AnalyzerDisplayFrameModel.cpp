@@ -40,24 +40,22 @@ void AnalyzerDisplayFrameModel::build(const Analyzer::MeterData &liveMeterData,
 
     for (const auto &liveTrace: liveMeterData.traces) {
         const auto slotIndex = Analyzer::slotIndexForTraceKind(liveTrace.kind);
-        if (!slotIndex.has_value() || *slotIndex >= displayFrame.slotFrames.size())
+        if (slotIndex >= displayFrame.slotFrames.size())
             continue;
 
-        hasLiveTrace[*slotIndex] = true;
-        latestSlotTraces[*slotIndex] = liveTrace;
+        hasLiveTrace[slotIndex] = true;
+        latestSlotTraces[slotIndex] = liveTrace;
         const Analyzer::MeterTrace *displayTrace = &liveTrace;
 
-        if (controlState.slotFrozen[*slotIndex]) {
-            if (frozenSlotTraces[*slotIndex].has_value()
-                && isTraceCompatible(*frozenSlotTraces[*slotIndex], bandCount)) {
-                displayTrace = &*frozenSlotTraces[*slotIndex];
-            } else {
-                frozenSlotTraces[*slotIndex] = liveTrace;
-                displayTrace = &*frozenSlotTraces[*slotIndex];
+        if (controlState.slotFrozen[slotIndex]) {
+            if (!frozenSlotTraces[slotIndex].has_value()
+                || !isTraceCompatible(*frozenSlotTraces[slotIndex], bandCount)) {
+                frozenSlotTraces[slotIndex] = liveTrace;
             }
+            displayTrace = &*frozenSlotTraces[slotIndex];
         }
 
-        assignSlotFrame(displayFrame.slotFrames[*slotIndex], *displayTrace);
+        assignSlotFrame(displayFrame.slotFrames[slotIndex], *displayTrace);
     }
 
     for (size_t slotIndex = 0; slotIndex < controlState.slotFrozen.size(); ++slotIndex) {

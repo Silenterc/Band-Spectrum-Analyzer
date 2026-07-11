@@ -11,10 +11,14 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     dsp/AnalyzerEngineTests.cpp
+    plugin/PluginUiBridgeSettingsTests.cpp
     plugin/PresetSessionTests.cpp
     plugin/SignalOutputMixerTests.cpp
     ui/UiArchitectureRulesTests.cpp
     ui/AnalyzerUiModelTests.cpp
+    ui/RasterKnobTests.cpp
+    ui/RasterHorizontalSliderTests.cpp
+    ui/SettingsRangeModelTests.cpp
     ../src/dsp/core/AnalyzerEngine.cpp
     ../src/dsp/filterbank/FilterBank.cpp
     ../src/dsp/filterbank/SIMDBPFilter.cpp
@@ -24,6 +28,7 @@ add_executable(band-spectrum-analyzer-tests
     ../src/display/analyzer/logic/AnalyzerDisplayFrameModel.cpp
     ../src/display/analyzer/logic/AnalyzerGlobalHoldModel.cpp
     ../src/display/analyzer/logic/AnalyzerMeter.cpp
+    ../src/plugin/PluginUiBridge.cpp
     ../src/plugin/SignalOutputMixer.cpp
     ../src/plugin/parameters/ParameterAccess.cpp
     ../src/plugin/presets/FactoryPresetRepository.cpp
@@ -32,7 +37,11 @@ add_executable(band-spectrum-analyzer-tests
     ../src/plugin/presets/PresetSession.cpp
     ../src/plugin/presets/PresetTypes.cpp
     ../src/plugin/presets/UserPresetStore.cpp
+    ../src/ui/theme/UiRasterAssets.cpp
     ../src/ui/theme/UiTheme.cpp
+    ../src/ui/widgets/RasterFilmstrip.cpp
+    ../src/ui/widgets/RasterKnobComponent.cpp
+    ../src/ui/widgets/RasterSliderValueMapping.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerGeometry.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerHoverModel.cpp
     ../src/ui/analyzer/plot/logic/AnalyzerRenderBatchBuilder.cpp

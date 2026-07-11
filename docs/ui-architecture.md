@@ -41,12 +41,12 @@ flowchart TD
     Editor[SpectrumAnalyzerAudioProcessorEditor] --> Theme[Ui::Theme]
     Editor --> Layout[MainLayoutComponent]
 
-    Processor[SpectrumAnalyzerAudioProcessor] --> RawSource[AnalyzerRawTraceSource]
-    Processor --> AnalyzerSnapshot[AnalyzerUiSnapshotSource]
-    Processor --> AnalyzerActions[AnalyzerSettingsActions]
-    Processor --> PresetSnapshot[PresetUiSnapshotSource]
-    Processor --> PresetActions[PresetActions]
-    Processor --> Presentation[EditorPresentationStateSource]
+    Engine[Analyzer::Engine] --> RawSource[AnalyzerRawTraceSource]
+    Bridge[PluginUiBridge] --> AnalyzerSnapshot[AnalyzerUiSnapshotSource]
+    Bridge --> AnalyzerActions[AnalyzerSettingsActions]
+    Bridge --> PresetSnapshot[PresetUiSnapshotSource]
+    Bridge --> PresetActions[PresetActions]
+    Bridge --> Presentation[EditorPresentationStateSource]
 
     RawSource --> AnalyzerPlot[AnalyzerPlotComponent]
     AnalyzerSnapshot --> AnalyzerSection[AnalyzerSectionComponent]
@@ -57,6 +57,8 @@ flowchart TD
     AnalyzerActions --> Rack
     AnalyzerActions --> Strip
 ```
+
+The editor receives all contracts through one `Ui::EditorContext` struct assembled by the plugin composition root: the raw trace channel resolves to `Analyzer::Engine`, everything else to `PluginUiBridge`.
 
 The editor owns the theme and top-level layout. `MainLayoutComponent` lives under `src/ui/editor/layout/` and owns product/header composition, analyzer section placement, rack placement, and control strip placement.
 
@@ -114,6 +116,7 @@ Snapshots must not carry raw trace payloads, APVTS handles, or plugin persistenc
 Views dispatch intents only:
 
 - analyzer actions: `AnalyzerSettingsActions`
+- editor presentation actions: `EditorPresentationActions`
 - preset actions: `PresetActions`
 
 Views must not know parameter ids, APVTS details, preset file paths, XML format, or plugin serialization policy.
@@ -136,6 +139,12 @@ Examples:
 - preset popups may remove a row after a successful delete action
 
 The plugin still owns persistence and parameter writes. The UI echo only bridges the time before the next snapshot publication.
+
+## Paired Settings Controls
+
+The settings page derives narrower interactive ranges for related controls where unrestricted direct manipulation would create an awkward display. Grid minimum/maximum keep at least 6 dB of separation, and visible frequency minimum/maximum keep at least a 2:1 ratio when edited in the plugin UI.
+
+These are settings-page interaction limits, not global parameter invariants. `PluginUiBridge` applies them to UI intents, while host automation and restored state may address the APVTS parameters independently. Published snapshots reflect the stored values and do not repair a host-authored combination by changing another parameter.
 
 ## Analyzer Feature
 

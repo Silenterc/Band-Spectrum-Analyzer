@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "ui/analyzer/plot/logic/AnalyzerMeterTuning.h"
+#include "display/analyzer/data/AnalyzerDisplayTuning.h"
 
 void AnalyzerGlobalHoldModel::reset() {
     frame.reset();
@@ -41,7 +41,7 @@ void AnalyzerGlobalHoldModel::tick(const AnalyzerContributingPeakSummary &peakSu
         }
 
         const auto isWithinResetTolerance = hasContributingPeak
-                                            && strongestPeakDb >= heldDb - Ui::analyzerMeterTuning.holdResetToleranceDb;
+                                            && strongestPeakDb >= heldDb - Display::analyzerMeterTuning.holdResetToleranceDb;
         if (isWithinResetTolerance) {
             holdTimeMs = meterSettings.holdMs;
             continue;
@@ -55,14 +55,14 @@ void AnalyzerGlobalHoldModel::tick(const AnalyzerContributingPeakSummary &peakSu
         heldDb = heldDb - meterSettings.holdDecayDbPerSecond * dtSeconds;
 
         if (hasContributingPeak
-            && heldDb <= strongestPeakDb + Ui::analyzerMeterTuning.holdResetToleranceDb) {
+            && heldDb <= strongestPeakDb + Display::analyzerMeterTuning.holdResetToleranceDb) {
             heldDb = strongestPeakDb;
             holdTimeMs = meterSettings.holdMs;
             if (strongestOwnerKind.has_value())
                 ownerKind = strongestOwnerKind;
         }
 
-        if (heldDb <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb && !strongestOwnerKind.has_value()) {
+        if (heldDb <= floorDb + Display::analyzerMeterTuning.settleToleranceDb && !strongestOwnerKind.has_value()) {
             heldDb = floorDb;
             holdTimeMs = 0.0f;
             ownerKind.reset();
@@ -80,7 +80,7 @@ bool AnalyzerGlobalHoldModel::isSettledAtFloor(const float floorDb) const {
 
     return std::all_of(frame->holdDb.begin(), frame->holdDb.end(),
                        [floorDb](const float value) {
-                           return value <= floorDb + Ui::analyzerMeterTuning.settleToleranceDb;
+                           return value <= floorDb + Display::analyzerMeterTuning.settleToleranceDb;
                        });
 }
 

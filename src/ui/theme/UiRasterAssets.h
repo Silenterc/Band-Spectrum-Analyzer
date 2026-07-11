@@ -3,6 +3,8 @@
 #include <juce_graphics/juce_graphics.h>
 
 namespace Ui {
+    struct Theme;
+
     enum class SharedRasterAssetId {
         background,
         buttonOff,
@@ -23,8 +25,17 @@ namespace Ui {
         switchUp,
     };
 
+    enum class ControlRasterAssetId {
+        knobSmallFilmstrip,
+        knobSmallScale,
+        horizontalSliderFilmstrip,
+        rectanglePadOff,
+        rectanglePadOn,
+    };
+
     const juce::Image &getSharedRasterAsset(SharedRasterAssetId assetId);
     const juce::Image &getAnalyzerRasterAsset(AnalyzerRasterAssetId assetId);
+    const juce::Image &getControlRasterAsset(ControlRasterAssetId assetId);
 
     juce::Rectangle<int> getLogicalAssetBounds(const juce::Image &image,
                                                float rasterScale,
@@ -47,4 +58,8 @@ namespace Ui {
                          const juce::Image& image,
                          const juce::Rectangle<int>& destinationBounds,
                          const juce::Rectangle<int>& sourceBounds);
+
+    void drawTopCornerScrews(juce::Graphics &g,
+                             juce::Rectangle<int> bounds,
+                             const Theme &theme);
 }

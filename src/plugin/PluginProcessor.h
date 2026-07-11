@@ -2,18 +2,12 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#include "../display/analyzer/contracts/AnalyzerRawTraceSource.h"
-#include "../dsp/core/EngineParameterState.h"
-#include "../ui/analyzer/contracts/AnalyzerSettingsActions.h"
-#include "../ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
-#include "../ui/editor/contracts/EditorPresentationStateSource.h"
-#include "../ui/presets/contracts/PresetActions.h"
-#include "../ui/presets/contracts/PresetUiSnapshotSource.h"
 #include "../dsp/core/AnalyzerEngine.h"
+#include "../dsp/core/EngineParameterState.h"
+#include "PluginUiBridge.h"
 #include "ProcessorChangeTracker.h"
 #include "SignalOutputMixer.h"
 #include "parameters/ParameterAccess.h"
@@ -25,14 +19,7 @@
 #include "state/SignalSlotOrderState.h"
 
 //==============================================================================
-class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor,
-                                             public AnalyzerRawTraceSource,
-                                             public AnalyzerSettingsActions,
-                                             public AnalyzerUiSnapshotSource,
-                                             public EditorPresentationStateSource,
-                                             public PresetActions,
-                                             public PresetUiSnapshotSource,
-                                             private ProcessorChangeTracker::Listener {
+class SpectrumAnalyzerAudioProcessor final : public juce::AudioProcessor {
 public:
     //==============================================================================
     SpectrumAnalyzerAudioProcessor();
@@ -92,75 +79,8 @@ public:
         return parameters;
     }
 
-    // AnalyzerUiSnapshotSource
-    Ui::AnalyzerUiSnapshot getAnalyzerUiSnapshot() const override;
-    void addAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
-    void removeAnalyzerUiSnapshotListener(AnalyzerUiSnapshotSource::Listener &listener) override;
-
-    // EditorPresentationStateSource
-    Ui::EditorPresentationState getEditorPresentationState() const override;
-    void addEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
-    void removeEditorPresentationStateListener(EditorPresentationStateSource::Listener &listener) override;
-
-    // PresetUiSnapshotSource
-    Ui::Presets::PresetUiSnapshot getPresetUiSnapshot() const override;
-    void addPresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
-    void removePresetUiSnapshotListener(PresetUiSnapshotSource::Listener& listener) override;
-
-    // AnalyzerRawTraceSource
-    std::shared_ptr<const std::vector<Analyzer::BandInfo>> getBandInfo() const override;
-    AnalyzerPublishedTracesView readPublishedTraces() const override;
-    bool hasRecentSignal() const override;
-    bool shouldProcessAnalyzer() const override;
-
-    // AnalyzerSettingsActions
-    void setFreezeEnabled(bool isFrozen) override;
-    void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) override;
-    void setSignalSlotVisible(size_t slotIndex, bool isVisible) override;
-    void setSignalSlotFrozen(size_t slotIndex, bool isFrozen) override;
-    void setSignalSlotSolo(size_t slotIndex, bool isSolo) override;
-    void setSignalSlotSource(size_t slotIndex, Analyzer::SignalSource source) override;
-    void setSignalSlotMode(size_t slotIndex, Analyzer::SignalMode mode) override;
-    void removeSignalSlot(size_t slotIndex) override;
-    void addSignalSlot(size_t slotIndex,
-                       const Ui::SignalSlotState &state,
-                       const Shared::SignalSlotOrder &slotOrder) override;
-    void setSignalSlotOrder(const Shared::SignalSlotOrder &slotOrder) override;
-    void setSignalSlotColour(size_t slotIndex, int colourIndex) override;
-    void setSignalSlotOpacity(size_t slotIndex, float opacity) override;
-    void setShowPeakEnabled(bool isEnabled) override;
-    void setShowRmsEnabled(bool isEnabled) override;
-    void setShowHoldEnabled(bool isEnabled) override;
-    void setCustomFrequencyRangeEnabled(bool isEnabled) override;
-    void setVisibleMinFrequencyHz(float frequencyHz) override;
-    void setVisibleMaxFrequencyHz(float frequencyHz) override;
-
-    [[nodiscard]] Ui::Presets::PresetActionResult loadPreset(const Ui::Presets::PresetId& presetId) override;
-    [[nodiscard]] Ui::Presets::PresetActionResult loadPreviousPreset() override;
-    [[nodiscard]] Ui::Presets::PresetActionResult loadNextPreset() override;
-    [[nodiscard]] Ui::Presets::PresetActionResult resetCurrentPreset() override;
-    [[nodiscard]] Ui::Presets::PresetActionResult savePresetAs(const juce::String& name) override;
-    [[nodiscard]] Ui::Presets::PresetActionResult overwritePreset(const Ui::Presets::PresetId& presetId,
-                                                                    const juce::String& name) override;
-    [[nodiscard]] Ui::Presets::PresetActionResult deletePreset(const Ui::Presets::PresetId& presetId) override;
-    void refreshPresetCatalog() override;
-
 private:
-    std::array<Ui::SignalSlotState, Shared::maxSignalSlots> getSignalSlots() const;
-    Shared::SignalSlotOrder getSignalSlotOrder() const;
     bool isSidechainAvailable() const;
-    bool isFrozen() const;
-    Analyzer::MeterSettings getMeterSettings() const;
-    float getGridMinDb() const;
-    float getGridMaxDb() const;
-    float getGridStepDb() const;
-    bool getUseCustomFrequencyRange() const;
-    float getVisibleMinFrequencyHz() const;
-    float getVisibleMaxFrequencyHz() const;
-    Ui::UiScalePreset getUiScalePreset() const;
-    void publishAnalyzerUiSnapshot();
-    void publishEditorPresentationState();
-    void publishPresetUiSnapshot();
 
     Analyzer::Engine engine;
     SignalOutputMixer outputMixer;
@@ -171,19 +91,12 @@ private:
     UserPresetStore userPresetStore;
     FactoryPresetRepository factoryPresetRepository;
     PresetSession presetSession;
+    PluginUiBridge uiBridge;
     std::unique_ptr<ProcessorChangeTracker> changeTracker;
 
     std::optional<Analyzer::EngineParameterState> previousEngineParameters;
-    std::optional<Ui::AnalyzerUiSnapshot> lastPublishedUiSnapshot;
-    std::optional<Ui::EditorPresentationState> lastPublishedEditorPresentationState;
-    std::optional<Ui::Presets::PresetUiSnapshot> lastPublishedPresetUiSnapshot;
-    juce::ListenerList<AnalyzerUiSnapshotSource::Listener> uiSnapshotListeners;
-    juce::ListenerList<EditorPresentationStateSource::Listener> editorPresentationStateListeners;
-    juce::ListenerList<PresetUiSnapshotSource::Listener> presetUiSnapshotListeners;
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    void processorPresetStateChanged() override;
-    void processorUiRefreshRequested() override;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerAudioProcessor)

@@ -23,7 +23,7 @@ struct TripleBuffer {
         back_idx_ = prev_spare.idx;
     }
 
-    std::pair<T *, bool> get_for_reader() {
+    std::pair<const T *, bool> get_for_reader() {
         State curr_spare = spare_.load(std::memory_order_relaxed);
         bool updated = curr_spare.has_update;
         if (curr_spare.has_update) {

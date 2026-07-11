@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <cstddef>
 #include <vector>
 
 namespace Analyzer {
@@ -31,46 +31,21 @@ namespace Analyzer {
     };
 
     /**
-     * Identifies one logical analyzer trace in the UI
+     * Identifies one logical analyzer trace; values map 1:1 to signal slot indices
      */
     enum class TraceKind {
         slot1,
         slot2,
         slot3,
-        slot4,
-        custom
+        slot4
     };
 
-    inline TraceKind traceKindForSlot(const size_t slotIndex) {
-        switch (slotIndex) {
-            case 0:
-                return TraceKind::slot1;
-            case 1:
-                return TraceKind::slot2;
-            case 2:
-                return TraceKind::slot3;
-            case 3:
-                return TraceKind::slot4;
-        }
-
-        return TraceKind::custom;
+    inline constexpr TraceKind traceKindForSlot(const size_t slotIndex) {
+        return static_cast<TraceKind>(slotIndex);
     }
 
-    inline std::optional<size_t> slotIndexForTraceKind(const TraceKind kind) {
-        switch (kind) {
-            case TraceKind::slot1:
-                return 0;
-            case TraceKind::slot2:
-                return 1;
-            case TraceKind::slot3:
-                return 2;
-            case TraceKind::slot4:
-                return 3;
-            case TraceKind::custom:
-                break;
-        }
-
-        return std::nullopt;
+    inline constexpr size_t slotIndexForTraceKind(const TraceKind kind) {
+        return static_cast<size_t>(kind);
     }
 
     /**

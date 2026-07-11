@@ -2,17 +2,22 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
+#include "dsp/core/AnalyzerRawTraceSource.h"
 #include "ui/analyzer/contracts/AnalyzerSettingsActions.h"
 #include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
+#include "ui/editor/contracts/EditorPresentationActions.h"
+#include "ui/editor/contracts/EditorPresentationStateSource.h"
 #include "ui/presets/contracts/PresetActions.h"
 #include "ui/presets/contracts/PresetUiSnapshotSource.h"
+#include "ui/editor/state/EditorPage.h"
 #include "ui/widgets/SectionDividerComponent.h"
+#include "ui/widgets/BrandLogoComponent.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/presets/view/PresetHeaderComponent.h"
 #include "ui/analyzer/plot/view/AnalyzerSectionComponent.h"
 #include "ui/analyzer/controls/view/AnalyzerMeterControlsComponent.h"
 #include "ui/analyzer/rack/view/SignalRackComponent.h"
+#include "ui/settings/view/SettingsPageComponent.h"
 
 class MainLayoutComponent final : public juce::Component {
 public:
@@ -21,6 +26,8 @@ public:
                         PresetUiSnapshotSource& presetUiSnapshotSource,
                         AnalyzerSettingsActions& settingsActions,
                         PresetActions& presetActions,
+                        EditorPresentationStateSource& presentationStateSource,
+                        EditorPresentationActions& presentationActions,
                         const Ui::Theme& theme);
     ~MainLayoutComponent() override = default;
 
@@ -29,6 +36,7 @@ public:
 private:
     struct Layout {
         juce::Rectangle<int> analyzerBounds;
+        juce::Rectangle<int> settingsPageBounds;
         juce::Rectangle<int> presetHeaderBounds;
         juce::Rectangle<int> actionsBounds;
         juce::Rectangle<int> rackBounds;
@@ -37,10 +45,16 @@ private:
     };
 
     Layout computeLayout() const;
+    void toggleSettingsPage();
+    void setEditorPage(Ui::EditorPage page);
+    void updatePageVisibility();
 
     const Ui::Theme& theme;
+    Ui::EditorPage editorPage = Ui::EditorPage::analyzer;
     PresetHeaderComponent presetHeaderComponent;
     AnalyzerSectionComponent analyzerSectionComponent;
+    SettingsPageComponent settingsPageComponent;
+    BrandLogoComponent settingsLogoComponent;
     SignalRackComponent signalRackComponent;
     AnalyzerMeterControlsComponent meterControlsComponent;
     SectionDividerComponent verticalSectionDivider;

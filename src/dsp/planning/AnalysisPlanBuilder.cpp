@@ -1,6 +1,9 @@
 #include "AnalysisPlanBuilder.h"
 
 namespace Analyzer {
+    static_assert(static_cast<size_t>(TraceKind::slot4) + 1 == Shared::maxSignalSlots,
+                  "TraceKind values must map 1:1 to signal slot indices");
+
     std::vector<AnalysisGroupSpec> AnalysisPlanBuilder::build(const EngineParameterState &parameters) const {
         std::vector<AnalysisGroupSpec> plan;
         plan.reserve(Shared::maxSignalSlots);

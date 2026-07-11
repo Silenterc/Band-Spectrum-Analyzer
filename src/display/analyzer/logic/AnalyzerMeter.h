@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "display/analyzer/data/AnalyzerMeterData.h"
-#include "ui/analyzer/plot/logic/AnalyzerMeterTuning.h"
 
 class AnalyzerMeter final {
 public:
@@ -43,7 +42,6 @@ private:
         std::vector<RmsWindowState> rmsWindows;
     };
 
-    void ensureTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb);
     TraceState &getOrCreateTraceState(Analyzer::TraceKind kind, size_t bandCount, float floorDb);
     static float getPeakDb(const Analyzer::BandMeasurements &measurements, float floorDb);
     static float getHopMeanPower(const Analyzer::BandMeasurements &measurements);

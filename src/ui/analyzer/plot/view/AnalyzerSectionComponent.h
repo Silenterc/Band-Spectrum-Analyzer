@@ -6,7 +6,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "display/analyzer/contracts/AnalyzerRawTraceSource.h"
+#include "dsp/core/AnalyzerRawTraceSource.h"
 #include "ui/analyzer/contracts/AnalyzerUiSnapshotSource.h"
 #include "ui/theme/UiTheme.h"
 #include "ui/analyzer/plot/state/AnalyzerViewState.h"
@@ -28,6 +28,7 @@ public:
     void paint(juce::Graphics &g) override;
     void paintOverChildren(juce::Graphics &g) override;
     void resized() override;
+    void visibilityChanged() override;
 
 private:
     struct Layout {
@@ -35,7 +36,6 @@ private:
     };
 
     void drawAxisLabels(juce::Graphics &g) const;
-    void drawTopCornerScrews(juce::Graphics &g, const juce::Rectangle<int> &bounds) const;
     void rebuildLayout();
     void rebuildCachedBackground();
     void updateHoverPresentation();

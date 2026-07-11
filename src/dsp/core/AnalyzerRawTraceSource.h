@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "display/analyzer/contracts/AnalyzerPublishedTracesView.h"
+#include "dsp/core/AnalyzerPublishedTracesView.h"
 #include "dsp/core/AnalyzerData.h"
 
 class AnalyzerRawTraceSource {

@@ -191,6 +191,137 @@ namespace Ui {
         [[nodiscard]] PopupMetrics scaled(float factor) const;
     };
 
+    struct KnobMetrics {
+        int width = 104;
+        int height = 104;
+        int scaleWidth = 56;
+        int scaleHeight = 49;
+        int scaleOffsetY = -8;
+        int knobSide = 60;
+        int valueWidth = 78;
+        int valueHeight = 20;
+        int valueEditorTextIndentX = 6;
+        int valueEditorTextIndentTop = 2;
+        float labelFontHeight = 13.0f;
+        float valueFontHeight = 13.5f;
+        int labelHeight = 18;
+        int labelToScaleGap = 4;
+        int scaleToValueGap = 2;
+        int filmstripFrameCount = 128;
+        int filmstripFrameWidth = 120;
+        int filmstripFrameHeight = 120;
+        float dragPixelsForFullRange = 180.0f;
+        float keyboardStepMultiplier = 10.0f;
+
+        [[nodiscard]] KnobMetrics scaled(float factor) const;
+    };
+
+    struct HorizontalSliderMetrics {
+        int width = 240;
+        int height = 102;
+        int sliderWidth = 222;
+        int sliderHeight = 52;
+        int valueWidth = 112;
+        int valueHeight = 20;
+        int valueEditorTextIndentX = 6;
+        int valueEditorTextIndentTop = 2;
+        float labelFontHeight = 13.0f;
+        float valueFontHeight = 13.5f;
+        int labelHeight = 18;
+        int labelToSliderGap = 4;
+        int sliderToValueGap = 6;
+        int filmstripFrameCount = 256;
+        int filmstripFrameWidth = 444;
+        int filmstripFrameHeight = 104;
+        float dragPixelsForFullRange = 210.0f;
+        float keyboardStepMultiplier = 10.0f;
+
+        [[nodiscard]] HorizontalSliderMetrics scaled(float factor) const;
+    };
+
+    struct RectanglePadMetrics {
+        int width = 104;
+        int height = 44;
+        int iconSide = 24;
+        float visualCenterOffsetX = 0.5f;
+        float visualCenterOffsetY = 1.0f;
+        float labelFontHeight = 15.0f;
+
+        [[nodiscard]] RectanglePadMetrics scaled(float factor) const;
+    };
+
+    struct SettingsSectionFrameMetrics {
+        float strokeWidth = 1.5f;
+        float cornerRadius = 8.0f;
+        float titleFontHeight = 17.0f;
+        int titleHorizontalPadding = 12;
+        int titleGapHeight = 18;
+        float borderActiveBlend = 0.42f;
+        float strokeInsetMultiplier = 0.5f;
+        float titleTopGapMultiplier = 0.5f;
+        float borderAlpha = 0.82f;
+        float titleAlpha = 0.88f;
+
+        [[nodiscard]] SettingsSectionFrameMetrics scaled(float factor) const;
+    };
+
+    struct SettingsPageMetrics {
+        int analysisSectionHeight = 88;
+        int timeDecayTopGap = 18;
+        int timeDecaySectionWidth = 348;
+        int timeDecaySectionHeight = 250;
+        int sectionColumnGap = 14;
+        int sectionStackGap = 14;
+        int gridSectionHeight = 138;
+        int uiSectionHeight = 98;
+        int frequencyRangeSectionHeight = 136;
+
+        [[nodiscard]] SettingsPageMetrics scaled(float factor) const;
+    };
+
+    struct SettingsAnalysisSectionMetrics {
+        int buttonGap = 10;
+        int horizontalInset = 34;
+
+        [[nodiscard]] SettingsAnalysisSectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsTimeDecaySectionMetrics {
+        int contentTopInset = 26;
+        int horizontalInset = 34;
+        int columnGap = 36;
+        int rowGap = 8;
+        [[nodiscard]] SettingsTimeDecaySectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsGridSectionMetrics {
+        int contentTopInset = 26;
+        int horizontalInset = 34;
+        int columnGap = 22;
+
+        [[nodiscard]] SettingsGridSectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsUiSectionMetrics {
+        int horizontalInset = 34;
+        int buttonGap = 8;
+
+        [[nodiscard]] SettingsUiSectionMetrics scaled(float factor) const;
+    };
+
+    struct SettingsFrequencyRangeSectionMetrics {
+        int contentTopInset = 26;
+        int horizontalInset = 34;
+        int contentOffsetX = 4;
+        int toggleWidth = 150;
+        int toggleLabelHeight = 20;
+        int toggleLabelToButtonGap = 2;
+        int toggleToSliderGap = 42;
+        int sliderGap = 42;
+
+        [[nodiscard]] SettingsFrequencyRangeSectionMetrics scaled(float factor) const;
+    };
+
     struct BackgroundMetrics {
         int woodSideInset = 31;
         int screwPadding = 2;
@@ -291,6 +422,16 @@ namespace Ui {
         RackMetrics rack;
         SlotMetrics slot;
         PopupMetrics popup;
+        KnobMetrics knob;
+        HorizontalSliderMetrics horizontalSlider;
+        RectanglePadMetrics rectanglePad;
+        SettingsSectionFrameMetrics settingsSectionFrame;
+        SettingsPageMetrics settingsPage;
+        SettingsAnalysisSectionMetrics settingsAnalysisSection;
+        SettingsTimeDecaySectionMetrics settingsTimeDecaySection;
+        SettingsGridSectionMetrics settingsGridSection;
+        SettingsUiSectionMetrics settingsUiSection;
+        SettingsFrequencyRangeSectionMetrics settingsFrequencyRangeSection;
         BackgroundMetrics background;
         SectionDividerMetrics sectionDivider;
         AssetMetrics assets;
@@ -315,6 +456,7 @@ namespace Ui {
         juce::Colour tooltipText;
         juce::Colour hardwareMarkingLight;
         juce::Colour hardwareMarkingDark;
+        juce::Colour hardwareMarkingActiveLight;
         juce::Colour hardwareMarkingCoolDark;
         juce::Colour textSelectionFill;
         juce::Colour textSelectionText;

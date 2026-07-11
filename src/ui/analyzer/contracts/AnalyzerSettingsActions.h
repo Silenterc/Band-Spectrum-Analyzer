@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "dsp/core/BandMode.h"
 #include "shared/SignalSlotConfiguration.h"
 #include "ui/analyzer/rack/state/SignalSlotUiState.h"
 
@@ -9,6 +10,7 @@ class AnalyzerSettingsActions {
 public:
     virtual ~AnalyzerSettingsActions() = default;
 
+    virtual void setBandMode(Analyzer::BandMode bandMode) = 0;
     virtual void setFreezeEnabled(bool isFrozen) = 0;
     virtual void setSignalSlotEnabled(size_t slotIndex, bool isEnabled) = 0;
     virtual void setSignalSlotVisible(size_t slotIndex, bool isVisible) = 0;
@@ -22,6 +24,13 @@ public:
     virtual void setShowPeakEnabled(bool isEnabled) = 0;
     virtual void setShowRmsEnabled(bool isEnabled) = 0;
     virtual void setShowHoldEnabled(bool isEnabled) = 0;
+    virtual void setHoldTimeMs(float holdMs) = 0;
+    virtual void setRmsWindowMs(float rmsWindowMs) = 0;
+    virtual void setPeakDecayDbPerSecond(float decayDbPerSecond) = 0;
+    virtual void setHoldDecayDbPerSecond(float decayDbPerSecond) = 0;
+    virtual void setGridMinDb(float gridMinDb) = 0;
+    virtual void setGridMaxDb(float gridMaxDb) = 0;
+    virtual void setGridStepDb(float gridStepDb) = 0;
     virtual void setCustomFrequencyRangeEnabled(bool isEnabled) = 0;
     virtual void setVisibleMinFrequencyHz(float frequencyHz) = 0;
     virtual void setVisibleMaxFrequencyHz(float frequencyHz) = 0;

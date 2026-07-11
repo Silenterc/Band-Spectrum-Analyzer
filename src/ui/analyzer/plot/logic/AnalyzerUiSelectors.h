@@ -9,15 +9,12 @@
 namespace Ui {
     inline bool isTraceVisible(const Analyzer::TraceKind kind,
                                const std::array<SignalSlotState, Shared::maxSignalSlots> &signalSlots) {
-        if (const auto slotIndex = Analyzer::slotIndexForTraceKind(kind); slotIndex.has_value()) {
-            if (*slotIndex >= signalSlots.size())
-                return false;
+        const auto slotIndex = Analyzer::slotIndexForTraceKind(kind);
+        if (slotIndex >= signalSlots.size())
+            return false;
 
-            const auto &slot = signalSlots[*slotIndex];
-            return slot.configuration.enabled && slot.visible;
-        }
-
-        return true;
+        const auto &slot = signalSlots[slotIndex];
+        return slot.configuration.enabled && slot.visible;
     }
 
     inline std::vector<Analyzer::TraceKind> collectVisibleTraceKinds(const AnalyzerUiSnapshot &snapshot) {
