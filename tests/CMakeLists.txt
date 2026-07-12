@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(band-spectrum-analyzer-tests
     display/AnalyzerDisplayTickSchedulerTests.cpp
+    display/AnalyzerDisplayWorkerTests.cpp
     dsp/AnalyzerEngineTests.cpp
     plugin/PluginUiBridgeSettingsTests.cpp
     plugin/PresetSessionTests.cpp
@@ -29,6 +30,7 @@ add_executable(band-spectrum-analyzer-tests
     ../src/display/analyzer/logic/AnalyzerDisplayFrameModel.cpp
     ../src/display/analyzer/logic/AnalyzerGlobalHoldModel.cpp
     ../src/display/analyzer/logic/AnalyzerMeter.cpp
+    ../src/display/analyzer/thread/AnalyzerDisplayWorker.cpp
     ../src/plugin/PluginUiBridge.cpp
     ../src/plugin/SignalOutputMixer.cpp
     ../src/plugin/parameters/ParameterAccess.cpp

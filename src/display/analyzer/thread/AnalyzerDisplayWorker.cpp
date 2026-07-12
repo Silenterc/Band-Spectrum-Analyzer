@@ -60,6 +60,7 @@ void AnalyzerDisplayWorker::run() {
 
         {
             const juce::ScopedLock lock(controlLock);
+            shouldComputeImmediately = forceRefresh;
             currentControlState = controlState;
         }
 

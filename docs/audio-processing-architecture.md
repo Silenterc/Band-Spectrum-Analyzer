@@ -229,8 +229,10 @@ Active ticks use monotonic 20 ms deadlines. Each deadline advances from the prev
 not from the end of the last worker pass, so computation time does not slow the nominal 50 fps
 cadence. If work overruns one or more deadlines, the worker skips them and resumes at the next
 future deadline; it never publishes catch-up bursts. A control-state wake computes immediately
-and reanchors the cadence. Settled displays poll at the slower idle interval, while global freeze
-waits for an explicit control-state wake without polling. The active rate has one code-level
+and reanchors the cadence. Freeze transitions are consumed before the worker chooses a wait, so
+frozen wall time is never applied to meter or hold decay when display updates resume. Settled
+displays poll at the slower idle interval, while global freeze waits for an explicit control-state
+wake without polling. The active rate has one code-level
 setting, `Display::Constants::framesPerSecond`, in
 `display/analyzer/config/AnalyzerDisplayConstants.h`; the frame interval is derived from it.
 

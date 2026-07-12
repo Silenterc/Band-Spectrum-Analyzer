@@ -194,7 +194,8 @@ macOS measured — do this before any Linux-specific rendering work.
 - Keep the fixed 20 ms (50 fps) evenly-paced tick as the only active mode. Implemented with
   monotonic absolute deadlines: work time does not extend the interval, missed deadlines are
   skipped instead of replayed, immediate control refreshes reanchor the schedule, and global
-  freeze waits without polling. `Display::Constants::framesPerSecond` in
+  freeze waits without polling. Freeze transitions are handled before waiting so time spent
+  frozen cannot advance meter or hold decay on resume. `Display::Constants::framesPerSecond` in
   `display/analyzer/config/AnalyzerDisplayConstants.h` is the single code-level rate setting;
   scheduling derives its interval from that value.
 - Once W1 lands, consider presenting on the display's vblank (`VBlankAttachment`) so publish and
